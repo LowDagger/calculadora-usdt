@@ -3,46 +3,46 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="theme-color" content="#121212" />
+  <meta name="theme-color" content="#1f1f1f" />
   <title>Calculadora Banco a USDT</title>
   <link rel="manifest" href="manifest.json" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
   <style>
     :root {
       color-scheme: dark;
       --bg: #121212;
-      --bg-2: #171717;
-      --surface: #1e1f20;
-      --surface-2: #2a2b2f;
+      --bg-soft: #171717;
+      --surface: #1f1f1f;
+      --surface-2: #28292b;
       --surface-3: #303134;
+      --surface-4: #3c4043;
       --text: #e8eaed;
       --muted: #9aa0a6;
       --line: #3c4043;
       --primary: #8ab4f8;
-      --primary-2: #1a2a40;
+      --primary-bg: #162a46;
       --green: #81c995;
       --green-bg: #123522;
       --red: #f28b82;
       --red-bg: #3c1d1b;
       --amber: #fdd663;
       --amber-bg: #3a2a0b;
-      --shadow: 0 16px 40px rgba(0, 0, 0, .34);
-      --radius: 22px;
-      --font-size: clamp(14px, .85vw, 15.5px);
-      --h1: clamp(1.28rem, 2vw, 1.85rem);
-      --kpi: clamp(1.4rem, 2.6vw, 2.15rem);
+      --radius: 20px;
+      --shadow: 0 14px 36px rgba(0, 0, 0, .36);
+      --font: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     }
 
     * { box-sizing: border-box; }
+    html { -webkit-text-size-adjust: 100%; }
     body {
       margin: 0;
-      font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      font-size: var(--font-size);
-      background: radial-gradient(circle at top, #202124 0, var(--bg-2) 42%, var(--bg) 100%);
-      color: var(--text);
       min-height: 100vh;
+      font-family: var(--font);
+      background: radial-gradient(circle at top, #242628 0, #171717 44%, #101010 100%);
+      color: var(--text);
+      font-size: clamp(13px, .8vw, 15px);
     }
 
     button, input { font: inherit; }
@@ -50,140 +50,218 @@
     input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
     input[type="number"] { -moz-appearance: textfield; }
 
-    ::selection { background: rgba(138,180,248,.28); }
-    input::placeholder { color: #7d8590; }
-
     .app {
-      width: min(1120px, 100%);
+      width: min(1040px, 100%);
       margin: 0 auto;
-      padding: 18px;
+      padding: 12px;
     }
 
     .topbar {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 16px;
-      margin-bottom: 18px;
+      gap: 10px;
+      margin-bottom: 10px;
     }
 
-    .brand { display: flex; align-items: center; gap: 12px; }
+    .brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
     .logo {
-      width: 44px; height: 44px; border-radius: 14px;
+      width: 38px; height: 38px; border-radius: 13px;
       display: grid; place-items: center;
-      color: #202124; font-weight: 800;
+      color: #202124; font-weight: 900; font-size: .76rem;
       background: linear-gradient(135deg, #8ab4f8, #81c995);
-      box-shadow: var(--shadow);
+      flex: 0 0 auto;
     }
-    h1 { margin: 0; font-size: var(--h1); letter-spacing: -.04em; line-height: 1.05; }
-    .subtitle { margin: 5px 0 0; color: var(--muted); font-size: .9rem; }
+    h1 { margin: 0; font-size: clamp(1.05rem, 2vw, 1.45rem); letter-spacing: -.04em; line-height: 1.05; }
+    .subtitle { margin: 3px 0 0; color: var(--muted); font-size: .74rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 72vw; }
 
-    .update-btn, .ghost-btn, .copy-btn {
-      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-      border-radius: 999px;
-      padding: 11px 16px;
-      font-weight: 700;
-      transition: transform .15s ease, box-shadow .15s ease, background .15s ease;
-      white-space: nowrap;
+    .icon-actions { display: flex; gap: 7px; }
+    .icon-btn {
+      width: 38px; height: 38px; border-radius: 14px;
+      display: grid; place-items: center;
+      color: var(--text); background: var(--surface-2);
+      border: 1px solid var(--line);
+      transition: transform .15s ease, background .15s ease;
     }
-    .update-btn { background: var(--primary); color: #202124; box-shadow: 0 8px 20px rgba(138,180,248,.18); }
-    .ghost-btn { background: var(--primary-2); color: var(--primary); }
-    .copy-btn { background: #e8eaed; color: #202124; width: 100%; }
-    .update-btn:active, .ghost-btn:active, .copy-btn:active { transform: scale(.98); }
+    .icon-btn:active, .btn:active, .chip-btn:active { transform: scale(.97); }
 
-    .grid { display: grid; grid-template-columns: 1fr 1.15fr; gap: 18px; align-items: start; }
+    .layout { display: grid; grid-template-columns: .86fr 1.14fr; gap: 12px; align-items: start; }
     .card {
-      background: rgba(30,31,32,.92);
-      backdrop-filter: blur(18px);
-      border: 1px solid rgba(60,64,67,.92);
+      background: rgba(31,31,31,.94);
+      border: 1px solid rgba(60,64,67,.86);
       border-radius: var(--radius);
       box-shadow: var(--shadow);
-      padding: 18px;
+      padding: 12px;
+      backdrop-filter: blur(16px);
     }
-    .card-title { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
-    .card-title h2 { margin: 0; font-size: 1rem; letter-spacing: -.02em; }
-    .small { color: var(--muted); font-size: .78rem; }
+    .card-title { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+    .card-title h2 { margin: 0; font-size: .92rem; letter-spacing: -.02em; }
+    .small { color: var(--muted); font-size: .72rem; }
 
-    .field { margin-bottom: 14px; }
-    .label-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 7px; }
-    label { color: var(--text); font-weight: 700; font-size: .86rem; }
+    .field { margin-bottom: 10px; }
+    .label-row { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 5px; align-items: center; }
+    label { font-weight: 760; font-size: .78rem; color: var(--text); }
     .input-wrap { position: relative; }
     input {
-      width: 100%; border: 1px solid var(--line); border-radius: 16px;
-      background: var(--surface-3); color: var(--text); outline: none;
-      padding: 14px 82px 14px 14px;
-      font-weight: 750; letter-spacing: -.02em;
-      transition: border .15s ease, box-shadow .15s ease, background .15s ease;
+      width: 100%;
+      border: 1px solid transparent;
+      border-radius: 15px;
+      background: var(--surface-3);
+      color: var(--text);
+      outline: none;
+      padding: 11px 70px 11px 12px;
+      font-weight: 800;
+      letter-spacing: -.02em;
+      min-height: 43px;
     }
-    input:focus { border-color: var(--primary); box-shadow: 0 0 0 4px rgba(138,180,248,.16); }
+    input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(138,180,248,.16); }
     .unit {
-      position: absolute; right: 13px; top: 50%; transform: translateY(-50%);
-      color: var(--muted); font-size: .78rem; font-weight: 800;
-      background: var(--surface-2); padding: 5px 8px; border-radius: 999px;
+      position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+      color: var(--muted); font-size: .68rem; font-weight: 850;
+      background: var(--surface-2); padding: 4px 7px; border-radius: 999px;
     }
-    .two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 
-    .rates { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 14px 0; }
-    .rate-box { background: var(--surface-2); border: 1px solid var(--line); border-radius: 18px; padding: 12px; }
-    .rate-label { color: var(--muted); font-size: .72rem; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; }
-    .rate-value { margin-top: 6px; font-size: 1.05rem; font-weight: 850; letter-spacing: -.04em; }
-    .rate-sub { margin-top: 3px; color: var(--muted); font-size: .72rem; }
+    .hero-input input { font-size: 1.45rem; min-height: 54px; padding-right: 86px; }
+    .quick-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 7px; margin-top: 8px; }
+    .chip-btn {
+      min-height: 34px;
+      border-radius: 999px;
+      background: var(--primary-bg);
+      color: var(--primary);
+      font-weight: 800;
+      font-size: .76rem;
+    }
+
+    .btn {
+      border-radius: 999px;
+      min-height: 40px;
+      padding: 0 14px;
+      font-weight: 850;
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    }
+    .btn.primary { width: 100%; color: #202124; background: var(--primary); }
+    .btn.ghost { color: var(--primary); background: var(--primary-bg); }
+    .btn.light { color: #202124; background: #e8eaed; }
+
+    .rates-compact { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; }
+    .rate-mini { background: var(--surface-2); border: 1px solid var(--line); border-radius: 16px; padding: 9px; min-width: 0; }
+    .rate-mini span { display: block; color: var(--muted); font-size: .65rem; font-weight: 900; letter-spacing: .06em; text-transform: uppercase; }
+    .rate-mini strong { display: block; margin-top: 4px; font-size: .9rem; letter-spacing: -.04em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    .kpi-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+    .kpi {
+      background: var(--surface-2);
+      border: 1px solid var(--line);
+      border-radius: 17px;
+      padding: 11px;
+      min-height: 88px;
+      display: flex; flex-direction: column; justify-content: space-between;
+    }
+    .kpi.primary { background: linear-gradient(135deg, #172a45, var(--surface-2)); border-color: rgba(138,180,248,.38); }
+    .kpi.good { background: linear-gradient(135deg, #123522, var(--surface-2)); border-color: rgba(129,201,149,.36); }
+    .kpi.bad { background: linear-gradient(135deg, #3c1d1b, var(--surface-2)); border-color: rgba(242,139,130,.36); }
+    .kpi-label { color: var(--muted); font-size: .64rem; font-weight: 900; text-transform: uppercase; letter-spacing: .06em; }
+    .kpi-value { margin-top: 4px; font-size: clamp(1.05rem, 3vw, 1.55rem); font-weight: 950; letter-spacing: -.06em; line-height: 1.02; }
+    .kpi-sub { margin-top: 5px; color: var(--muted); font-size: .68rem; line-height: 1.25; }
 
     .status {
-      display: none; margin-top: 10px; padding: 10px 12px; border-radius: 14px;
-      font-weight: 650; font-size: .82rem;
+      display: none;
+      margin-top: 9px;
+      border-radius: 14px;
+      padding: 9px 11px;
+      font-size: .76rem;
+      font-weight: 750;
+      line-height: 1.35;
     }
     .status.show { display: block; }
     .status.ok { background: var(--green-bg); color: var(--green); }
     .status.warn { background: var(--amber-bg); color: var(--amber); }
     .status.err { background: var(--red-bg); color: var(--red); }
 
-    .kpis { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 14px; }
-    .kpi { border-radius: 20px; padding: 16px; border: 1px solid var(--line); background: var(--surface-2); }
-    .kpi.primary { background: linear-gradient(135deg, #1a2a40, var(--surface-2)); border-color: rgba(138,180,248,.42); }
-    .kpi.good { background: linear-gradient(135deg, #123522, var(--surface-2)); border-color: rgba(129,201,149,.38); }
-    .kpi.bad { background: linear-gradient(135deg, #3c1d1b, var(--surface-2)); border-color: rgba(242,139,130,.38); }
-    .kpi-label { color: var(--muted); font-size: .72rem; font-weight: 850; text-transform: uppercase; letter-spacing: .06em; }
-    .kpi-value { margin-top: 6px; font-size: var(--kpi); font-weight: 900; letter-spacing: -.06em; line-height: 1; }
-    .kpi-sub { margin-top: 8px; color: var(--muted); font-size: .78rem; }
+    .mobile-main-actions { display: none; grid-template-columns: repeat(3, 1fr); gap: 7px; margin-top: 9px; }
+    .tiny-action { min-height: 34px; border-radius: 999px; background: var(--surface-2); color: var(--text); border: 1px solid var(--line); font-weight: 850; }
 
-    .flow { display: grid; gap: 8px; margin-top: 12px; }
+    details {
+      margin-top: 9px;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: var(--surface-2);
+      overflow: hidden;
+    }
+    summary { padding: 11px; font-weight: 850; cursor: pointer; font-size: .8rem; }
+    .details-body { padding: 0 11px 11px; color: var(--muted); font-size: .76rem; line-height: 1.5; }
+
+    .flow { display: grid; gap: 7px; margin-top: 9px; }
     .step {
-      display: grid; grid-template-columns: 34px 1fr auto; gap: 10px; align-items: center;
-      padding: 12px; border: 1px solid var(--line); background: var(--surface-2); border-radius: 17px;
+      display: grid; grid-template-columns: 28px 1fr auto; gap: 9px; align-items: center;
+      padding: 9px; border-radius: 15px; background: var(--surface-2); border: 1px solid var(--line);
     }
-    .num { width: 34px; height: 34px; border-radius: 12px; display: grid; place-items: center; background: var(--primary-2); color: var(--primary); font-weight: 900; }
-    .step h3 { margin: 0; font-size: .88rem; letter-spacing: -.02em; }
-    .step p { margin: 3px 0 0; color: var(--muted); font-size: .75rem; }
-    .amount { font-weight: 850; font-size: .95rem; text-align: right; white-space: nowrap; }
-    .negative { color: var(--red); }
+    .num { width: 28px; height: 28px; border-radius: 10px; display: grid; place-items: center; background: var(--primary-bg); color: var(--primary); font-weight: 900; font-size: .78rem; }
+    .step h3 { margin: 0; font-size: .78rem; letter-spacing: -.02em; }
+    .step p { margin: 2px 0 0; color: var(--muted); font-size: .67rem; }
+    .amount { text-align: right; font-weight: 900; white-space: nowrap; font-size: .84rem; }
     .positive { color: var(--green); }
+    .negative { color: var(--red); }
 
-    details { margin-top: 14px; border: 1px solid var(--line); border-radius: 18px; background: var(--surface-2); overflow: hidden; }
-    summary { padding: 14px; font-weight: 800; cursor: pointer; color: var(--text); }
-    .details-body { padding: 0 14px 14px; color: var(--muted); font-size: .84rem; line-height: 1.55; }
-
-    .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px; }
-    .full { grid-column: 1 / -1; }
-
-    footer { text-align: center; color: var(--muted); font-size: .75rem; padding: 20px 0 8px; }
-
-    @media (min-width: 920px) {
-      .compact-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-      .card { padding: 20px; }
-      input { padding-top: 12px; padding-bottom: 12px; }
+    .settings-panel {
+      position: fixed;
+      inset: 0;
+      display: none;
+      z-index: 50;
+      background: rgba(0,0,0,.58);
+      padding: 12px;
+      overflow: auto;
     }
+    .settings-panel.open { display: grid; place-items: start center; }
+    .settings-card {
+      width: min(620px, 100%);
+      margin: 18px auto;
+      background: #1f1f1f;
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      box-shadow: var(--shadow);
+      padding: 14px;
+    }
+    .settings-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 12px; }
+    .settings-head h2 { margin: 0; font-size: 1.2rem; letter-spacing: -.04em; }
+    .settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .settings-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; margin-top: 12px; }
+    .switch-row {
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
+      padding: 11px; border-radius: 16px; background: var(--surface-2); border: 1px solid var(--line); margin-top: 10px;
+    }
+    .switch-row strong { display:block; font-size:.82rem; }
+    .switch-row span { display:block; color:var(--muted); font-size:.7rem; margin-top:2px; }
+    .toggle { width: 48px; height: 28px; appearance: none; border-radius: 999px; background: var(--surface-4); position: relative; padding:0; flex: 0 0 auto; }
+    .toggle:checked { background: var(--primary); }
+    .toggle::before { content:""; position:absolute; width:22px; height:22px; border-radius:50%; left:3px; top:3px; background:#e8eaed; transition:.16s; }
+    .toggle:checked::before { transform: translateX(20px); background:#202124; }
+
+    footer { color: var(--muted); text-align: center; font-size: .68rem; padding: 14px 0 4px; }
 
     @media (max-width: 860px) {
-      .app { padding: 14px; }
-      .topbar { align-items: flex-start; flex-direction: column; }
-      .update-btn { width: 100%; }
-      .grid { grid-template-columns: 1fr; }
-      .rates, .kpis { grid-template-columns: 1fr; }
-      .two { grid-template-columns: 1fr; gap: 0; }
-      .actions { grid-template-columns: 1fr; }
-      .step { grid-template-columns: 32px 1fr; }
-      .amount { grid-column: 2; text-align: left; font-size: 1.05rem; }
+      .app { padding: 10px; }
+      .layout { grid-template-columns: 1fr; gap: 10px; }
+      .topbar { position: sticky; top: 0; z-index: 20; padding: 8px 0; background: linear-gradient(180deg, rgba(18,18,18,.98), rgba(18,18,18,.72)); backdrop-filter: blur(14px); }
+      .logo { width: 34px; height: 34px; border-radius: 12px; font-size: .68rem; }
+      .subtitle { max-width: 56vw; }
+      .result-card { order: -1; }
+      .card { padding: 10px; border-radius: 19px; }
+      .hero-input input { min-height: 50px; font-size: 1.32rem; }
+      .rates-compact { gap: 6px; }
+      .rate-mini { padding: 8px; border-radius: 14px; }
+      .rate-mini strong { font-size: .82rem; }
+      .mobile-main-actions { display: grid; }
+      .flow { display: none; }
+      .settings-grid { grid-template-columns: 1fr; gap: 8px; }
+      .settings-card { margin: 0 auto; border-radius: 22px; }
+      .kpi { min-height: 82px; padding: 10px; }
+    }
+
+    @media (max-width: 380px) {
+      .kpi-grid { grid-template-columns: 1fr; }
+      .quick-row { grid-template-columns: repeat(2, 1fr); }
+      .rates-compact { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -193,164 +271,107 @@
       <div class="brand">
         <div class="logo">USDT</div>
         <div>
-          <h1>Calculadora Banco → USDT</h1>
-          <p class="subtitle">BCV automático, banco +0.5%, P2P/paralelo editable y comisiones simples.</p>
+          <h1>Banco → USDT</h1>
+          <p class="subtitle">BCV automático · P2P editable · comisiones guardadas</p>
         </div>
       </div>
-      <button class="update-btn" id="loadRatesBtn">Actualizar tasas</button>
+      <div class="icon-actions">
+        <button class="icon-btn" id="loadRatesBtn" title="Actualizar tasas" aria-label="Actualizar tasas">↻</button>
+        <button class="icon-btn" id="copyBtn" title="Copiar resumen" aria-label="Copiar resumen">⧉</button>
+        <button class="icon-btn" id="openSettingsBtn" title="Configuración" aria-label="Configuración">⚙</button>
+      </div>
     </header>
 
-    <div class="grid">
-      <section class="card">
+    <div class="layout">
+      <section class="card operation-card">
         <div class="card-title">
           <h2>Operación</h2>
           <span class="small" id="lastUpdate">Sin actualizar</span>
         </div>
 
-        <div class="field">
+        <div class="field hero-input">
           <div class="label-row">
-            <label for="usdToBuy">USD que quieres comprar al banco</label>
-            <span class="small">Principal</span>
+            <label for="usdToBuy">USD que quieres comprar</label>
+            <span class="small" id="limitHint">Límite 500 USD</span>
           </div>
           <div class="input-wrap">
             <input id="usdToBuy" type="number" inputmode="decimal" value="500" min="0" step="0.01" />
             <span class="unit">USD</span>
           </div>
-        </div>
-
-        <div class="field">
-          <div class="label-row">
-            <label for="bankLimit">Límite de compra del banco</label>
-            <span class="small">Siempre aplicado</span>
-          </div>
-          <div class="input-wrap">
-            <input id="bankLimit" type="number" inputmode="decimal" value="500" min="0" step="1" />
-            <span class="unit">USD</span>
+          <div class="quick-row">
+            <button class="chip-btn" data-quick="100">100</button>
+            <button class="chip-btn" data-quick="250">250</button>
+            <button class="chip-btn" data-quick="500">500</button>
+            <button class="chip-btn" id="maxBtn">MAX</button>
           </div>
         </div>
 
-        <div class="rates">
-          <div class="rate-box">
-            <div class="rate-label">BCV</div>
-            <div class="rate-value" id="bcvView">--</div>
-            <div class="rate-sub">DolarApi oficial</div>
-          </div>
-          <div class="rate-box">
-            <div class="rate-label">Banco</div>
-            <div class="rate-value" id="bankView">--</div>
-            <div class="rate-sub">BCV + 0.5%</div>
-          </div>
-          <div class="rate-box">
-            <div class="rate-label">P2P/Paralelo</div>
-            <div class="rate-value" id="p2pView">--</div>
-            <div class="rate-sub">editable</div>
-          </div>
-        </div>
-
-        <div class="compact-grid">
-          <div class="field">
-            <div class="label-row"><label for="bcvRate">BCV manual</label></div>
-            <div class="input-wrap">
-              <input id="bcvRate" type="number" inputmode="decimal" placeholder="Ej: 622.31" min="0" step="0.01" />
-              <span class="unit">Bs/USD</span>
-            </div>
-          </div>
-          <div class="field">
-            <div class="label-row"><label for="p2pRate">P2P / Paralelo manual</label></div>
-            <div class="input-wrap">
-              <input id="p2pRate" type="number" inputmode="decimal" placeholder="Ej: 768.44" min="0" step="0.01" />
-              <span class="unit">Bs/USDT</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="two">
-          <div class="field">
-            <div class="label-row"><label for="cardFee">Comisión tarjeta</label></div>
-            <div class="input-wrap">
-              <input id="cardFee" type="number" inputmode="decimal" value="1.5" min="0" step="0.1" />
-              <span class="unit">%</span>
-            </div>
-          </div>
-          <div class="field">
-            <div class="label-row"><label for="bpayFee">Comisión BPay</label></div>
-            <div class="input-wrap">
-              <input id="bpayFee" type="number" inputmode="decimal" value="4.1" min="0" step="0.1" />
-              <span class="unit">%</span>
-            </div>
-          </div>
+        <div class="rates-compact">
+          <div class="rate-mini"><span>BCV</span><strong id="bcvView">--</strong></div>
+          <div class="rate-mini"><span>Banco</span><strong id="bankView">--</strong></div>
+          <div class="rate-mini"><span>P2P</span><strong id="p2pView">--</strong></div>
         </div>
 
         <div class="status" id="statusBox"></div>
 
-        <div class="actions">
-          <button class="ghost-btn" id="clearBtn">Limpiar</button>
-          <button class="ghost-btn" id="saveDefaultsBtn">Guardar</button>
-          <button class="copy-btn full" id="copyBtn">Copiar resumen</button>
+        <div class="mobile-main-actions">
+          <button class="tiny-action" id="clearBtnMobile">Limpiar</button>
+          <button class="tiny-action" id="saveBtnMobile">Guardar</button>
+          <button class="tiny-action" id="copyBtnMobile">Copiar</button>
         </div>
       </section>
 
-      <main class="card">
+      <main class="card result-card">
         <div class="card-title">
           <h2>Resultado</h2>
           <span class="small" id="opStatus">Esperando datos</span>
         </div>
 
-        <div class="kpis">
+        <div class="kpi-grid">
           <div class="kpi primary">
-            <div class="kpi-label">Bs necesarios</div>
-            <div class="kpi-value" id="vesNeeded">--</div>
+            <div>
+              <div class="kpi-label">Bs necesarios</div>
+              <div class="kpi-value" id="vesNeeded">--</div>
+            </div>
             <div class="kpi-sub" id="vesSub">Para comprar USD al banco</div>
           </div>
-          <div class="kpi good" id="profitCard">
-            <div class="kpi-label">Ganancia neta</div>
-            <div class="kpi-value" id="profitVes">--</div>
-            <div class="kpi-sub" id="profitUsdt">-- USDT equivalentes</div>
-          </div>
-          <div class="kpi">
-            <div class="kpi-label">USDT finales</div>
-            <div class="kpi-value" id="usdtFinal">--</div>
-            <div class="kpi-sub">Luego de tarjeta + BPay</div>
-          </div>
-          <div class="kpi">
-            <div class="kpi-label">ROI estimado</div>
-            <div class="kpi-value" id="roiView">--</div>
-            <div class="kpi-sub" id="roiSub">Sobre Bs usados</div>
-          </div>
-        </div>
 
-        <div class="flow">
-          <div class="step">
-            <div class="num">1</div>
-            <div><h3>Compra al banco</h3><p>USD solicitado limitado por el banco.</p></div>
-            <div class="amount" id="flowUsd">--</div>
+          <div class="kpi good" id="profitCard">
+            <div>
+              <div class="kpi-label">Ganancia</div>
+              <div class="kpi-value" id="profitUsdtBig">--</div>
+            </div>
+            <div class="kpi-sub" id="profitVes">-- Bs</div>
           </div>
-          <div class="step">
-            <div class="num">2</div>
-            <div><h3>Bolívares requeridos</h3><p>Tasa banco = BCV + 0.5%.</p></div>
-            <div class="amount" id="flowVes">--</div>
+
+          <div class="kpi">
+            <div>
+              <div class="kpi-label">USDT finales</div>
+              <div class="kpi-value" id="usdtFinal">--</div>
+            </div>
+            <div class="kpi-sub" id="feesSub">Tarjeta + BPay</div>
           </div>
-          <div class="step">
-            <div class="num">3</div>
-            <div><h3>Tarjeta</h3><p>Descuento porcentual sobre los USD comprados.</p></div>
-            <div class="amount negative" id="flowCard">--</div>
-          </div>
-          <div class="step">
-            <div class="num">4</div>
-            <div><h3>BPay</h3><p>Descuento porcentual después de tarjeta.</p></div>
-            <div class="amount negative" id="flowBpay">--</div>
-          </div>
-          <div class="step">
-            <div class="num">5</div>
-            <div><h3>Venta P2P/paralelo</h3><p>Valor de los USDT finales al venderlos.</p></div>
-            <div class="amount positive" id="flowReturn">--</div>
+
+          <div class="kpi">
+            <div>
+              <div class="kpi-label">ROI</div>
+              <div class="kpi-value" id="roiView">--</div>
+            </div>
+            <div class="kpi-sub" id="returnSub">Venta P2P estimada</div>
           </div>
         </div>
 
         <details>
-          <summary>Detalles y fórmula</summary>
-          <div class="details-body" id="formulaText">
-            Completa USD, BCV y P2P para ver el cálculo. El banco se calcula automáticamente como BCV × 1.005.
+          <summary>Ver desglose</summary>
+          <div class="details-body">
+            <div class="flow">
+              <div class="step"><div class="num">1</div><div><h3>Compra banco</h3><p>USD limitado por el banco.</p></div><div class="amount" id="flowUsd">--</div></div>
+              <div class="step"><div class="num">2</div><div><h3>Bs requeridos</h3><p>BCV + margen banco.</p></div><div class="amount" id="flowVes">--</div></div>
+              <div class="step"><div class="num">3</div><div><h3>Tarjeta</h3><p>Comisión sobre USD.</p></div><div class="amount negative" id="flowCard">--</div></div>
+              <div class="step"><div class="num">4</div><div><h3>BPay</h3><p>Comisión después de tarjeta.</p></div><div class="amount negative" id="flowBpay">--</div></div>
+              <div class="step"><div class="num">5</div><div><h3>Venta P2P</h3><p>Valor final en bolívares.</p></div><div class="amount positive" id="flowReturn">--</div></div>
+            </div>
+            <div id="formulaText" style="margin-top:10px">Completa USD, BCV y P2P para ver fórmula.</div>
           </div>
         </details>
       </main>
@@ -359,41 +380,72 @@
     <footer>Herramienta personal. Verifica tasas, límites y comisiones antes de operar.</footer>
   </div>
 
+  <section class="settings-panel" id="settingsPanel" aria-hidden="true">
+    <div class="settings-card">
+      <div class="settings-head">
+        <div>
+          <h2>Configuración</h2>
+          <p class="subtitle" style="max-width:none">Estos valores se guardan en este dispositivo.</p>
+        </div>
+        <button class="icon-btn" id="closeSettingsBtn" aria-label="Cerrar configuración">✕</button>
+      </div>
+
+      <div class="settings-grid">
+        <div class="field">
+          <div class="label-row"><label for="bankLimit">Límite banco</label><span class="small">Default 500</span></div>
+          <div class="input-wrap"><input id="bankLimit" type="number" inputmode="decimal" value="500" min="0" step="1"><span class="unit">USD</span></div>
+        </div>
+        <div class="field">
+          <div class="label-row"><label for="bankMargin">Margen banco</label><span class="small">BCV + %</span></div>
+          <div class="input-wrap"><input id="bankMargin" type="number" inputmode="decimal" value="0.5" min="0" step="0.1"><span class="unit">%</span></div>
+        </div>
+        <div class="field">
+          <div class="label-row"><label for="cardFee">Tarjeta</label></div>
+          <div class="input-wrap"><input id="cardFee" type="number" inputmode="decimal" value="1.5" min="0" step="0.1"><span class="unit">%</span></div>
+        </div>
+        <div class="field">
+          <div class="label-row"><label for="bpayFee">BPay</label></div>
+          <div class="input-wrap"><input id="bpayFee" type="number" inputmode="decimal" value="4.1" min="0" step="0.1"><span class="unit">%</span></div>
+        </div>
+        <div class="field">
+          <div class="label-row"><label for="bcvRate">BCV manual</label></div>
+          <div class="input-wrap"><input id="bcvRate" type="number" inputmode="decimal" placeholder="Ej: 622.31" min="0" step="0.01"><span class="unit">Bs/USD</span></div>
+        </div>
+        <div class="field">
+          <div class="label-row"><label for="p2pRate">P2P / Paralelo manual</label></div>
+          <div class="input-wrap"><input id="p2pRate" type="number" inputmode="decimal" placeholder="Ej: 768.44" min="0" step="0.01"><span class="unit">Bs/USDT</span></div>
+        </div>
+      </div>
+
+      <div class="switch-row">
+        <div><strong>Actualizar tasas al abrir</strong><span>Usa DolarApi y conserva valores manuales si falla.</span></div>
+        <input class="toggle" id="autoRates" type="checkbox" checked>
+      </div>
+
+      <div class="settings-actions">
+        <button class="btn ghost" id="clearBtn">Limpiar USD</button>
+        <button class="btn ghost" id="resetDefaultsBtn">Valores base</button>
+        <button class="btn light" id="copyBtnSettings">Copiar resumen</button>
+        <button class="btn primary" id="saveDefaultsBtn">Guardar</button>
+      </div>
+    </div>
+  </section>
+
   <script>
     const API_OFICIAL = 'https://ve.dolarapi.com/v1/dolares/oficial';
     const API_PARALELO = 'https://ve.dolarapi.com/v1/dolares/paralelo';
+    const STORE_KEY = 'bancoUsdtCalcCompactV2';
 
+    const $ = id => document.getElementById(id);
     const els = {
-      usdToBuy: document.getElementById('usdToBuy'),
-      bankLimit: document.getElementById('bankLimit'),
-      bcvRate: document.getElementById('bcvRate'),
-      p2pRate: document.getElementById('p2pRate'),
-      cardFee: document.getElementById('cardFee'),
-      bpayFee: document.getElementById('bpayFee'),
-      bcvView: document.getElementById('bcvView'),
-      bankView: document.getElementById('bankView'),
-      p2pView: document.getElementById('p2pView'),
-      lastUpdate: document.getElementById('lastUpdate'),
-      statusBox: document.getElementById('statusBox'),
-      opStatus: document.getElementById('opStatus'),
-      vesNeeded: document.getElementById('vesNeeded'),
-      vesSub: document.getElementById('vesSub'),
-      profitCard: document.getElementById('profitCard'),
-      profitVes: document.getElementById('profitVes'),
-      profitUsdt: document.getElementById('profitUsdt'),
-      usdtFinal: document.getElementById('usdtFinal'),
-      roiView: document.getElementById('roiView'),
-      roiSub: document.getElementById('roiSub'),
-      flowUsd: document.getElementById('flowUsd'),
-      flowVes: document.getElementById('flowVes'),
-      flowCard: document.getElementById('flowCard'),
-      flowBpay: document.getElementById('flowBpay'),
-      flowReturn: document.getElementById('flowReturn'),
-      formulaText: document.getElementById('formulaText'),
-      loadRatesBtn: document.getElementById('loadRatesBtn'),
-      clearBtn: document.getElementById('clearBtn'),
-      saveDefaultsBtn: document.getElementById('saveDefaultsBtn'),
-      copyBtn: document.getElementById('copyBtn')
+      usdToBuy: $('usdToBuy'), bankLimit: $('bankLimit'), bankMargin: $('bankMargin'), bcvRate: $('bcvRate'), p2pRate: $('p2pRate'),
+      cardFee: $('cardFee'), bpayFee: $('bpayFee'), autoRates: $('autoRates'), bcvView: $('bcvView'), bankView: $('bankView'), p2pView: $('p2pView'),
+      lastUpdate: $('lastUpdate'), limitHint: $('limitHint'), statusBox: $('statusBox'), opStatus: $('opStatus'), vesNeeded: $('vesNeeded'), vesSub: $('vesSub'),
+      profitCard: $('profitCard'), profitUsdtBig: $('profitUsdtBig'), profitVes: $('profitVes'), usdtFinal: $('usdtFinal'), feesSub: $('feesSub'),
+      roiView: $('roiView'), returnSub: $('returnSub'), flowUsd: $('flowUsd'), flowVes: $('flowVes'), flowCard: $('flowCard'), flowBpay: $('flowBpay'),
+      flowReturn: $('flowReturn'), formulaText: $('formulaText'), loadRatesBtn: $('loadRatesBtn'), copyBtn: $('copyBtn'), openSettingsBtn: $('openSettingsBtn'),
+      settingsPanel: $('settingsPanel'), closeSettingsBtn: $('closeSettingsBtn'), clearBtn: $('clearBtn'), saveDefaultsBtn: $('saveDefaultsBtn'),
+      resetDefaultsBtn: $('resetDefaultsBtn'), copyBtnSettings: $('copyBtnSettings'), clearBtnMobile: $('clearBtnMobile'), saveBtnMobile: $('saveBtnMobile'), copyBtnMobile: $('copyBtnMobile'), maxBtn: $('maxBtn')
     };
 
     function n(value) { return Number.parseFloat(value) || 0; }
@@ -406,36 +458,54 @@
       els.statusBox.className = 'status show ' + type;
     }
     function clearStatus() { els.statusBox.className = 'status'; els.statusBox.textContent = ''; }
-    function bankRate() { return n(els.bcvRate.value) * 1.005; }
+    function currentBankRate() { return n(els.bcvRate.value) * (1 + n(els.bankMargin.value) / 100); }
 
-    function saveState() {
+    function saveState(show = true) {
       const data = {
+        usdToBuy: els.usdToBuy.value,
         bankLimit: els.bankLimit.value,
+        bankMargin: els.bankMargin.value,
         bcvRate: els.bcvRate.value,
         p2pRate: els.p2pRate.value,
         cardFee: els.cardFee.value,
         bpayFee: els.bpayFee.value,
+        autoRates: els.autoRates.checked,
         lastUpdate: els.lastUpdate.textContent
       };
-      localStorage.setItem('bancoUsdtCalc', JSON.stringify(data));
-      setStatus('Configuración guardada.', 'ok');
+      localStorage.setItem(STORE_KEY, JSON.stringify(data));
+      if (show) setStatus('Configuración guardada.', 'ok');
     }
 
     function loadState() {
       try {
-        const data = JSON.parse(localStorage.getItem('bancoUsdtCalc') || '{}');
+        const data = JSON.parse(localStorage.getItem(STORE_KEY) || '{}');
+        if (data.usdToBuy) els.usdToBuy.value = data.usdToBuy;
         if (data.bankLimit) els.bankLimit.value = data.bankLimit;
+        if (data.bankMargin) els.bankMargin.value = data.bankMargin;
         if (data.bcvRate) els.bcvRate.value = data.bcvRate;
         if (data.p2pRate) els.p2pRate.value = data.p2pRate;
         if (data.cardFee) els.cardFee.value = data.cardFee;
         if (data.bpayFee) els.bpayFee.value = data.bpayFee;
+        if (typeof data.autoRates === 'boolean') els.autoRates.checked = data.autoRates;
         if (data.lastUpdate) els.lastUpdate.textContent = data.lastUpdate;
       } catch {}
     }
 
+    function resetDefaults() {
+      els.usdToBuy.value = '500';
+      els.bankLimit.value = '500';
+      els.bankMargin.value = '0.5';
+      els.cardFee.value = '1.5';
+      els.bpayFee.value = '4.1';
+      els.autoRates.checked = true;
+      calculate();
+      saveState(false);
+      setStatus('Valores base restaurados.', 'ok');
+    }
+
     async function loadRates() {
       els.loadRatesBtn.disabled = true;
-      els.loadRatesBtn.textContent = 'Actualizando...';
+      els.loadRatesBtn.textContent = '…';
       try {
         const [oficialRes, paraleloRes] = await Promise.all([
           fetch(API_OFICIAL, { cache: 'no-store' }),
@@ -450,13 +520,14 @@
         els.bcvRate.value = bcv.toFixed(4);
         els.p2pRate.value = p2p.toFixed(4);
         els.lastUpdate.textContent = new Date().toLocaleString('es-VE', { dateStyle: 'short', timeStyle: 'short' });
-        setStatus('Tasas actualizadas desde DolarApi. Puedes editarlas manualmente.', 'ok');
-        saveState();
+        setStatus('Tasas actualizadas desde DolarApi.', 'ok');
+        calculate();
+        saveState(false);
       } catch (err) {
-        setStatus('No se pudieron cargar las tasas. Déjalas manualmente. Detalle: ' + err.message, 'err');
+        setStatus('No se pudieron cargar las tasas. Puedes dejarlas manuales. ' + err.message, 'err');
       } finally {
         els.loadRatesBtn.disabled = false;
-        els.loadRatesBtn.textContent = 'Actualizar tasas';
+        els.loadRatesBtn.textContent = '↻';
         calculate();
       }
     }
@@ -465,20 +536,23 @@
       const requestedUsd = n(els.usdToBuy.value);
       const limitUsd = n(els.bankLimit.value) || 500;
       const bcv = n(els.bcvRate.value);
-      const bank = bankRate();
+      const bank = currentBankRate();
       const p2p = n(els.p2pRate.value);
       const cardPct = n(els.cardFee.value);
       const bpayPct = n(els.bpayFee.value);
 
+      els.limitHint.textContent = `Límite ${money(limitUsd, 0)} USD`;
       els.bcvView.textContent = bcv ? money(bcv, 2) : '--';
       els.bankView.textContent = bank ? money(bank, 2) : '--';
       els.p2pView.textContent = p2p ? money(p2p, 2) : '--';
 
       if (!requestedUsd || !bcv || !p2p) {
         els.opStatus.textContent = 'Esperando datos';
-        ['vesNeeded','profitVes','usdtFinal','roiView','flowUsd','flowVes','flowCard','flowBpay','flowReturn'].forEach(id => els[id].textContent = '--');
-        els.profitUsdt.textContent = '-- USDT equivalentes';
-        els.formulaText.textContent = 'Completa USD, BCV y P2P para ver el cálculo. El banco se calcula automáticamente como BCV × 1.005.';
+        ['vesNeeded','profitUsdtBig','profitVes','usdtFinal','roiView','flowUsd','flowVes','flowCard','flowBpay','flowReturn'].forEach(id => els[id].textContent = '--');
+        els.feesSub.textContent = 'Tarjeta + BPay';
+        els.returnSub.textContent = 'Venta P2P estimada';
+        els.vesSub.textContent = 'Para comprar USD al banco';
+        els.formulaText.textContent = 'Completa USD, BCV y P2P para ver fórmula.';
         return null;
       }
 
@@ -491,18 +565,19 @@
       const usdtFinal = afterCard - bpayFeeUsd;
       const vesReturn = usdtFinal * p2p;
       const profitVes = vesReturn - vesNeeded;
-      const profitUsdt = p2p ? profitVes / p2p : 0;
+      const profitUsdt = profitVes / p2p;
       const roi = vesNeeded ? (profitVes / vesNeeded) * 100 : 0;
       const totalFeesUsd = cardFeeUsd + bpayFeeUsd;
 
-      els.opStatus.textContent = profitVes >= 0 ? 'Operación rentable' : 'Operación en pérdida';
+      els.opStatus.textContent = profitVes >= 0 ? 'Rentable' : 'Pérdida';
       els.vesNeeded.textContent = money(vesNeeded, 2);
-      els.vesSub.textContent = usdBlocked > 0 ? `Se usan ${money(usdUsed, 2)} USD. Exceso: ${money(usdBlocked, 2)} USD.` : `Para comprar ${money(usdUsed, 2)} USD.`;
+      els.vesSub.textContent = usdBlocked > 0 ? `Se usan ${money(usdUsed, 2)} USD · exceso ${money(usdBlocked, 2)} USD` : `Para ${money(usdUsed, 2)} USD al banco`;
       els.usdtFinal.textContent = money(usdtFinal, 2);
-      els.profitVes.textContent = (profitVes >= 0 ? '+' : '') + money(profitVes, 2);
-      els.profitUsdt.textContent = (profitUsdt >= 0 ? '+' : '') + money(profitUsdt, 2) + ' USDT equivalentes';
+      els.profitUsdtBig.textContent = (profitUsdt >= 0 ? '+' : '') + money(profitUsdt, 2);
+      els.profitVes.textContent = (profitVes >= 0 ? '+' : '') + money(profitVes, 2) + ' Bs';
       els.roiView.textContent = (roi >= 0 ? '+' : '') + money(roi, 2) + '%';
-      els.roiSub.textContent = `Comisiones: ${money(totalFeesUsd, 2)} USD`;
+      els.feesSub.textContent = `Comisiones ${money(totalFeesUsd, 2)} USD`;
+      els.returnSub.textContent = `${money(vesReturn, 2)} Bs al P2P`;
       els.flowUsd.textContent = money(usdUsed, 2) + ' USD';
       els.flowVes.textContent = money(vesNeeded, 2) + ' Bs';
       els.flowCard.textContent = '-' + money(cardFeeUsd, 2) + ' USD';
@@ -511,41 +586,51 @@
       els.profitCard.className = profitVes >= 0 ? 'kpi good' : 'kpi bad';
 
       if (usdBlocked > 0) {
-        setStatus(`El banco limita la compra a ${money(limitUsd, 2)} USD. Se ignoraron ${money(usdBlocked, 2)} USD del monto solicitado.`, 'warn');
+        setStatus(`Límite aplicado: se usan ${money(limitUsd, 2)} USD y se ignoran ${money(usdBlocked, 2)} USD.`, 'warn');
       } else if (els.statusBox.classList.contains('warn')) {
         clearStatus();
       }
 
       els.formulaText.innerHTML = `
-        <strong>Tasa banco:</strong> ${money(bcv, 4)} × 1.005 = ${money(bank, 4)} Bs/USD.<br>
+        <strong>Tasa banco:</strong> ${money(bcv, 4)} × ${(1 + n(els.bankMargin.value) / 100).toFixed(4)} = ${money(bank, 4)} Bs/USD.<br>
         <strong>Bs necesarios:</strong> ${money(usdUsed, 2)} × ${money(bank, 4)} = ${money(vesNeeded, 2)} Bs.<br>
         <strong>USDT final:</strong> ${money(usdUsed, 2)} - ${money(cardFeeUsd, 2)} tarjeta - ${money(bpayFeeUsd, 2)} BPay = ${money(usdtFinal, 2)} USDT.<br>
         <strong>Retorno P2P:</strong> ${money(usdtFinal, 2)} × ${money(p2p, 4)} = ${money(vesReturn, 2)} Bs.
       `;
 
-      return { usdUsed, usdBlocked, vesNeeded, usdtFinal, vesReturn, profitVes, profitUsdt, roi, bank, bcv, p2p, cardPct, bpayPct };
+      return { usdUsed, usdBlocked, vesNeeded, usdtFinal, vesReturn, profitVes, profitUsdt, roi, bank, bcv, p2p, cardPct, bpayPct, totalFeesUsd };
     }
 
     function copySummary() {
       const r = calculate();
-      if (!r) { setStatus('Completa los datos antes de copiar el resumen.', 'warn'); return; }
-      const text = `Compra banco: ${money(r.usdUsed, 2)} USD\nTasa BCV: ${money(r.bcv, 4)} Bs\nTasa banco BCV+0.5%: ${money(r.bank, 4)} Bs\nBs necesarios: ${money(r.vesNeeded, 2)} Bs\nUSDT final tras tarjeta+BPay: ${money(r.usdtFinal, 2)} USDT\nP2P/paralelo: ${money(r.p2p, 4)} Bs\nRetorno estimado: ${money(r.vesReturn, 2)} Bs\nGanancia: ${(r.profitVes >= 0 ? '+' : '') + money(r.profitVes, 2)} Bs (${(r.profitUsdt >= 0 ? '+' : '') + money(r.profitUsdt, 2)} USDT)\nROI: ${(r.roi >= 0 ? '+' : '') + money(r.roi, 2)}%`;
+      if (!r) { setStatus('Completa los datos antes de copiar.', 'warn'); return; }
+      const text = `Compra banco: ${money(r.usdUsed, 2)} USD\nTasa BCV: ${money(r.bcv, 4)} Bs\nTasa banco: ${money(r.bank, 4)} Bs\nBs necesarios: ${money(r.vesNeeded, 2)} Bs\nUSDT final: ${money(r.usdtFinal, 2)} USDT\nP2P/paralelo: ${money(r.p2p, 4)} Bs\nRetorno: ${money(r.vesReturn, 2)} Bs\nGanancia: ${(r.profitVes >= 0 ? '+' : '') + money(r.profitVes, 2)} Bs (${(r.profitUsdt >= 0 ? '+' : '') + money(r.profitUsdt, 2)} USDT)\nROI: ${(r.roi >= 0 ? '+' : '') + money(r.roi, 2)}%`;
       navigator.clipboard.writeText(text).then(() => setStatus('Resumen copiado.', 'ok')).catch(() => setStatus('No se pudo copiar automáticamente.', 'err'));
     }
 
-    function clearOperation() {
-      els.usdToBuy.value = '';
-      clearStatus();
-      calculate();
-    }
+    function clearOperation() { els.usdToBuy.value = ''; clearStatus(); calculate(); saveState(false); }
+    function openSettings() { els.settingsPanel.classList.add('open'); els.settingsPanel.setAttribute('aria-hidden','false'); }
+    function closeSettings() { els.settingsPanel.classList.remove('open'); els.settingsPanel.setAttribute('aria-hidden','true'); }
 
-    ['usdToBuy','bankLimit','bcvRate','p2pRate','cardFee','bpayFee'].forEach(key => {
-      els[key].addEventListener('input', calculate);
+    ['usdToBuy','bankLimit','bankMargin','bcvRate','p2pRate','cardFee','bpayFee','autoRates'].forEach(key => {
+      els[key].addEventListener('input', () => { calculate(); saveState(false); });
+      els[key].addEventListener('change', () => { calculate(); saveState(false); });
     });
+    document.querySelectorAll('[data-quick]').forEach(btn => btn.addEventListener('click', () => { els.usdToBuy.value = btn.dataset.quick; calculate(); saveState(false); }));
+    els.maxBtn.addEventListener('click', () => { els.usdToBuy.value = n(els.bankLimit.value) || 500; calculate(); saveState(false); });
     els.loadRatesBtn.addEventListener('click', loadRates);
-    els.saveDefaultsBtn.addEventListener('click', saveState);
     els.copyBtn.addEventListener('click', copySummary);
+    els.copyBtnMobile.addEventListener('click', copySummary);
+    els.copyBtnSettings.addEventListener('click', copySummary);
     els.clearBtn.addEventListener('click', clearOperation);
+    els.clearBtnMobile.addEventListener('click', clearOperation);
+    els.saveDefaultsBtn.addEventListener('click', () => saveState(true));
+    els.saveBtnMobile.addEventListener('click', () => saveState(true));
+    els.resetDefaultsBtn.addEventListener('click', resetDefaults);
+    els.openSettingsBtn.addEventListener('click', openSettings);
+    els.closeSettingsBtn.addEventListener('click', closeSettings);
+    els.settingsPanel.addEventListener('click', e => { if (e.target === els.settingsPanel) closeSettings(); });
+    window.addEventListener('keydown', e => { if (e.key === 'Escape') closeSettings(); });
 
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => navigator.serviceWorker.register('./service-worker.js').catch(() => {}));
@@ -553,6 +638,7 @@
 
     loadState();
     calculate();
+    window.addEventListener('load', () => { if (els.autoRates.checked) loadRates().catch(() => {}); });
   </script>
 </body>
 </html>
