@@ -9,6 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,400,0,0" rel="stylesheet">
   <style>
     :root {
       color-scheme: dark;
@@ -123,6 +124,15 @@
 
     .hero-input input { font-size: 1.45rem; min-height: 54px; padding-right: 86px; }
     .quick-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 7px; margin-top: 8px; }
+    .limit-presets { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; margin-top: 8px; }
+    .material-symbols-rounded { font-family: 'Material Symbols Rounded'; font-weight: normal; font-style: normal; font-size: 20px; line-height: 1; letter-spacing: normal; text-transform: none; display: inline-block; white-space: nowrap; word-wrap: normal; direction: ltr; -webkit-font-feature-settings: 'liga'; -webkit-font-smoothing: antialiased; }
+    .icon-btn .material-symbols-rounded, .tiny-icon .material-symbols-rounded { pointer-events: none; }
+    .compact-actions { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+    .tiny-icon { width: 38px; height: 38px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface-2); color: var(--text); display: grid; place-items: center; cursor: pointer; transition: transform .15s, background .15s, border-color .15s; }
+    .tiny-icon:hover { background: var(--surface-3); border-color: #5f6368; transform: translateY(-1px); }
+    .tiny-icon:active { transform: translateY(0); }
+    .auto-save-note { margin-top: 12px; display: flex; align-items: center; gap: 8px; color: var(--green); background: rgba(18, 53, 34, .65); border: 1px solid rgba(129, 201, 149, .22); padding: 9px 10px; border-radius: 14px; font-size: .78rem; font-weight: 700; }
+    .auto-save-note .material-symbols-rounded { font-size: 18px; }
     .chip-btn {
       min-height: 34px;
       border-radius: 999px;
@@ -225,7 +235,7 @@
     .settings-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 12px; }
     .settings-head h2 { margin: 0; font-size: 1.2rem; letter-spacing: -.04em; }
     .settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-    .settings-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; margin-top: 12px; }
+    .settings-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
     .switch-row {
       display: flex; align-items: center; justify-content: space-between; gap: 12px;
       padding: 11px; border-radius: 16px; background: var(--surface-2); border: 1px solid var(--line); margin-top: 10px;
@@ -251,7 +261,7 @@
       .rates-compact { gap: 6px; }
       .rate-mini { padding: 8px; border-radius: 14px; }
       .rate-mini strong { font-size: .82rem; }
-      .mobile-main-actions { display: grid; }
+      .mobile-main-actions { display: flex; }
       .flow { display: none; }
       .settings-grid { grid-template-columns: 1fr; gap: 8px; }
       .settings-card { margin: 0 auto; border-radius: 22px; }
@@ -276,9 +286,10 @@
         </div>
       </div>
       <div class="icon-actions">
-        <button class="icon-btn" id="loadRatesBtn" title="Actualizar tasas" aria-label="Actualizar tasas">↻</button>
-        <button class="icon-btn" id="copyBtn" title="Copiar resumen" aria-label="Copiar resumen">⧉</button>
-        <button class="icon-btn" id="openSettingsBtn" title="Configuración" aria-label="Configuración">⚙</button>
+        <button class="icon-btn" id="loadRatesBtn" title="Actualizar tasas" aria-label="Actualizar tasas"><span class="material-symbols-rounded">sync</span></button>
+        <button class="icon-btn" id="copyBtn" title="Copiar resumen" aria-label="Copiar resumen"><span class="material-symbols-rounded">content_copy</span></button>
+        <button class="icon-btn" id="clearBtnTop" title="Limpiar operación" aria-label="Limpiar operación"><span class="material-symbols-rounded">mop</span></button>
+        <button class="icon-btn" id="openSettingsBtn" title="Configuración" aria-label="Configuración"><span class="material-symbols-rounded">settings</span></button>
       </div>
     </header>
 
@@ -299,9 +310,9 @@
             <span class="unit">USD</span>
           </div>
           <div class="quick-row">
-            <button class="chip-btn" data-quick="100">100</button>
-            <button class="chip-btn" data-quick="250">250</button>
+            <button class="chip-btn" data-quick="200">200</button>
             <button class="chip-btn" data-quick="500">500</button>
+            <button class="chip-btn" data-quick="1000">1000</button>
             <button class="chip-btn" id="maxBtn">MAX</button>
           </div>
         </div>
@@ -314,10 +325,10 @@
 
         <div class="status" id="statusBox"></div>
 
-        <div class="mobile-main-actions">
-          <button class="tiny-action" id="clearBtnMobile">Limpiar</button>
-          <button class="tiny-action" id="saveBtnMobile">Guardar</button>
-          <button class="tiny-action" id="copyBtnMobile">Copiar</button>
+        <div class="mobile-main-actions compact-actions" aria-label="Acciones rápidas">
+          <button class="tiny-icon" id="clearBtnMobile" title="Limpiar operación" aria-label="Limpiar operación"><span class="material-symbols-rounded">mop</span></button>
+          <button class="tiny-icon" id="copyBtnMobile" title="Copiar resumen" aria-label="Copiar resumen"><span class="material-symbols-rounded">content_copy</span></button>
+          <button class="tiny-icon" id="loadRatesBtnMobile" title="Actualizar tasas" aria-label="Actualizar tasas"><span class="material-symbols-rounded">sync</span></button>
         </div>
       </section>
 
@@ -387,13 +398,18 @@
           <h2>Configuración</h2>
           <p class="subtitle" style="max-width:none">Estos valores se guardan en este dispositivo.</p>
         </div>
-        <button class="icon-btn" id="closeSettingsBtn" aria-label="Cerrar configuración">✕</button>
+        <button class="icon-btn" id="closeSettingsBtn" title="Cerrar" aria-label="Cerrar configuración"><span class="material-symbols-rounded">close</span></button>
       </div>
 
       <div class="settings-grid">
         <div class="field">
           <div class="label-row"><label for="bankLimit">Límite banco</label><span class="small">Default 500</span></div>
           <div class="input-wrap"><input id="bankLimit" type="number" inputmode="decimal" value="500" min="0" step="1"><span class="unit">USD</span></div>
+          <div class="limit-presets">
+            <button class="chip-btn" data-limit="200" title="Usar límite 200 USD">200</button>
+            <button class="chip-btn" data-limit="500" title="Usar límite 500 USD">500</button>
+            <button class="chip-btn" data-limit="1000" title="Usar límite 1000 USD">1000</button>
+          </div>
         </div>
         <div class="field">
           <div class="label-row"><label for="bankMargin">Margen banco</label><span class="small">BCV + %</span></div>
@@ -422,11 +438,12 @@
         <input class="toggle" id="autoRates" type="checkbox" checked>
       </div>
 
-      <div class="settings-actions">
-        <button class="btn ghost" id="clearBtn">Limpiar USD</button>
-        <button class="btn ghost" id="resetDefaultsBtn">Valores base</button>
-        <button class="btn light" id="copyBtnSettings">Copiar resumen</button>
-        <button class="btn primary" id="saveDefaultsBtn">Guardar</button>
+      <div class="auto-save-note"><span class="material-symbols-rounded">check_circle</span> Los cambios se guardan automáticamente.</div>
+      <div class="settings-actions compact-actions">
+        <button class="tiny-icon" id="clearBtn" title="Limpiar USD" aria-label="Limpiar USD"><span class="material-symbols-rounded">mop</span></button>
+        <button class="tiny-icon" id="resetDefaultsBtn" title="Restaurar valores base" aria-label="Restaurar valores base"><span class="material-symbols-rounded">restart_alt</span></button>
+        <button class="tiny-icon" id="copyBtnSettings" title="Copiar resumen" aria-label="Copiar resumen"><span class="material-symbols-rounded">content_copy</span></button>
+        <button class="tiny-icon" id="loadRatesBtnSettings" title="Actualizar tasas" aria-label="Actualizar tasas"><span class="material-symbols-rounded">sync</span></button>
       </div>
     </div>
   </section>
@@ -444,8 +461,8 @@
       profitCard: $('profitCard'), profitUsdtBig: $('profitUsdtBig'), profitVes: $('profitVes'), usdtFinal: $('usdtFinal'), feesSub: $('feesSub'),
       roiView: $('roiView'), returnSub: $('returnSub'), flowUsd: $('flowUsd'), flowVes: $('flowVes'), flowCard: $('flowCard'), flowBpay: $('flowBpay'),
       flowReturn: $('flowReturn'), formulaText: $('formulaText'), loadRatesBtn: $('loadRatesBtn'), copyBtn: $('copyBtn'), openSettingsBtn: $('openSettingsBtn'),
-      settingsPanel: $('settingsPanel'), closeSettingsBtn: $('closeSettingsBtn'), clearBtn: $('clearBtn'), saveDefaultsBtn: $('saveDefaultsBtn'),
-      resetDefaultsBtn: $('resetDefaultsBtn'), copyBtnSettings: $('copyBtnSettings'), clearBtnMobile: $('clearBtnMobile'), saveBtnMobile: $('saveBtnMobile'), copyBtnMobile: $('copyBtnMobile'), maxBtn: $('maxBtn')
+      settingsPanel: $('settingsPanel'), closeSettingsBtn: $('closeSettingsBtn'), clearBtn: $('clearBtn'), clearBtnTop: $('clearBtnTop'),
+      resetDefaultsBtn: $('resetDefaultsBtn'), copyBtnSettings: $('copyBtnSettings'), clearBtnMobile: $('clearBtnMobile'), copyBtnMobile: $('copyBtnMobile'), maxBtn: $('maxBtn'), loadRatesBtnMobile: $('loadRatesBtnMobile'), loadRatesBtnSettings: $('loadRatesBtnSettings')
     };
 
     function n(value) { return Number.parseFloat(value) || 0; }
@@ -505,7 +522,9 @@
 
     async function loadRates() {
       els.loadRatesBtn.disabled = true;
-      els.loadRatesBtn.textContent = '…';
+      els.loadRatesBtn.innerHTML = '<span class="material-symbols-rounded">hourglass_top</span>';
+      if (els.loadRatesBtnMobile) els.loadRatesBtnMobile.disabled = true;
+      if (els.loadRatesBtnSettings) els.loadRatesBtnSettings.disabled = true;
       try {
         const [oficialRes, paraleloRes] = await Promise.all([
           fetch(API_OFICIAL, { cache: 'no-store' }),
@@ -527,7 +546,9 @@
         setStatus('No se pudieron cargar las tasas. Puedes dejarlas manuales. ' + err.message, 'err');
       } finally {
         els.loadRatesBtn.disabled = false;
-        els.loadRatesBtn.textContent = '↻';
+        els.loadRatesBtn.innerHTML = '<span class="material-symbols-rounded">sync</span>';
+        if (els.loadRatesBtnMobile) els.loadRatesBtnMobile.disabled = false;
+        if (els.loadRatesBtnSettings) els.loadRatesBtnSettings.disabled = false;
         calculate();
       }
     }
@@ -617,15 +638,17 @@
       els[key].addEventListener('change', () => { calculate(); saveState(false); });
     });
     document.querySelectorAll('[data-quick]').forEach(btn => btn.addEventListener('click', () => { els.usdToBuy.value = btn.dataset.quick; calculate(); saveState(false); }));
+    document.querySelectorAll('[data-limit]').forEach(btn => btn.addEventListener('click', () => { els.bankLimit.value = btn.dataset.limit; calculate(); saveState(false); setStatus('Límite actualizado a ' + btn.dataset.limit + ' USD.', 'ok'); }));
     els.maxBtn.addEventListener('click', () => { els.usdToBuy.value = n(els.bankLimit.value) || 500; calculate(); saveState(false); });
     els.loadRatesBtn.addEventListener('click', loadRates);
+    els.loadRatesBtnMobile.addEventListener('click', loadRates);
+    els.loadRatesBtnSettings.addEventListener('click', loadRates);
     els.copyBtn.addEventListener('click', copySummary);
     els.copyBtnMobile.addEventListener('click', copySummary);
     els.copyBtnSettings.addEventListener('click', copySummary);
     els.clearBtn.addEventListener('click', clearOperation);
+    els.clearBtnTop.addEventListener('click', clearOperation);
     els.clearBtnMobile.addEventListener('click', clearOperation);
-    els.saveDefaultsBtn.addEventListener('click', () => saveState(true));
-    els.saveBtnMobile.addEventListener('click', () => saveState(true));
     els.resetDefaultsBtn.addEventListener('click', resetDefaults);
     els.openSettingsBtn.addEventListener('click', openSettings);
     els.closeSettingsBtn.addEventListener('click', closeSettings);
