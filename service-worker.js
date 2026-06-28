@@ -1,16 +1,16 @@
-const CACHE_NAME = 'calculadora-usdt-v3';
+const CACHE_NAME = 'calculadora-usdt-v4';
 const FILES_TO_CACHE = [
-  './',
-  './index.html',
-  './manifest.json',
-  './css/style.css',
-  './js/app.js',
-  './js/api.js',
-  './js/calculator.js',
-  './js/storage.js',
-  './js/ui.js',
-  './js/utils.js',
-  './assets/icon.svg'
+  '/',
+  '/index.html',
+  '/manifest.json',
+  '/css/style.css',
+  '/js/app.js',
+  '/js/api.js',
+  '/js/calculator.js',
+  '/js/storage.js',
+  '/js/ui.js',
+  '/js/utils.js',
+  '/assets/icon.svg'
 ];
 
 self.addEventListener('install', event => {
@@ -27,5 +27,22 @@ self.addEventListener('activate', event => {
 
 self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET') return;
+
+  const requestUrl = new URL(event.request.url);
+  if (requestUrl.origin !== self.location.origin) return;
+
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request)
+        .then(response => {
+          const responseClone = response.clone();
+          caches.open(CACHE_NAME).then(cache => cache.put('/index.html', responseClone));
+          return response;
+        })
+        .catch(() => caches.match('/index.html'))
+    );
+    return;
+  }
+
   event.respondWith(caches.match(event.request).then(cached => cached || fetch(event.request)));
 });
