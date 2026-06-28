@@ -1,12 +1,11 @@
 {
   "name": "Calculadora Banco a USDT",
   "short_name": "Banco USDT",
-  "description": "Calculadora PWA para compras USD banco, comisiones BPay y retorno P2P.",
   "start_url": "./",
   "display": "standalone",
   "background_color": "#121212",
   "theme_color": "#1f1f1f",
   "icons": [
-    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+    { "src": "assets/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
   ]
 }
