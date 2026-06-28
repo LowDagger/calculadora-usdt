@@ -421,7 +421,7 @@
 
       <div class="settings-grid">
         <div class="field">
-          <div class="label-row"><label for="bankLimit">Límite banco</label><span class="small">Default 500</span></div>
+          <div class="label-row"><label for="bankLimit">Límite banco</label><span class="small">Default 1000</span></div>
           <div class="input-wrap"><input id="bankLimit" type="number" inputmode="decimal" value="500" min="0" step="1"><span class="unit">USD</span></div>
           <div class="limit-presets">
             <button class="chip-btn" data-limit="200" title="Usar límite 200 USD">200</button>
@@ -691,5 +691,9 @@
       if (els.autoRates.checked) loadRates().catch(() => {});
     });
   </script>
+  
+  <script defer src="/_vercel/insights/script.js"></script>
+<script defer src="/_vercel/speed-insights/script.js"></script>
+
 </body>
 </html>
