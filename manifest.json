@@ -1,0 +1,17 @@
+{
+  "name": "Calculadora Banco a USDT",
+  "short_name": "Banco USDT",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#121212",
+  "theme_color": "#121212",
+  "description": "Calculadora simple para compra de USD en banco, comisiones y retorno USDT/P2P.",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
