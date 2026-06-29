@@ -8,8 +8,31 @@ export const els = {
   roiView: $('roiView'), returnSub: $('returnSub'), flowUsd: $('flowUsd'), flowVes: $('flowVes'), flowCard: $('flowCard'), flowBpay: $('flowBpay'),
   flowReturn: $('flowReturn'), formulaText: $('formulaText'), loadRatesBtn: $('loadRatesBtn'), copyBtn: $('copyBtn'), openSettingsBtn: $('openSettingsBtn'),
   settingsPanel: $('settingsPanel'), closeSettingsBtn: $('closeSettingsBtn'), clearBtn: $('clearBtn'), clearBtnTop: $('clearBtnTop'),
-  resetDefaultsBtn: $('resetDefaultsBtn'), copyBtnSettings: $('copyBtnSettings'), clearBtnMobile: $('clearBtnMobile'), copyBtnMobile: $('copyBtnMobile'), maxBtn: $('maxBtn'), loadRatesBtnMobile: $('loadRatesBtnMobile'), loadRatesBtnSettings: $('loadRatesBtnSettings')
+  resetDefaultsBtn: $('resetDefaultsBtn'), copyBtnSettings: $('copyBtnSettings'), clearBtnMobile: $('clearBtnMobile'), copyBtnMobile: $('copyBtnMobile'), maxBtn: $('maxBtn'), loadRatesBtnMobile: $('loadRatesBtnMobile'), loadRatesBtnSettings: $('loadRatesBtnSettings'),
+  // New elements
+  breakdownAmount: $('breakdownAmount'),
+  statusPill: $('statusPill'),
+  statusPillText: $('statusPillText'),
+  bottomTimestamp: $('bottomTimestamp')
 };
+
+export function updateUsdToBuyDisplay(value) {
+  const displayEl = document.getElementById('usdToBuyDisplay');
+  if (!displayEl) return;
+  const numPart = displayEl.querySelector('.num-part');
+  if (numPart) {
+    numPart.textContent = value || '0';
+  }
+  
+  // Highlight active chips
+  document.querySelectorAll('[data-quick]').forEach(btn => {
+    if (btn.dataset.quick === value) {
+      btn.classList.add('active');
+    } else {
+      btn.classList.remove('active');
+    }
+  });
+}
 
 export function setStatus(text, type = 'ok') {
   els.statusBox.textContent = text;
@@ -37,6 +60,18 @@ export function renderEmpty() {
   els.returnSub.textContent = 'Venta P2P estimada';
   els.vesSub.textContent = 'Para comprar USD al banco';
   els.formulaText.textContent = 'Completa USD, BCV y P2P para ver fórmula.';
+  if (els.breakdownAmount) els.breakdownAmount.textContent = '-- USD';
+  
+  updateUsdToBuyDisplay(els.usdToBuy.value);
+  
+  // Reset bottom status bar
+  if (els.statusPill && els.statusPillText) {
+    els.statusPillText.textContent = '--';
+    els.statusPill.className = 'status-pill';
+  }
+  if (els.bottomTimestamp) {
+    els.bottomTimestamp.textContent = '--';
+  }
 }
 
 export function renderRates({ bcv, bank, p2p, limitUsd }) {
@@ -63,13 +98,29 @@ export function renderResult(r) {
   els.flowCard.textContent = '-' + money(r.cardFeeUsd, 2) + ' USD';
   els.flowBpay.textContent = '-' + money(r.bpayFeeUsd, 2) + ' USD';
   els.flowReturn.textContent = money(r.vesReturn, 2) + ' Bs';
-  els.profitCard.className = r.profitVes >= 0 ? 'kpi good' : 'kpi bad';
+  els.profitCard.className = r.profitVes >= 0 ? 'kpi-card kpi-highlight' : 'kpi-card kpi-highlight kpi-loss';
   els.formulaText.innerHTML = `
     <strong>Tasa banco:</strong> ${money(r.bcv, 4)} × ${(1 + n(els.bankMargin.value) / 100).toFixed(4)} = ${money(r.bank, 4)} Bs/USD.<br>
     <strong>Bs necesarios:</strong> ${money(r.usdUsed, 2)} × ${money(r.bank, 4)} = ${money(r.vesNeeded, 2)} Bs.<br>
     <strong>USDT final:</strong> ${money(r.usdUsed, 2)} - ${money(r.cardFeeUsd, 2)} tarjeta - ${money(r.bpayFeeUsd, 2)} BPay = ${money(r.usdtFinal, 2)} USDT.<br>
     <strong>Retorno P2P:</strong> ${money(r.usdtFinal, 2)} × ${money(r.p2p, 4)} = ${money(r.vesReturn, 2)} Bs.
   `;
+  
+  if (els.breakdownAmount) {
+    els.breakdownAmount.textContent = money(r.usdUsed, 2) + ' USD';
+  }
+  
+  updateUsdToBuyDisplay(els.usdToBuy.value);
+  
+  // Update bottom status pill
+  const isProfitable = r.profitVes >= 0;
+  if (els.statusPill && els.statusPillText) {
+    els.statusPillText.textContent = isProfitable ? 'Rentable' : 'Pérdida';
+    els.statusPill.className = 'status-pill ' + (isProfitable ? 'profitable' : 'loss');
+  }
+  if (els.bottomTimestamp) {
+    els.bottomTimestamp.textContent = els.lastUpdate.textContent.replace(', ', ' · ');
+  }
 }
 
 export function openSettings() {

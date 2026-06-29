@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="theme-color" content="#1f1f1f" />
+  <meta name="theme-color" content="#0e0f11" />
   <title>Calculadora Banco a USDT</title>
   <link rel="manifest" href="/manifest.json" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -16,113 +16,129 @@
   <div class="app">
     <header class="topbar">
       <div class="brand">
-        <div class="logo">USDT</div>
-        <div>
-          <h1>Banco → USDT</h1>
-          <p class="subtitle">BCV automático · P2P editable · comisiones guardadas</p>
-        </div>
+        <h1 class="brand-title">Banco <span class="divider">|</span> USDT</h1>
+        <p class="subtitle">BCV automático · P2P editable</p>
       </div>
       <div class="icon-actions">
-        <button class="icon-btn" id="loadRatesBtn" title="Actualizar tasas" aria-label="Actualizar tasas"><span class="material-symbols-rounded">sync</span></button>
         <button class="icon-btn" id="copyBtn" title="Copiar resumen" aria-label="Copiar resumen"><span class="material-symbols-rounded">content_copy</span></button>
-        <button class="icon-btn" id="clearBtnTop" title="Limpiar operación" aria-label="Limpiar operación"><span class="material-symbols-rounded">mop</span></button>
-        <button class="icon-btn" id="openSettingsBtn" title="Configuración" aria-label="Configuración"><span class="material-symbols-rounded">settings</span></button>
+        <button class="icon-btn" id="loadRatesBtn" title="Actualizar tasas" aria-label="Actualizar tasas"><span class="material-symbols-rounded">sync</span></button>
+        <button class="icon-btn" id="openSettingsBtn" title="Configuración" aria-label="Configuración"><span class="material-symbols-rounded">tune</span></button>
       </div>
     </header>
 
     <div class="layout">
-      <section class="card operation-card">
-        <div class="card-title">
-          <h2>Operación</h2>
-          <span class="small" id="lastUpdate">Sin actualizar</span>
+      <!-- Card 1: Calculator input card -->
+      <section class="card calculator-card">
+        <div class="calculator-header">
+          <span class="calculator-label">USD A COMPRAR</span>
+          <span class="calculator-limit" id="limitHint">Límite -- USD</span>
         </div>
-
-        <div class="field hero-input">
-          <div class="label-row">
-            <label for="usdToBuy">USD que quieres comprar</label>
-            <span class="small" id="limitHint">Límite 500 USD</span>
-          </div>
-          <div class="input-wrap">
-            <input id="usdToBuy" type="number" inputmode="decimal" value="500" min="0" step="0.01" />
-            <span class="unit">USD</span>
-          </div>
-          <div class="quick-row">
-            <button class="chip-btn" data-quick="200">200</button>
-            <button class="chip-btn" data-quick="500">500</button>
-            <button class="chip-btn" data-quick="1000">1000</button>
-            <button class="chip-btn" id="maxBtn">MAX</button>
+        
+        <div class="calculator-display-wrap">
+          <input id="usdToBuy" type="number" inputmode="decimal" value="500" min="0" step="0.01" autocomplete="off" />
+          <div class="calculator-display" id="usdToBuyDisplay">
+            <span class="num-part">500</span>
+            <span class="unit-part">USD</span>
+            <span class="custom-cursor"></span>
           </div>
         </div>
 
-        <div class="rates-compact">
-          <div class="rate-mini"><span>BCV</span><strong id="bcvView">--</strong></div>
-          <div class="rate-mini"><span>Banco</span><strong id="bankView">--</strong></div>
-          <div class="rate-mini"><span>P2P</span><strong id="p2pView">--</strong></div>
-        </div>
-
-        <div class="status" id="statusBox"></div>
-
-        <div class="mobile-main-actions compact-actions" aria-label="Acciones rápidas">
-          <button class="tiny-icon" id="clearBtnMobile" title="Limpiar operación" aria-label="Limpiar operación"><span class="material-symbols-rounded">mop</span></button>
-          <button class="tiny-icon" id="copyBtnMobile" title="Copiar resumen" aria-label="Copiar resumen"><span class="material-symbols-rounded">content_copy</span></button>
-          <button class="tiny-icon" id="loadRatesBtnMobile" title="Actualizar tasas" aria-label="Actualizar tasas"><span class="material-symbols-rounded">sync</span></button>
+        <div class="quick-row">
+          <button class="chip-btn" data-quick="100">100</button>
+          <button class="chip-btn" data-quick="500">500</button>
+          <button class="chip-btn" data-quick="1000">1000</button>
         </div>
       </section>
 
-      <main class="card result-card">
-        <div class="card-title">
-          <h2>Resultado</h2>
-          <span class="small" id="opStatus">Esperando datos</span>
+      <!-- Card 2: Rates grid (4 columns) -->
+      <div class="rates-grid">
+        <div class="rate-card">
+          <span class="rate-label">BCV</span>
+          <strong class="rate-val" id="bcvView">--</strong>
+        </div>
+        <div class="rate-card">
+          <span class="rate-label">BANCO</span>
+          <strong class="rate-val" id="bankView">--</strong>
+        </div>
+        <div class="rate-card">
+          <span class="rate-label">P2P</span>
+          <strong class="rate-val" id="p2pView">--</strong>
+        </div>
+        <div class="rate-card updated-card">
+          <span class="rate-label">ACTUALIZADO</span>
+          <strong class="rate-val updated-time" id="lastUpdate">Sin actualizar</strong>
+        </div>
+      </div>
+
+      <!-- Card 3: Results KPI grid (2x2) -->
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <span class="kpi-label">BS NECESARIOS</span>
+          <strong class="kpi-val" id="vesNeeded">--</strong>
+          <span class="kpi-desc" id="vesSub">Para comprar USD al banco</span>
         </div>
 
-        <div class="kpi-grid">
-          <div class="kpi primary">
-            <div>
-              <div class="kpi-label">Bs necesarios</div>
-              <div class="kpi-value" id="vesNeeded">--</div>
-            </div>
-            <div class="kpi-sub" id="vesSub">Para comprar USD al banco</div>
-          </div>
-
-          <div class="kpi good" id="profitCard">
-            <div>
-              <div class="kpi-label">Ganancia</div>
-              <div class="kpi-value" id="profitUsdtBig">--</div>
-            </div>
-            <div class="kpi-sub" id="profitVes">-- Bs</div>
-          </div>
-
-          <div class="kpi">
-            <div>
-              <div class="kpi-label">USDT finales</div>
-              <div class="kpi-value" id="usdtFinal">--</div>
-            </div>
-            <div class="kpi-sub" id="feesSub">Tarjeta + BPay</div>
-          </div>
-
-          <div class="kpi">
-            <div>
-              <div class="kpi-label">ROI</div>
-              <div class="kpi-value" id="roiView">--</div>
-            </div>
-            <div class="kpi-sub" id="returnSub">Venta P2P estimada</div>
-          </div>
+        <div class="kpi-card kpi-highlight" id="profitCard">
+          <span class="kpi-label">GANANCIA</span>
+          <strong class="kpi-val" id="profitUsdtBig">--</strong>
+          <span class="kpi-desc" id="profitVes">-- Bs</span>
         </div>
 
-        <details>
-          <summary>Ver desglose</summary>
-          <div class="details-body">
-            <div class="flow">
-              <div class="step"><div class="num">1</div><div><h3>Compra banco</h3><p>USD limitado por el banco.</p></div><div class="amount" id="flowUsd">--</div></div>
-              <div class="step"><div class="num">2</div><div><h3>Bs requeridos</h3><p>BCV + margen banco.</p></div><div class="amount" id="flowVes">--</div></div>
-              <div class="step"><div class="num">3</div><div><h3>Tarjeta</h3><p>Comisión sobre USD.</p></div><div class="amount negative" id="flowCard">--</div></div>
-              <div class="step"><div class="num">4</div><div><h3>BPay</h3><p>Comisión después de tarjeta.</p></div><div class="amount negative" id="flowBpay">--</div></div>
-              <div class="step"><div class="num">5</div><div><h3>Venta P2P</h3><p>Valor final en bolívares.</p></div><div class="amount positive" id="flowReturn">--</div></div>
-            </div>
-            <div id="formulaText" style="margin-top:10px">Completa USD, BCV y P2P para ver fórmula.</div>
+        <div class="kpi-card">
+          <span class="kpi-label">USDT FINALES</span>
+          <strong class="kpi-val" id="usdtFinal">--</strong>
+          <span class="kpi-desc" id="feesSub">Tarjeta + BPay</span>
+        </div>
+
+        <div class="kpi-card">
+          <span class="kpi-label">ROI</span>
+          <strong class="kpi-val" id="roiView">--</strong>
+          <span class="kpi-desc" id="returnSub">Venta P2P estimada</span>
+        </div>
+      </div>
+
+      <!-- Accordion (Ver desglose) -->
+      <details class="breakdown-details">
+        <summary class="breakdown-summary">
+          <span class="summary-left">
+            <span class="material-symbols-rounded arrow-icon">chevron_right</span>
+            <span>Ver desglose</span>
+          </span>
+          <span class="summary-amount" id="breakdownAmount">-- USD</span>
+        </summary>
+        <div class="details-body">
+          <div class="flow">
+            <div class="step"><div class="num">1</div><div><h3>Compra banco</h3><p>USD limitado por el banco.</p></div><div class="amount" id="flowUsd">--</div></div>
+            <div class="step"><div class="num">2</div><div><h3>Bs requeridos</h3><p>BCV + margen banco.</p></div><div class="amount" id="flowVes">--</div></div>
+            <div class="step"><div class="num">3</div><div><h3>Tarjeta</h3><p>Comisión sobre USD.</p></div><div class="amount negative" id="flowCard">--</div></div>
+            <div class="step"><div class="num">4</div><div><h3>BPay</h3><p>Comisión después de tarjeta.</p></div><div class="amount negative" id="flowBpay">--</div></div>
+            <div class="step"><div class="num">5</div><div><h3>Venta P2P</h3><p>Valor final en bolívares.</p></div><div class="amount positive" id="flowReturn">--</div></div>
           </div>
-        </details>
-      </main>
+          <div id="formulaText" style="margin-top:10px">Completa USD, BCV y P2P para ver fórmula.</div>
+        </div>
+      </details>
+    </div>
+
+    <!-- General Status Info (used for auto-save notifications, limits, errors) -->
+    <div class="status" id="statusBox"></div>
+
+    <!-- Hidden compatibility controls to prevent original JS from throwing errors -->
+    <div style="display: none !important;">
+      <button id="maxBtn"></button>
+      <button id="clearBtnTop"></button>
+      <button id="clearBtnMobile"></button>
+      <button id="copyBtnMobile"></button>
+      <button id="loadRatesBtnMobile"></button>
+      <span id="opStatus"></span>
+    </div>
+
+    <!-- Bottom status bar (Rentable badge & timestamp) -->
+    <div class="bottom-bar">
+      <div class="status-pill" id="statusPill">
+        <span class="dot"></span>
+        <span class="status-text" id="statusPillText">Rentable</span>
+      </div>
+      <div class="timestamp-text" id="bottomTimestamp">--</div>
     </div>
 
     <footer>Herramienta personal. Verifica tasas, límites y comisiones antes de operar.</footer>
@@ -184,7 +200,12 @@
       </div>
     </div>
   </section>
+<<<<<<< Updated upstream
   <script type="module" src="/js/app.js"></script>
+=======
+
+  <script type="module" src="js/app.js"></script>
+>>>>>>> Stashed changes
   <script defer src="/_vercel/insights/script.js"></script>
   <script defer src="/_vercel/speed-insights/script.js"></script>
 </body>
