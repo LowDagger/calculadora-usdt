@@ -8,7 +8,7 @@ export const els = {
   roiView: $('roiView'), returnSub: $('returnSub'), flowUsd: $('flowUsd'), flowVes: $('flowVes'), flowCard: $('flowCard'), flowBpay: $('flowBpay'),
   flowReturn: $('flowReturn'), formulaText: $('formulaText'), loadRatesBtn: $('loadRatesBtn'), copyBtn: $('copyBtn'), openSettingsBtn: $('openSettingsBtn'),
   settingsPanel: $('settingsPanel'), closeSettingsBtn: $('closeSettingsBtn'), clearBtn: $('clearBtn'), clearBtnTop: $('clearBtnTop'),
-  resetDefaultsBtn: $('resetDefaultsBtn'), copyBtnSettings: $('copyBtnSettings'), clearBtnMobile: $('clearBtnMobile'), copyBtnMobile: $('copyBtnMobile'), maxBtn: $('maxBtn'), loadRatesBtnMobile: $('loadRatesBtnMobile'), loadRatesBtnSettings: $('loadRatesBtnSettings'),
+  resetDefaultsBtn: $('resetDefaultsBtn'), copyBtnSettings: $('copyBtnSettings'), clearBtnMobile: $('clearBtnMobile'), copyBtnMobile: $('copyBtnMobile'), loadRatesBtnMobile: $('loadRatesBtnMobile'), loadRatesBtnSettings: $('loadRatesBtnSettings'),
   // New elements
   breakdownAmount: $('breakdownAmount'),
   statusPill: $('statusPill'),
@@ -46,11 +46,16 @@ export function clearStatus() {
 
 export function setLoadingRates(isLoading) {
   els.loadRatesBtn.disabled = isLoading;
-  els.loadRatesBtn.innerHTML = isLoading
-    ? '<span class="material-symbols-rounded">hourglass_top</span>'
-    : '<span class="material-symbols-rounded">sync</span>';
-  if (els.loadRatesBtnMobile) els.loadRatesBtnMobile.disabled = isLoading;
-  if (els.loadRatesBtnSettings) els.loadRatesBtnSettings.disabled = isLoading;
+  // Toggle .loading class to drive the CSS spin animation; preserve icon markup
+  els.loadRatesBtn.classList.toggle('loading', isLoading);
+  if (els.loadRatesBtnMobile) {
+    els.loadRatesBtnMobile.disabled = isLoading;
+    els.loadRatesBtnMobile.classList.toggle('loading', isLoading);
+  }
+  if (els.loadRatesBtnSettings) {
+    els.loadRatesBtnSettings.disabled = isLoading;
+    els.loadRatesBtnSettings.classList.toggle('loading', isLoading);
+  }
 }
 
 export function renderEmpty() {
@@ -137,4 +142,41 @@ export function collapseDetailsOnMobileLoad() {
   if (window.matchMedia('(max-width: 860px)').matches) {
     document.querySelectorAll('details').forEach(detail => { detail.open = false; });
   }
+}
+
+// ── Toast / Snackbar ──────────────────────────────────────────────────────
+let _toastEl = null;
+let _toastTimer = null;
+
+/**
+ * Show a Material Design 3 snackbar toast.
+ * @param {string} message  Text to display.
+ * @param {'ok'|'err'|'warn'} type  Visual variant.
+ * @param {number} duration  Auto-dismiss delay in ms (default 2500).
+ */
+export function showToast(message, type = 'ok', duration = 2500) {
+  // Lazily create the toast element once
+  if (!_toastEl) {
+    _toastEl = document.createElement('div');
+    _toastEl.className = 'toast';
+    document.body.appendChild(_toastEl);
+  }
+
+  // Cancel any in-flight dismiss timer
+  if (_toastTimer) { clearTimeout(_toastTimer); _toastTimer = null; }
+
+  // Reset state before updating to force re-animation even if already showing
+  _toastEl.classList.remove('toast-show', 'toast-err', 'toast-warn');
+  // Force reflow so removing + re-adding the class triggers the transition
+  void _toastEl.offsetWidth;
+
+  _toastEl.textContent = message;
+  if (type === 'err')  _toastEl.classList.add('toast-err');
+  if (type === 'warn') _toastEl.classList.add('toast-warn');
+  _toastEl.classList.add('toast-show');
+
+  _toastTimer = setTimeout(() => {
+    _toastEl.classList.remove('toast-show');
+    _toastTimer = null;
+  }, duration);
 }

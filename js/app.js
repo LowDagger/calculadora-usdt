@@ -2,7 +2,7 @@ import { fetchRates } from './api.js';
 import { calculateValues, currentBankRate } from './calculator.js';
 import { loadState as readState, saveState as writeState } from './storage.js';
 import { money, n } from './utils.js';
-import { els, setStatus, clearStatus, setLoadingRates, renderEmpty, renderRates, renderResult, openSettings, closeSettings, collapseDetailsOnMobileLoad } from './ui.js';
+import { els, setStatus, clearStatus, setLoadingRates, showToast, renderEmpty, renderRates, renderResult, openSettings, closeSettings, collapseDetailsOnMobileLoad } from './ui.js';
 
 function getState() {
   return {
@@ -56,11 +56,11 @@ async function loadRates() {
     els.p2pRate.value = p2p.toFixed(4);
     const timeStr = new Date().toLocaleString('es-VE', { dateStyle: 'short', timeStyle: 'short' });
     els.lastUpdate.textContent = `${timeStr} · TasaVE`;
-    setStatus('Tasas actualizadas desde TasaVE.', 'ok');
+    showToast('Tasas actualizadas desde TasaVE.');
     calculate();
     saveState(false);
   } catch (err) {
-    setStatus('No se pudo cargar TasaVE. Conservando tasas manuales.', 'err');
+    showToast('No se pudo cargar TasaVE. Conservando tasas manuales.', 'err');
   } finally {
     setLoadingRates(false);
     calculate();
@@ -99,7 +99,7 @@ function calculate() {
 
 function copySummary() {
   const r = calculate();
-  if (!r) { setStatus('Completa los datos antes de copiar.', 'warn'); return; }
+  if (!r) { showToast('Completa los datos antes de copiar.', 'warn'); return; }
   const text = `Compra banco: ${money(r.usdUsed, 2)} USD
 Tasa BCV: ${money(r.bcv, 4)} Bs
 Tasa banco: ${money(r.bank, 4)} Bs
@@ -110,8 +110,12 @@ Retorno: ${money(r.vesReturn, 2)} Bs
 Ganancia: ${(r.profitVes >= 0 ? '+' : '') + money(r.profitVes, 2)} Bs (${(r.profitUsdt >= 0 ? '+' : '') + money(r.profitUsdt, 2)} USDT)
 ROI: ${(r.roi >= 0 ? '+' : '') + money(r.roi, 2)}%`;
   navigator.clipboard.writeText(text)
-    .then(() => setStatus('Resumen copiado.', 'ok'))
-    .catch(() => setStatus('No se pudo copiar automáticamente.', 'err'));
+    .then(() => {
+      showToast('Resumen copiado.');
+      flashCopyBtn(els.copyBtn);
+      flashCopyBtn(els.copyBtnSettings);
+    })
+    .catch(() => showToast('No se pudo copiar.', 'err'));
 }
 
 function clearOperation() {
@@ -140,7 +144,7 @@ function bindEvents() {
     setStatus('Límite actualizado a ' + btn.dataset.limit + ' USD.', 'ok');
   }));
 
-  els.maxBtn.addEventListener('click', () => { els.usdToBuy.value = n(els.bankLimit.value) || 1000; calculate(); saveState(false); });
+  // maxBtn was removed from the UI; its hidden compat element is also gone
   els.loadRatesBtn.addEventListener('click', loadRates);
   els.loadRatesBtnMobile.addEventListener('click', loadRates);
   els.loadRatesBtnSettings.addEventListener('click', loadRates);
@@ -163,10 +167,94 @@ function registerServiceWorker() {
   }
 }
 
+/**
+ * Briefly animate the copy button icon to give tactile feedback.
+ * Swaps to a checkmark for 1.2s, applies a pop animation, then restores.
+ */
+function flashCopyBtn(btn) {
+  if (!btn) return;
+  btn.innerHTML = '<span class="material-symbols-rounded">check</span>';
+  btn.classList.add('copy-success');
+  setTimeout(() => {
+    btn.innerHTML = '<span class="material-symbols-rounded">content_copy</span>';
+    btn.classList.remove('copy-success');
+  }, 1200);
+}
+
+/**
+ * Mobile keyboard UX improvements:
+ *  • Auto-scroll the amount input into view when focused.
+ *  • Show a floating “Listo” button above the virtual keyboard.
+ *  • Tap outside any input to dismiss the keyboard.
+ *  • Uses visualViewport API (where available) to position the button
+ *    correctly above the keyboard even when the viewport shifts.
+ */
+function setupKeyboardUX() {
+  const input   = els.usdToBuy;
+  const doneBtn = document.getElementById('keyboardDoneBtn');
+  if (!doneBtn || !input) return;
+
+  let hasTouched = false;
+  window.addEventListener('touchstart', () => { hasTouched = true; }, { once: true, passive: true });
+
+  // --- position helper ---
+  function positionDoneBtn() {
+    if (!window.visualViewport) return;
+    // keyboard top = window.innerHeight - visualViewport.height (approx)
+    const kbHeight = window.innerHeight - window.visualViewport.offsetTop - window.visualViewport.height;
+    doneBtn.style.bottom = Math.max(0, kbHeight) + 'px';
+  }
+
+  // --- show / hide ---
+  function showDoneBtn() {
+    doneBtn.classList.add('kbd-visible');
+    positionDoneBtn();
+  }
+  function hideDoneBtn() {
+    doneBtn.classList.remove('kbd-visible');
+    doneBtn.style.bottom = '';
+  }
+
+  // --- focus: scroll into view + show Done button on mobile ---
+  input.addEventListener('focus', () => {
+    setTimeout(() => {
+      input.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }, 300);   // wait for keyboard animation to start
+    if (hasTouched) showDoneBtn();
+  });
+
+  input.addEventListener('blur', hideDoneBtn);
+
+  // --- Done button tapped ---
+  doneBtn.addEventListener('pointerdown', (e) => {
+    e.preventDefault();        // prevent focus loss triggering hide before click
+    input.blur();
+    hideDoneBtn();
+  });
+
+  // --- visualViewport resize: reposition Done button as keyboard animates ---
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize',  positionDoneBtn, { passive: true });
+    window.visualViewport.addEventListener('scroll',  positionDoneBtn, { passive: true });
+  }
+
+  // --- Tap outside any input: dismiss keyboard ---
+  document.addEventListener('touchend', (e) => {
+    const tag = e.target.tagName;
+    if (tag !== 'INPUT' && tag !== 'TEXTAREA' && e.target.id !== 'keyboardDoneBtn') {
+      const active = document.activeElement;
+      if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) {
+        active.blur();
+      }
+    }
+  }, { passive: true });
+}
+
 loadState();
 bindEvents();
 calculate();
 collapseDetailsOnMobileLoad();
+setupKeyboardUX();
 registerServiceWorker();
 
 window.addEventListener('load', () => {
