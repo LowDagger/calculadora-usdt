@@ -6,7 +6,7 @@ export function currentBankRate(bcvRate, bankMargin) {
 
 export function calculateValues({ requestedUsd, limitUsd, bcvRate, bankMargin, p2pRate, cardFee, bpayFee }) {
   const requested = n(requestedUsd);
-  const limit = n(limitUsd) || 500;
+  const limit = n(limitUsd) || 1000;  // Default limit is 1000 USD
   const bcv = n(bcvRate);
   const bank = currentBankRate(bcv, bankMargin);
   const p2p = n(p2pRate);

@@ -156,12 +156,12 @@
 
       <div class="settings-grid">
         <div class="field">
-          <div class="label-row"><label for="bankLimit">Límite banco</label><span class="small">Default 500</span></div>
-          <div class="input-wrap"><input id="bankLimit" type="number" inputmode="decimal" value="500" min="0" step="1"><span class="unit">USD</span></div>
+          <div class="label-row"><label for="bankLimit">Límite banco</label><span class="small">Default 1000</span></div>
+          <div class="input-wrap"><input id="bankLimit" type="number" inputmode="decimal" value="1000" min="0" step="1"><span class="unit">USD</span></div>
           <div class="limit-presets">
-            <button class="chip-btn" data-limit="200" title="Usar límite 200 USD">200</button>
-            <button class="chip-btn" data-limit="500" title="Usar límite 500 USD">500</button>
+            <button class="chip-btn" data-limit="500"  title="Usar límite 500 USD">500</button>
             <button class="chip-btn" data-limit="1000" title="Usar límite 1000 USD">1000</button>
+            <button class="chip-btn" data-limit="1500" title="Usar límite 1500 USD">1500</button>
           </div>
         </div>
         <div class="field">
@@ -187,7 +187,7 @@
       </div>
 
       <div class="switch-row">
-        <div><strong>Actualizar tasas al abrir</strong><span>Usa DolarApi y conserva valores manuales si falla.</span></div>
+        <div><strong>Actualizar tasas al abrir</strong><span>Usa TasaVE y conserva valores manuales si falla.</span></div>
         <input class="toggle" id="autoRates" type="checkbox" checked>
       </div>
 
@@ -200,12 +200,7 @@
       </div>
     </div>
   </section>
-<<<<<<< Updated upstream
   <script type="module" src="/js/app.js"></script>
-=======
-
-  <script type="module" src="js/app.js"></script>
->>>>>>> Stashed changes
   <script defer src="/_vercel/insights/script.js"></script>
   <script defer src="/_vercel/speed-insights/script.js"></script>
 </body>

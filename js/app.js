@@ -38,7 +38,7 @@ function loadState() {
 
 function resetDefaults() {
   els.usdToBuy.value = '500';
-  els.bankLimit.value = '500';
+  els.bankLimit.value = '1000';  // Default limit updated to 1000 USD
   els.bankMargin.value = '0.5';
   els.cardFee.value = '1.5';
   els.bpayFee.value = '4.1';
@@ -54,12 +54,13 @@ async function loadRates() {
     const { bcv, p2p } = await fetchRates();
     els.bcvRate.value = bcv.toFixed(4);
     els.p2pRate.value = p2p.toFixed(4);
-    els.lastUpdate.textContent = new Date().toLocaleString('es-VE', { dateStyle: 'short', timeStyle: 'short' });
-    setStatus('Tasas actualizadas desde DolarApi.', 'ok');
+    const timeStr = new Date().toLocaleString('es-VE', { dateStyle: 'short', timeStyle: 'short' });
+    els.lastUpdate.textContent = `${timeStr} · TasaVE`;
+    setStatus('Tasas actualizadas desde TasaVE.', 'ok');
     calculate();
     saveState(false);
   } catch (err) {
-    setStatus('No se pudieron cargar las tasas. Puedes dejarlas manuales. ' + err.message, 'err');
+    setStatus('No se pudo cargar TasaVE. Conservando tasas manuales.', 'err');
   } finally {
     setLoadingRates(false);
     calculate();
@@ -68,7 +69,7 @@ async function loadRates() {
 
 function calculate() {
   const requestedUsd = n(els.usdToBuy.value);
-  const limitUsd = n(els.bankLimit.value) || 500;
+  const limitUsd = n(els.bankLimit.value) || 1000;  // Default limit is 1000 USD
   const bcv = n(els.bcvRate.value);
   const bank = currentBankRate(bcv, els.bankMargin.value);
   const p2p = n(els.p2pRate.value);
@@ -139,7 +140,7 @@ function bindEvents() {
     setStatus('Límite actualizado a ' + btn.dataset.limit + ' USD.', 'ok');
   }));
 
-  els.maxBtn.addEventListener('click', () => { els.usdToBuy.value = n(els.bankLimit.value) || 500; calculate(); saveState(false); });
+  els.maxBtn.addEventListener('click', () => { els.usdToBuy.value = n(els.bankLimit.value) || 1000; calculate(); saveState(false); });
   els.loadRatesBtn.addEventListener('click', loadRates);
   els.loadRatesBtnMobile.addEventListener('click', loadRates);
   els.loadRatesBtnSettings.addEventListener('click', loadRates);
