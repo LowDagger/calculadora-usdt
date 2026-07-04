@@ -7,7 +7,6 @@ import { els, setStatus, clearStatus, setLoadingRates, showToast, renderEmpty, r
 function getState() {
   return {
     usdToBuy: els.usdToBuy.value,
-    bankLimit: els.bankLimit.value,
     bankMargin: els.bankMargin.value,
     bcvRate: els.bcvRate.value,
     p2pRate: els.p2pRate.value,
@@ -26,7 +25,6 @@ function saveState(show = true) {
 function loadState() {
   const data = readState();
   if (data.usdToBuy) els.usdToBuy.value = data.usdToBuy;
-  if (data.bankLimit) els.bankLimit.value = data.bankLimit;
   if (data.bankMargin) els.bankMargin.value = data.bankMargin;
   if (data.bcvRate) els.bcvRate.value = data.bcvRate;
   if (data.p2pRate) els.p2pRate.value = data.p2pRate;
@@ -38,11 +36,16 @@ function loadState() {
 
 function resetDefaults() {
   els.usdToBuy.value = '500';
-  els.bankLimit.value = '1000';  // Default limit updated to 1000 USD
   els.bankMargin.value = '0.5';
   els.cardFee.value = '1.5';
   els.bpayFee.value = '4.1';
   els.autoRates.checked = true;
+  
+  // Reset theme to system
+  applyTheme('system');
+  updateThemeUI('system');
+  localStorage.setItem('theme', 'system');
+
   calculate();
   saveState(false);
   setStatus('Valores base restaurados.', 'ok');
@@ -69,15 +72,14 @@ async function loadRates() {
 
 function calculate() {
   const requestedUsd = n(els.usdToBuy.value);
-  const limitUsd = n(els.bankLimit.value) || 1000;  // Default limit is 1000 USD
   const bcv = n(els.bcvRate.value);
   const bank = currentBankRate(bcv, els.bankMargin.value);
   const p2p = n(els.p2pRate.value);
 
-  renderRates({ bcv, bank, p2p, limitUsd });
+  renderRates({ bcv, bank, p2p });
 
   const result = calculateValues({
-    requestedUsd, limitUsd, bcvRate: bcv, bankMargin: els.bankMargin.value,
+    requestedUsd, bcvRate: bcv, bankMargin: els.bankMargin.value,
     p2pRate: p2p, cardFee: els.cardFee.value, bpayFee: els.bpayFee.value
   });
 
@@ -88,9 +90,7 @@ function calculate() {
 
   renderResult(result);
 
-  if (result.usdBlocked > 0) {
-    setStatus(`Límite aplicado: se usan ${money(limitUsd, 2)} USD y se ignoran ${money(result.usdBlocked, 2)} USD.`, 'warn');
-  } else if (els.statusBox.classList.contains('warn')) {
+  if (els.statusBox.classList.contains('warn')) {
     clearStatus();
   }
 
@@ -133,7 +133,7 @@ function clearOperation() {
 }
 
 function bindEvents() {
-  ['usdToBuy','bankLimit','bankMargin','bcvRate','p2pRate','cardFee','bpayFee','autoRates'].forEach(key => {
+  ['usdToBuy','bankMargin','bcvRate','p2pRate','cardFee','bpayFee','autoRates'].forEach(key => {
     els[key].addEventListener('input', () => { calculate(); saveState(false); });
     els[key].addEventListener('change', () => { calculate(); saveState(false); });
   });
@@ -142,13 +142,6 @@ function bindEvents() {
     els.usdToBuy.value = btn.dataset.quick;
     calculate();
     saveState(false);
-  }));
-
-  document.querySelectorAll('[data-limit]').forEach(btn => btn.addEventListener('click', () => {
-    els.bankLimit.value = btn.dataset.limit;
-    calculate();
-    saveState(false);
-    setStatus('Límite actualizado a ' + btn.dataset.limit + ' USD.', 'ok');
   }));
 
   // maxBtn was removed from the UI; its hidden compat element is also gone
@@ -326,6 +319,7 @@ function setupKeyboardUX() {
 }
 
 loadState();
+initTheme();
 bindEvents();
 calculate();
 collapseDetailsOnMobileLoad();
@@ -336,3 +330,61 @@ window.addEventListener('load', () => {
   collapseDetailsOnMobileLoad();
   if (els.autoRates.checked) loadRates().catch(() => {});
 });
+
+// ─── Theme Management ────────────────────────────────────────────────────────
+function initTheme() {
+  const currentTheme = localStorage.getItem('theme') || 'system';
+  applyTheme(currentTheme);
+  updateThemeUI(currentTheme);
+
+  // Bind segmented buttons click
+  const container = document.getElementById('themeSelector');
+  if (container) {
+    container.querySelectorAll('.segment-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const val = btn.dataset.themeVal;
+        applyTheme(val);
+        updateThemeUI(val);
+        localStorage.setItem('theme', val);
+      });
+    });
+  }
+
+  // Listen for system changes when theme is system
+  window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
+    if ((localStorage.getItem("theme") || "system") === "system") {
+      applyTheme("system");
+    }
+  });
+}
+
+function applyTheme(theme) {
+  const systemIsDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+  if (theme === "system") {
+    document.documentElement.dataset.theme = systemIsDark ? "dark" : "light";
+  } else if (theme === "dark") {
+    document.documentElement.dataset.theme = "dark";
+  } else if (theme === "light") {
+    document.documentElement.dataset.theme = "light";
+  }
+  updateStatusBarColor();
+}
+
+function updateThemeUI(theme) {
+  const container = document.getElementById('themeSelector');
+  if (!container) return;
+  container.querySelectorAll('.segment-btn').forEach(btn => {
+    if (btn.dataset.themeVal === theme) {
+      btn.classList.add('active');
+    } else {
+      btn.classList.remove('active');
+    }
+  });
+}
+
+function updateStatusBarColor() {
+  const metaThemeColor = document.querySelector('meta[name="theme-color"]');
+  if (!metaThemeColor) return;
+  const isLight = document.documentElement.dataset.theme === 'light';
+  metaThemeColor.setAttribute('content', isLight ? '#F5F7FA' : '#0F1115');
+}

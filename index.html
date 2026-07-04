@@ -6,6 +6,19 @@
   <meta name="theme-color" content="#0F1115" />
   <title>Calculadora Banco → USDT</title>
   <link rel="canonical" href="https://calculadora-banco-usdt.vercel.app/" />
+  <script>
+    (function() {
+      const savedTheme = localStorage.getItem("theme") || "system";
+      const systemIsDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+      if (savedTheme === "system") {
+        document.documentElement.dataset.theme = systemIsDark ? "dark" : "light";
+      } else if (savedTheme === "dark") {
+        document.documentElement.dataset.theme = "dark";
+      } else if (savedTheme === "light") {
+        document.documentElement.dataset.theme = "light";
+      }
+    })();
+  </script>
 
   <!-- Primary Meta Tags -->
   <meta name="title" content="Calculadora Banco → USDT" />
@@ -57,7 +70,6 @@
       <section class="card calculator-card">
         <div class="calculator-header">
           <span class="calculator-label">USD A COMPRAR</span>
-          <span class="calculator-limit" id="limitHint">Límite -- USD</span>
         </div>
         
         <div class="calculator-display-wrap">
@@ -79,19 +91,31 @@
       <!-- Card 2: Rates grid (4 columns) -->
       <div class="rates-grid">
         <div class="rate-card">
-          <span class="rate-label">BCV</span>
+          <div class="card-header">
+            <span class="rate-label">BCV</span>
+            <span class="material-symbols-rounded card-icon">account_balance</span>
+          </div>
           <strong class="rate-val" id="bcvView">--</strong>
         </div>
         <div class="rate-card">
-          <span class="rate-label">BANCO</span>
+          <div class="card-header">
+            <span class="rate-label">BANCO</span>
+            <span class="material-symbols-rounded card-icon">payments</span>
+          </div>
           <strong class="rate-val" id="bankView">--</strong>
         </div>
         <div class="rate-card">
-          <span class="rate-label">P2P</span>
+          <div class="card-header">
+            <span class="rate-label">P2P</span>
+            <span class="material-symbols-rounded card-icon">currency_exchange</span>
+          </div>
           <strong class="rate-val" id="p2pView">--</strong>
         </div>
         <div class="rate-card updated-card">
-          <span class="rate-label">ACTUALIZADO</span>
+          <div class="card-header">
+            <span class="rate-label">ACTUALIZADO</span>
+            <span class="material-symbols-rounded card-icon">sync</span>
+          </div>
           <strong class="rate-val updated-time" id="lastUpdate">Sin actualizar</strong>
         </div>
       </div>
@@ -99,25 +123,37 @@
       <!-- Card 3: Results KPI grid (2x2) -->
       <div class="kpi-grid">
         <div class="kpi-card">
-          <span class="kpi-label">BS NECESARIOS</span>
+          <div class="card-header">
+            <span class="kpi-label">BS NECESARIOS</span>
+            <span class="material-symbols-rounded card-icon">receipt_long</span>
+          </div>
           <strong class="kpi-val" id="vesNeeded">--</strong>
           <span class="kpi-desc" id="vesSub">Para comprar USD al banco</span>
         </div>
 
         <div class="kpi-card kpi-highlight" id="profitCard">
-          <span class="kpi-label">GANANCIA</span>
+          <div class="card-header">
+            <span class="kpi-label">GANANCIA</span>
+            <span class="material-symbols-rounded card-icon">trending_up</span>
+          </div>
           <strong class="kpi-val" id="profitUsdtBig">--</strong>
           <span class="kpi-desc" id="profitVes">-- Bs</span>
         </div>
 
         <div class="kpi-card">
-          <span class="kpi-label">USDT FINALES</span>
+          <div class="card-header">
+            <span class="rate-label">USDT FINALES</span>
+            <span class="material-symbols-rounded card-icon">token</span>
+          </div>
           <strong class="kpi-val" id="usdtFinal">--</strong>
           <span class="kpi-desc" id="feesSub">Tarjeta + BPay</span>
         </div>
 
         <div class="kpi-card">
-          <span class="kpi-label">ROI</span>
+          <div class="card-header">
+            <span class="rate-label">ROI</span>
+            <span class="material-symbols-rounded card-icon">monitoring</span>
+          </div>
           <strong class="kpi-val" id="roiView">--</strong>
           <span class="kpi-desc" id="returnSub">Venta P2P estimada</span>
         </div>
@@ -134,7 +170,7 @@
         </summary>
         <div class="details-body">
           <div class="flow">
-            <div class="step"><div class="num">1</div><div><h3>Compra banco</h3><p>USD limitado por el banco.</p></div><div class="amount" id="flowUsd">--</div></div>
+            <div class="step"><div class="num">1</div><div><h3>Compra banco</h3><p>USD de la operación.</p></div><div class="amount" id="flowUsd">--</div></div>
             <div class="step"><div class="num">2</div><div><h3>Bs requeridos</h3><p>BCV + margen banco.</p></div><div class="amount" id="flowVes">--</div></div>
             <div class="step"><div class="num">3</div><div><h3>Tarjeta</h3><p>Comisión sobre USD.</p></div><div class="amount negative" id="flowCard">--</div></div>
             <div class="step"><div class="num">4</div><div><h3>BPay</h3><p>Comisión después de tarjeta.</p></div><div class="amount negative" id="flowBpay">--</div></div>
@@ -179,48 +215,101 @@
         <button class="icon-btn" id="closeSettingsBtn" title="Cerrar" aria-label="Cerrar configuración"><span class="material-symbols-rounded">close</span></button>
       </div>
 
-      <div class="settings-grid">
-        <div class="field">
-          <div class="label-row"><label for="bankLimit">Límite banco</label><span class="small">Default 1000</span></div>
-          <div class="input-wrap"><input id="bankLimit" type="number" inputmode="decimal" value="1000" min="0" step="1"><span class="unit">USD</span></div>
-          <div class="limit-presets">
-            <button class="chip-btn" data-limit="500"  title="Usar límite 500 USD">500</button>
-            <button class="chip-btn" data-limit="1000" title="Usar límite 1000 USD">1000</button>
-            <button class="chip-btn" data-limit="1500" title="Usar límite 1500 USD">1500</button>
+      <div class="settings-content">
+        <!-- 🎨 Apariencia -->
+        <div class="settings-section">
+          <div class="section-title">
+            <span class="material-symbols-rounded">palette</span>
+            <span>Apariencia</span>
+          </div>
+          <div class="field">
+            <div class="segmented-control" id="themeSelector">
+              <button class="segment-btn active" data-theme-val="system" aria-label="Usar apariencia del sistema">
+                <span class="material-symbols-rounded">devices</span>
+                <span>Sistema</span>
+              </button>
+              <button class="segment-btn" data-theme-val="dark" aria-label="Forzar apariencia oscura">
+                <span class="material-symbols-rounded">dark_mode</span>
+                <span>Oscuro</span>
+              </button>
+              <button class="segment-btn" data-theme-val="light" aria-label="Forzar apariencia clara">
+                <span class="material-symbols-rounded">light_mode</span>
+                <span>Claro</span>
+              </button>
+            </div>
+            <p class="field-desc">Usa la apariencia del dispositivo automáticamente.</p>
           </div>
         </div>
-        <div class="field">
-          <div class="label-row"><label for="bankMargin">Margen banco</label><span class="small">BCV + %</span></div>
-          <div class="input-wrap"><input id="bankMargin" type="number" inputmode="decimal" value="0.5" min="0" step="0.1"><span class="unit">%</span></div>
-        </div>
-        <div class="field">
-          <div class="label-row"><label for="cardFee">Tarjeta</label></div>
-          <div class="input-wrap"><input id="cardFee" type="number" inputmode="decimal" value="1.5" min="0" step="0.1"><span class="unit">%</span></div>
-        </div>
-        <div class="field">
-          <div class="label-row"><label for="bpayFee">BPay</label></div>
-          <div class="input-wrap"><input id="bpayFee" type="number" inputmode="decimal" value="4.1" min="0" step="0.1"><span class="unit">%</span></div>
-        </div>
-        <div class="field">
-          <div class="label-row"><label for="bcvRate">BCV manual</label></div>
-          <div class="input-wrap"><input id="bcvRate" type="number" inputmode="decimal" placeholder="Ej: 622.31" min="0" step="0.01"><span class="unit">Bs/USD</span></div>
-        </div>
-        <div class="field">
-          <div class="label-row"><label for="p2pRate">P2P / Paralelo manual</label></div>
-          <div class="input-wrap"><input id="p2pRate" type="number" inputmode="decimal" placeholder="Ej: 768.44" min="0" step="0.01"><span class="unit">Bs/USDT</span></div>
-        </div>
-      </div>
 
-      <div class="switch-row">
-        <div><strong>Actualizar tasas al abrir</strong><span>Usa TasaVE y conserva valores manuales si falla.</span></div>
-        <input class="toggle" id="autoRates" type="checkbox" checked>
-      </div>
+        <!-- 🏦 Banco -->
+        <div class="settings-section">
+          <div class="section-title">
+            <span class="material-symbols-rounded">account_balance</span>
+            <span>Banco</span>
+          </div>
+          <div class="field">
+            <div class="label-row"><label for="bankMargin">Margen banco</label><span class="small">BCV + %</span></div>
+            <div class="input-wrap"><input id="bankMargin" type="number" inputmode="decimal" value="0.5" min="0" step="0.1"><span class="unit">%</span></div>
+          </div>
+        </div>
 
-      <div class="auto-save-note"><span class="material-symbols-rounded">check_circle</span> Los cambios se guardan automáticamente.</div>
-      <div class="settings-actions compact-actions">
-        <button class="tiny-icon" id="resetDefaultsBtn" title="Restaurar configuración" aria-label="Restaurar configuración"><span class="material-symbols-rounded">restart_alt</span></button>
-        <button class="tiny-icon" id="copyBtnSettings" title="Copiar resumen" aria-label="Copiar resumen"><span class="material-symbols-rounded">content_copy</span></button>
-        <button class="tiny-icon" id="loadRatesBtnSettings" title="Actualizar tasas" aria-label="Actualizar tasas"><span class="material-symbols-rounded">sync</span></button>
+        <!-- 💳 Comisiones -->
+        <div class="settings-section">
+          <div class="section-title">
+            <span class="material-symbols-rounded">credit_card</span>
+            <span>Comisiones</span>
+          </div>
+          <div class="field">
+            <div class="label-row"><label for="cardFee">Tarjeta</label></div>
+            <div class="input-wrap"><input id="cardFee" type="number" inputmode="decimal" value="1.5" min="0" step="0.1"><span class="unit">%</span></div>
+          </div>
+          <div class="field">
+            <div class="label-row"><label for="bpayFee">BPay</label></div>
+            <div class="input-wrap"><input id="bpayFee" type="number" inputmode="decimal" value="4.1" min="0" step="0.1"><span class="unit">%</span></div>
+          </div>
+        </div>
+
+        <!-- 📈 Tasas -->
+        <div class="settings-section">
+          <div class="section-title">
+            <span class="material-symbols-rounded">monitoring</span>
+            <span>Tasas</span>
+          </div>
+          <div class="field">
+            <div class="label-row"><label for="bcvRate">BCV manual</label></div>
+            <div class="input-wrap"><input id="bcvRate" type="number" inputmode="decimal" placeholder="Ej: 622.31" min="0" step="0.01"><span class="unit">Bs/USD</span></div>
+          </div>
+          <div class="field">
+            <div class="label-row"><label for="p2pRate">P2P / Paralelo manual</label></div>
+            <div class="input-wrap"><input id="p2pRate" type="number" inputmode="decimal" placeholder="Ej: 768.44" min="0" step="0.01"><span class="unit">Bs/USDT</span></div>
+          </div>
+        </div>
+
+        <!-- ⚙ Actualización -->
+        <div class="settings-section">
+          <div class="section-title">
+            <span class="material-symbols-rounded">sync</span>
+            <span>Actualización</span>
+          </div>
+          <div class="switch-row">
+            <div><strong>Actualizar tasas al abrir</strong><span>Usa TasaVE y conserva valores manuales si falla.</span></div>
+            <input class="toggle" id="autoRates" type="checkbox" checked>
+          </div>
+        </div>
+
+        <!-- 🛠 Sistema -->
+        <div class="settings-section">
+          <div class="section-title">
+            <span class="material-symbols-rounded">settings_backup_restore</span>
+            <span>Sistema</span>
+          </div>
+          <div class="auto-save-note"><span class="material-symbols-rounded">check_circle</span> Los cambios se guardan automáticamente.</div>
+          <div class="settings-actions compact-actions">
+            <button class="tiny-icon" id="resetDefaultsBtn" title="Restaurar configuración" aria-label="Restaurar configuración"><span class="material-symbols-rounded">restart_alt</span></button>
+            <button class="tiny-icon" id="copyBtnSettings" title="Copiar resumen" aria-label="Copiar resumen"><span class="material-symbols-rounded">content_copy</span></button>
+            <button class="tiny-icon" id="loadRatesBtnSettings" title="Actualizar tasas" aria-label="Actualizar tasas"><span class="material-symbols-rounded">sync</span></button>
+          </div>
+        </div>
       </div>
     </div>
   </section>

@@ -1,9 +1,9 @@
 import { $, money, n } from './utils.js';
 
 export const els = {
-  usdToBuy: $('usdToBuy'), bankLimit: $('bankLimit'), bankMargin: $('bankMargin'), bcvRate: $('bcvRate'), p2pRate: $('p2pRate'),
+  usdToBuy: $('usdToBuy'), bankMargin: $('bankMargin'), bcvRate: $('bcvRate'), p2pRate: $('p2pRate'),
   cardFee: $('cardFee'), bpayFee: $('bpayFee'), autoRates: $('autoRates'), bcvView: $('bcvView'), bankView: $('bankView'), p2pView: $('p2pView'),
-  lastUpdate: $('lastUpdate'), limitHint: $('limitHint'), statusBox: $('statusBox'), opStatus: $('opStatus'), vesNeeded: $('vesNeeded'), vesSub: $('vesSub'),
+  lastUpdate: $('lastUpdate'), statusBox: $('statusBox'), opStatus: $('opStatus'), vesNeeded: $('vesNeeded'), vesSub: $('vesSub'),
   profitCard: $('profitCard'), profitUsdtBig: $('profitUsdtBig'), profitVes: $('profitVes'), usdtFinal: $('usdtFinal'), feesSub: $('feesSub'),
   roiView: $('roiView'), returnSub: $('returnSub'), flowUsd: $('flowUsd'), flowVes: $('flowVes'), flowCard: $('flowCard'), flowBpay: $('flowBpay'),
   flowReturn: $('flowReturn'), formulaText: $('formulaText'), loadRatesBtn: $('loadRatesBtn'), copyBtn: $('copyBtn'), openSettingsBtn: $('openSettingsBtn'),
@@ -79,8 +79,7 @@ export function renderEmpty() {
   }
 }
 
-export function renderRates({ bcv, bank, p2p, limitUsd }) {
-  els.limitHint.textContent = `Límite ${money(limitUsd, 0)} USD`;
+export function renderRates({ bcv, bank, p2p }) {
   els.bcvView.textContent = bcv ? money(bcv, 2) : '--';
   els.bankView.textContent = bank ? money(bank, 2) : '--';
   els.p2pView.textContent = p2p ? money(p2p, 2) : '--';
@@ -89,9 +88,7 @@ export function renderRates({ bcv, bank, p2p, limitUsd }) {
 export function renderResult(r) {
   els.opStatus.textContent = r.profitVes >= 0 ? 'Rentable' : 'Pérdida';
   els.vesNeeded.textContent = money(r.vesNeeded, 2);
-  els.vesSub.textContent = r.usdBlocked > 0
-    ? `Se usan ${money(r.usdUsed, 2)} USD · exceso ${money(r.usdBlocked, 2)} USD`
-    : `Para ${money(r.usdUsed, 2)} USD al banco`;
+  els.vesSub.textContent = `Para ${money(r.usdUsed, 2)} USD al banco`;
   els.usdtFinal.textContent = money(r.usdtFinal, 2);
   els.profitUsdtBig.textContent = (r.profitUsdt >= 0 ? '+' : '') + money(r.profitUsdt, 2);
   els.profitVes.textContent = (r.profitVes >= 0 ? '+' : '') + money(r.profitVes, 2) + ' Bs';
