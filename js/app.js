@@ -119,10 +119,17 @@ ROI: ${(r.roi >= 0 ? '+' : '') + money(r.roi, 2)}%`;
 }
 
 function clearOperation() {
-  els.usdToBuy.value = '';
-  clearStatus();
+  els.usdToBuy.value = '500';
+  // Dispatch events so any event listeners on the input element are triggered
+  els.usdToBuy.dispatchEvent(new Event('input', { bubbles: true }));
+  els.usdToBuy.dispatchEvent(new Event('change', { bubbles: true }));
+  
+  // Explicitly call calculation and save state to guarantee UI updates
   calculate();
   saveState(false);
+  
+  clearStatus();
+  showToast('Cálculo limpiado');
 }
 
 function bindEvents() {
