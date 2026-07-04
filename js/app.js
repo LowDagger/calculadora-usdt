@@ -161,10 +161,72 @@ function bindEvents() {
   window.addEventListener('keydown', e => { if (e.key === 'Escape') closeSettings(); });
 }
 
+/**
+ * Register the Service Worker and wire up the automatic update flow.
+ *
+ * Flow on a new deployment:
+ *  1. Browser finds an updated service-worker.js and installs it.
+ *  2. The new SW calls self.skipWaiting() during install, so it activates
+ *     without waiting for old tabs to close.
+ *  3. We detect the activation via `controllerchange`.
+ *  4. We reload the page once (guarded by sessionStorage to prevent loops).
+ *  5. A toast informs the user that the app just updated.
+ */
 function registerServiceWorker() {
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => navigator.serviceWorker.register('/service-worker.js', { scope: '/' }).catch(() => {}));
-  }
+  if (!('serviceWorker' in navigator)) return;
+
+  // Guard: only reload once per session to prevent infinite-reload loops.
+  const RELOAD_KEY = 'sw_reloading';
+
+  window.addEventListener('load', async () => {
+    let reg;
+    try {
+      reg = await navigator.serviceWorker.register('/service-worker.js', { scope: '/' });
+    } catch {
+      return; // SW not supported or blocked (e.g. private browsing on some browsers)
+    }
+
+    // ── Helper: signal the waiting SW to skip waiting ──
+    function activateWaiting(waitingWorker) {
+      if (!waitingWorker) return;
+      waitingWorker.postMessage({ type: 'SKIP_WAITING' });
+    }
+
+    // ── Handle a worker that is already waiting when the page loads ──
+    if (reg.waiting) {
+      activateWaiting(reg.waiting);
+    }
+
+    // ── Handle a worker that starts installing after this page loads ──
+    reg.addEventListener('updatefound', () => {
+      const newWorker = reg.installing;
+      if (!newWorker) return;
+
+      newWorker.addEventListener('statechange', () => {
+        // When the new worker finishes installing and is now waiting, activate it.
+        if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+          activateWaiting(newWorker);
+        }
+      });
+    });
+
+    // ── Reload once when the controller (active SW) changes ──
+    // This fires after the new SW calls clients.claim(), meaning our page is
+    // now controlled by the fresh version.
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (sessionStorage.getItem(RELOAD_KEY)) {
+        sessionStorage.removeItem(RELOAD_KEY);
+        return; // already reloaded once – do nothing to avoid loops
+      }
+      sessionStorage.setItem(RELOAD_KEY, '1');
+      showToast('Nueva versión instalada. Actualizando…', 'ok', 3000);
+      // Small delay lets the toast render before the page reloads
+      setTimeout(() => window.location.reload(), 800);
+    });
+
+    // ── Periodically check for updates (every 60 s) ──
+    setInterval(() => reg.update().catch(() => {}), 60_000);
+  });
 }
 
 /**
@@ -182,66 +244,72 @@ function flashCopyBtn(btn) {
 }
 
 /**
- * Mobile keyboard UX improvements:
+ * Mobile keyboard UX:
+ *  • Enter/Done key closes the keyboard and recalculates.
  *  • Auto-scroll the amount input into view when focused.
- *  • Show a floating “Listo” button above the virtual keyboard.
  *  • Tap outside any input to dismiss the keyboard.
- *  • Uses visualViewport API (where available) to position the button
- *    correctly above the keyboard even when the viewport shifts.
+ *  • Decimal-only guard for the type="text" USD input.
+ *  • No floating Done/Listo UI is shown.
  */
 function setupKeyboardUX() {
-  const input   = els.usdToBuy;
-  const doneBtn = document.getElementById('keyboardDoneBtn');
-  if (!doneBtn || !input) return;
+  const input = els.usdToBuy;
+  if (!input) return;
 
-  let hasTouched = false;
-  window.addEventListener('touchstart', () => { hasTouched = true; }, { once: true, passive: true });
+  // --- Decimal-only filter for type="text" ---
+  // Allow: digits, single dot/comma, backspace/delete, arrows, tab, home/end
+  input.addEventListener('keydown', (e) => {
+    // Handle Enter / Done key: close keyboard and recalculate
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      e.stopPropagation();
+      input.blur();
+      calculate();
+      saveState(false);
+      return;
+    }
+    // Allow control keys
+    const allowed = ['Backspace','Delete','ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Tab','Home','End'];
+    if (allowed.includes(e.key) || e.ctrlKey || e.metaKey) return;
+    // Allow digits
+    if (/^\d$/.test(e.key)) return;
+    // Allow a single decimal separator (dot or comma)
+    if ((e.key === '.' || e.key === ',') && !/[.,]/.test(input.value)) return;
+    // Block everything else
+    e.preventDefault();
+  });
 
-  // --- position helper ---
-  function positionDoneBtn() {
-    if (!window.visualViewport) return;
-    // keyboard top = window.innerHeight - visualViewport.height (approx)
-    const kbHeight = window.innerHeight - window.visualViewport.offsetTop - window.visualViewport.height;
-    doneBtn.style.bottom = Math.max(0, kbHeight) + 'px';
-  }
+  // Fallback: blur on Enter via keyup (some Android browsers fire keyup but not keydown for Enter)
+  input.addEventListener('keyup', (e) => {
+    if (e.key === 'Enter') {
+      input.blur();
+    }
+  });
 
-  // --- show / hide ---
-  function showDoneBtn() {
-    doneBtn.classList.add('kbd-visible');
-    positionDoneBtn();
-  }
-  function hideDoneBtn() {
-    doneBtn.classList.remove('kbd-visible');
-    doneBtn.style.bottom = '';
-  }
+  // Normalise comma → dot and recalculate on change (covers autofill, paste, etc.)
+  input.addEventListener('change', () => {
+    input.value = input.value.replace(',', '.');
+    calculate();
+    saveState(false);
+  });
 
-  // --- focus: scroll into view + show Done button on mobile ---
+  // Recalculate whenever the field loses focus (covers all dismissal paths)
+  input.addEventListener('blur', () => {
+    input.value = input.value.replace(',', '.');
+    calculate();
+    saveState(false);
+  });
+
+  // --- Focus: scroll into view (center so the keyboard doesn't hide it) ---
   input.addEventListener('focus', () => {
     setTimeout(() => {
-      input.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    }, 300);   // wait for keyboard animation to start
-    if (hasTouched) showDoneBtn();
+      input.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 300);
   });
-
-  input.addEventListener('blur', hideDoneBtn);
-
-  // --- Done button tapped ---
-  doneBtn.addEventListener('pointerdown', (e) => {
-    e.preventDefault();        // prevent focus loss triggering hide before click
-    input.blur();
-    hideDoneBtn();
-  });
-
-  // --- visualViewport resize: reposition Done button as keyboard animates ---
-  if (window.visualViewport) {
-    window.visualViewport.addEventListener('resize',  positionDoneBtn, { passive: true });
-    window.visualViewport.addEventListener('scroll',  positionDoneBtn, { passive: true });
-  }
 
   // --- Tap outside any input: dismiss keyboard ---
   document.addEventListener('touchend', (e) => {
     const tag = e.target.tagName;
-    if (tag !== 'INPUT' && tag !== 'TEXTAREA' && e.target.id !== 'keyboardDoneBtn') {
+    if (tag !== 'INPUT' && tag !== 'TEXTAREA') {
       const active = document.activeElement;
       if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) {
         active.blur();
