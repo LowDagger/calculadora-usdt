@@ -455,6 +455,13 @@ body {
 .breakdown-panel.open {
   display: grid;
   place-items: center;
+  animation: fade-in 150ms ease-out forwards;
+}
+
+.breakdown-panel.closing {
+  display: grid;
+  place-items: center;
+  animation: fade-out 150ms ease-in forwards;
 }
 
 .breakdown-card {
@@ -470,7 +477,11 @@ body {
   gap: 16px;
   max-height: 90vh;
   overflow-y: auto;
-  animation: modal-in 200ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: modal-in 150ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.breakdown-panel.closing .breakdown-card {
+  animation: modal-out 150ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 .breakdown-head {
@@ -518,38 +529,44 @@ body {
 
 /* Animations */
 @keyframes modal-in {
-  from {
-    transform: scale(0.95);
-    opacity: 0;
-  }
-  to {
-    transform: scale(1);
-    opacity: 1;
-  }
+  from { transform: scale(0.95); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+@keyframes modal-out {
+  from { transform: scale(1); opacity: 1; }
+  to { transform: scale(0.95); opacity: 0; }
 }
 
 @keyframes sheet-in {
-  from {
-    transform: translateY(100%);
-  }
-  to {
-    transform: translateY(0);
-  }
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+@keyframes sheet-out {
+  from { transform: translateY(0); }
+  to { transform: translateY(100%); }
 }
 
 @keyframes fade-in {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes fade-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .breakdown-card,
-  .settings-card {
-    animation: fade-in 200ms ease-out forwards !important;
+  .breakdown-panel.open, .settings-panel.open, .whats-new-panel.open {
+    animation: fade-in 150ms ease-out forwards !important;
+  }
+  .breakdown-panel.closing, .settings-panel.closing, .whats-new-panel.closing {
+    animation: fade-out 150ms ease-in forwards !important;
+  }
+  .breakdown-card, .settings-card, .whats-new-card {
+    animation: none !important;
   }
 }
 
@@ -563,12 +580,26 @@ body {
     padding: 0;
   }
 
+  .breakdown-panel.closing,
+  .settings-panel.closing {
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    padding: 0;
+    animation: fade-out 150ms ease-in forwards;
+  }
+
   .breakdown-card,
   .settings-card {
     border-radius: 24px 24px 0 0;
     max-height: 80vh;
     width: 100%;
-    animation: sheet-in 200ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    animation: sheet-in 150ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  .breakdown-panel.closing .breakdown-card,
+  .settings-panel.closing .settings-card {
+    animation: sheet-out 150ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
   }
 }
 
@@ -744,7 +775,13 @@ body {
 .settings-panel.open {
   display: grid;
   place-items: center;
-  animation: fade-in 200ms ease-out forwards;
+  animation: fade-in 150ms ease-out forwards;
+}
+
+.settings-panel.closing {
+  display: grid;
+  place-items: center;
+  animation: fade-out 150ms ease-in forwards;
 }
 
 .settings-card {
@@ -760,7 +797,11 @@ body {
   gap: 16px;
   max-height: 90vh;
   overflow-y: auto;
-  animation: modal-in 200ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: modal-in 150ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.settings-panel.closing .settings-card {
+  animation: modal-out 150ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 .settings-head {
@@ -779,6 +820,23 @@ body {
   display: flex;
   flex-direction: column;
   gap: 14px;
+}
+
+/* Compact mobile overrides for Settings screen */
+@media (max-width: 860px) {
+  .settings-card {
+    padding: 16px 16px 20px 16px !important;
+    gap: 12px !important;
+  }
+  .settings-content {
+    gap: 10px !important;
+  }
+  .settings-section {
+    gap: 6px !important;
+  }
+  .settings-section:not(:last-child) {
+    padding-bottom: 8px !important;
+  }
 }
 
 .settings-section {
@@ -1172,4 +1230,189 @@ html[data-theme="light"] .segment-btn:hover:not(.active) {
 
 .icon-btn:active, .chip-btn:active, .segment-btn:active, .tiny-icon:active, .breakdown-trigger-btn:active {
   transform: scale(0.97) !important;
+}
+
+/* PWA Install Prompt Card styling */
+.install-prompt {
+  position: fixed;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%) translateY(150%);
+  width: 92%;
+  max-width: 400px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  box-shadow: var(--shadow-lg);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  z-index: 1000;
+  transition: transform 250ms cubic-bezier(0.16, 1, 0.3, 1), opacity 250ms ease;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.install-prompt.show {
+  transform: translateX(-50%) translateY(0);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.install-prompt-content h3 {
+  font-size: 0.95rem;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.install-prompt-content p {
+  font-size: 0.75rem;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.install-prompt-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.install-prompt-actions button {
+  padding: 8px 16px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  border-radius: 10px;
+  cursor: pointer;
+  border: none;
+  font-family: var(--font);
+  transition: background-color 150ms, filter 150ms, transform 100ms;
+}
+
+.install-prompt-actions .btn-secondary {
+  background: var(--bg-soft);
+  color: var(--text);
+}
+
+.install-prompt-actions .btn-secondary:hover {
+  background: var(--surface-hover);
+}
+
+.install-prompt-actions .btn-primary {
+  background: var(--primary);
+  color: #ffffff;
+}
+
+.install-prompt-actions .btn-primary:hover {
+  filter: brightness(1.08);
+}
+
+.install-prompt-actions button:active {
+  transform: scale(0.97);
+}
+
+.ios-share-icon {
+  display: inline-block;
+  vertical-align: middle;
+  width: 16px;
+  height: 16px;
+  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="%233b82f6" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>');
+  background-repeat: no-repeat;
+  background-size: contain;
+  margin: 0 2px;
+}
+
+/* What's New Changelog Dialog styling */
+.whats-new-panel {
+  position: fixed;
+  inset: 0;
+  display: none;
+  z-index: 110;
+  background: rgba(15, 17, 21, 0.7);
+  backdrop-filter: blur(8px);
+  padding: 24px 16px;
+}
+
+.whats-new-panel.open {
+  display: grid;
+  place-items: center;
+  animation: fade-in 150ms ease-out forwards;
+}
+
+.whats-new-panel.closing {
+  display: grid;
+  place-items: center;
+  animation: fade-out 150ms ease-in forwards;
+}
+
+.whats-new-card {
+  width: 100%;
+  max-width: 320px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 20px;
+  box-shadow: var(--shadow-lg);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  animation: modal-in 150ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.whats-new-panel.closing .whats-new-card {
+  animation: modal-out 150ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.whats-new-head h2 {
+  font-size: 1.15rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.whats-new-content {
+  display: flex;
+  flex-direction: column;
+}
+
+.changelog-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.changelog-list li {
+  font-size: 0.78rem;
+  color: var(--muted);
+  line-height: 1.4;
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.changelog-list li span {
+  color: var(--primary);
+  font-weight: 800;
+}
+
+.whats-new-btn {
+  width: 100%;
+  padding: 10px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+  background: var(--primary);
+  color: #ffffff;
+  font-family: var(--font);
+  transition: opacity 150ms, filter 150ms, transform 100ms;
+}
+
+.whats-new-btn:hover {
+  filter: brightness(1.08);
+}
+
+.whats-new-btn:active {
+  transform: scale(0.98);
 }

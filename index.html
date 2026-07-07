@@ -187,6 +187,10 @@
       <button id="shareBtnMobile"></button>
       <button id="loadRatesBtnMobile"></button>
       <span id="opStatus"></span>
+      <!-- Extra buttons moved for compatibility -->
+      <button id="resetDefaultsBtn"></button>
+      <button id="copyBtnSettings"></button>
+      <button id="loadRatesBtnSettings"></button>
     </div>
 
     <!-- Bottom status bar (Rentable badge & timestamp) -->
@@ -358,24 +362,36 @@
           </div>
         </div>
 
-        <!-- 🛠 Sistema -->
-        <div class="settings-section">
-          <div class="section-title">
-            <span class="material-symbols-rounded">settings_backup_restore</span>
-            <span>Sistema</span>
-          </div>
-          <div class="auto-save-note"><span class="material-symbols-rounded">check_circle</span> Los cambios se guardan
-            automáticamente.</div>
-          <div class="settings-actions compact-actions">
-            <button class="tiny-icon" id="resetDefaultsBtn" title="Restaurar configuración"
-              aria-label="Restaurar configuración"><span class="material-symbols-rounded">restart_alt</span></button>
-            <button class="tiny-icon" id="copyBtnSettings" title="Copiar resumen" aria-label="Copiar resumen"><span
-                class="material-symbols-rounded">content_copy</span></button>
-            <button class="tiny-icon" id="loadRatesBtnSettings" title="Actualizar tasas"
-              aria-label="Actualizar tasas"><span class="material-symbols-rounded">sync</span></button>
-          </div>
-        </div>
       </div>
+    </div>
+  </section>
+
+  <!-- PWA Install Prompt Card -->
+  <div class="install-prompt" id="installPrompt">
+    <div class="install-prompt-content">
+      <h3 id="installPromptTitle">Instalar Aplicación</h3>
+      <p id="installPromptDesc">Agrega Calculadora Banco → USDT a tu pantalla de inicio para un acceso más rápido.</p>
+    </div>
+    <div class="install-prompt-actions">
+      <button class="btn-secondary" id="installDismissBtn">Ahora no</button>
+      <button class="btn-primary" id="installConfirmBtn">Instalar</button>
+    </div>
+  </div>
+
+  <!-- What's New Changelog Popup -->
+  <section class="whats-new-panel" id="whatsNewPanel" aria-hidden="true">
+    <div class="whats-new-card">
+      <div class="whats-new-head">
+        <h2>¿Qué hay de nuevo?</h2>
+      </div>
+      <div class="whats-new-content">
+        <ul class="changelog-list">
+          <li><span>•</span> Compartir nativo en móvil y escritorio</li>
+          <li><span>•</span> Mejoras visuales y menú de ajustes compacto</li>
+          <li><span>•</span> Experiencia de instalación web optimizada</li>
+        </ul>
+      </div>
+      <button class="whats-new-btn" id="whatsNewCloseBtn">Entendido</button>
     </div>
   </section>
   <script type="module" src="/js/app.js?v=10"></script>

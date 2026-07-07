@@ -13,6 +13,93 @@ import { loadState as readState, saveState as writeState } from './storage.js';
 import { money, n } from './utils.js';
 import { els, setStatus, clearStatus, setLoadingRates, showToast, renderEmpty, renderRates, renderResult, openSettings, closeSettings, openBreakdown, closeBreakdown } from './ui.js?v=10';
 
+let ratesLastUpdated = null;
+
+function parseLastUpdate(str) {
+  if (!str) return null;
+  const parts = str.split(' · ');
+  if (!parts[0]) return null;
+  const dateTimeStr = parts[0];
+  
+  let cleaned = dateTimeStr.replace(/\s+/g, ' ').trim();
+  cleaned = cleaned.replace(/p\.\s*m\./i, 'PM').replace(/a\.\s*m\./i, 'AM');
+  
+  const commaIdx = cleaned.indexOf(',');
+  let datePart = '';
+  let timePart = '';
+  if (commaIdx !== -1) {
+    datePart = cleaned.substring(0, commaIdx).trim();
+    timePart = cleaned.substring(commaIdx + 1).trim();
+  } else {
+    const spaceParts = cleaned.split(' ');
+    datePart = spaceParts[0] || '';
+    timePart = spaceParts.slice(1).join(' ') || '';
+  }
+  
+  const dateSplit = datePart.split('/');
+  if (dateSplit.length < 3) return null;
+  let day = parseInt(dateSplit[0], 10);
+  let month = parseInt(dateSplit[1], 10) - 1;
+  let year = parseInt(dateSplit[2], 10);
+  if (year < 100) year += 2000;
+  
+  let isPM = false;
+  let isAM = false;
+  if (timePart.toUpperCase().includes('PM')) {
+    isPM = true;
+    timePart = timePart.replace(/pm/i, '').trim();
+  } else if (timePart.toUpperCase().includes('AM')) {
+    isAM = true;
+    timePart = timePart.replace(/am/i, '').trim();
+  }
+  
+  const timeSplit = timePart.split(':');
+  if (timeSplit.length < 2) return null;
+  let hour = parseInt(timeSplit[0], 10);
+  let minute = parseInt(timeSplit[1], 10);
+  
+  if (isPM && hour < 12) hour += 12;
+  if (isAM && hour === 12) hour = 0;
+  
+  const parsedDate = new Date(year, month, day, hour, minute, 0);
+  return isNaN(parsedDate.getTime()) ? null : parsedDate;
+}
+
+function updateRelativeTime() {
+  if (!ratesLastUpdated) {
+    els.lastUpdate.textContent = 'Sin actualizar';
+    if (els.bottomTimestamp) els.bottomTimestamp.textContent = '--';
+    return;
+  }
+  
+  const diffMs = new Date() - ratesLastUpdated;
+  const diffSec = Math.floor(diffMs / 1000);
+  
+  let relativeText = '';
+  if (diffSec < 15) {
+    relativeText = 'Actualizado hace un momento';
+  } else if (diffSec < 60) {
+    relativeText = `Actualizado hace ${diffSec} segundos`;
+  } else {
+    const diffMin = Math.floor(diffSec / 60);
+    if (diffMin < 60) {
+      relativeText = `Hace ${diffMin} ${diffMin === 1 ? 'minuto' : 'minutos'}`;
+    } else {
+      const diffHour = Math.floor(diffMin / 60);
+      relativeText = `Hace ${diffHour} ${diffHour === 1 ? 'hora' : 'horas'}`;
+    }
+  }
+  
+  const absoluteStr = els.lastUpdate.dataset.absolute || '';
+  els.lastUpdate.textContent = `${relativeText} · TasaVE`;
+  els.lastUpdate.title = absoluteStr;
+  
+  if (els.bottomTimestamp) {
+    els.bottomTimestamp.textContent = `${relativeText} · TasaVE`;
+    els.bottomTimestamp.title = absoluteStr;
+  }
+}
+
 function getState() {
   return {
     usdToBuy: els.usdToBuy.value,
@@ -22,7 +109,7 @@ function getState() {
     cardFee: els.cardFee.value,
     bpayFee: els.bpayFee.value,
     autoRates: els.autoRates.checked,
-    lastUpdate: els.lastUpdate.textContent
+    lastUpdate: els.lastUpdate.dataset.absolute || els.lastUpdate.textContent
   };
 }
 
@@ -40,7 +127,11 @@ function loadState() {
   if (data.cardFee) els.cardFee.value = data.cardFee;
   if (data.bpayFee) els.bpayFee.value = data.bpayFee;
   if (typeof data.autoRates === 'boolean') els.autoRates.checked = data.autoRates;
-  if (data.lastUpdate) els.lastUpdate.textContent = data.lastUpdate;
+  if (data.lastUpdate) {
+    els.lastUpdate.textContent = data.lastUpdate;
+    els.lastUpdate.dataset.absolute = data.lastUpdate;
+    ratesLastUpdated = parseLastUpdate(data.lastUpdate);
+  }
 }
 
 function resetDefaults() {
@@ -66,8 +157,10 @@ async function loadRates() {
     const { bcv, p2p } = await fetchRates();
     els.bcvRate.value = bcv.toFixed(4);
     els.p2pRate.value = p2p.toFixed(4);
-    const timeStr = new Date().toLocaleString('es-VE', { dateStyle: 'short', timeStyle: 'short' });
-    els.lastUpdate.textContent = `${timeStr} · TasaVE`;
+    ratesLastUpdated = new Date();
+    const timeStr = ratesLastUpdated.toLocaleString('es-VE', { dateStyle: 'short', timeStyle: 'short' });
+    els.lastUpdate.dataset.absolute = `${timeStr} · TasaVE`;
+    updateRelativeTime();
     showToast('Tasas actualizadas desde TasaVE.');
     calculate();
     saveState(false);
@@ -402,12 +495,135 @@ function setupKeyboardUX() {
   }, { passive: true });
 }
 
+// --- PWA Install Prompt & iOS detection ---
+let deferredPrompt = null;
+
+function shouldShowInstallPrompt() {
+  const dismissedTime = localStorage.getItem('installPromptDismissed');
+  if (dismissedTime) {
+    const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
+    if (Date.now() - parseInt(dismissedTime, 10) < thirtyDaysMs) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function showAndroidInstallPrompt() {
+  const promptEl = document.getElementById('installPrompt');
+  if (!promptEl) return;
+  document.getElementById('installPromptTitle').textContent = 'Instalar Aplicación';
+  document.getElementById('installPromptDesc').textContent = 'Agrega Calculadora Banco → USDT a tu pantalla de inicio para un acceso más rápido.';
+  const dismissBtn = document.getElementById('installDismissBtn');
+  if (dismissBtn) dismissBtn.textContent = 'Ahora no';
+  promptEl.classList.add('show');
+}
+
+function showIOSInstallPrompt() {
+  const promptEl = document.getElementById('installPrompt');
+  if (!promptEl) return;
+  document.getElementById('installPromptTitle').textContent = 'Instalar en iOS';
+  document.getElementById('installPromptDesc').innerHTML = 'Para instalar la app, toca el botón de compartir <span class="ios-share-icon"></span> y selecciona <strong>"Agregar a inicio"</strong>.';
+  const dismissBtn = document.getElementById('installDismissBtn');
+  if (dismissBtn) dismissBtn.textContent = 'Entendido';
+  const confirmBtn = document.getElementById('installConfirmBtn');
+  if (confirmBtn) confirmBtn.style.display = 'none';
+  promptEl.classList.add('show');
+}
+
+function hideInstallPrompt() {
+  const promptEl = document.getElementById('installPrompt');
+  if (promptEl) {
+    promptEl.classList.remove('show');
+  }
+}
+
+function initInstallPrompt() {
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+  const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+  const isStandalone = window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches;
+  const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  
+  if (!isMobile || isStandalone) return;
+  
+  if (isIOS && isSafari) {
+    if (shouldShowInstallPrompt()) {
+      showIOSInstallPrompt();
+    }
+  }
+  
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    if (shouldShowInstallPrompt()) {
+      showAndroidInstallPrompt();
+    }
+  });
+  
+  const dismissBtn = document.getElementById('installDismissBtn');
+  if (dismissBtn) {
+    dismissBtn.addEventListener('click', () => {
+      hideInstallPrompt();
+      localStorage.setItem('installPromptDismissed', Date.now().toString());
+    });
+  }
+  
+  const confirmBtn = document.getElementById('installConfirmBtn');
+  if (confirmBtn) {
+    confirmBtn.addEventListener('click', async () => {
+      hideInstallPrompt();
+      if (!deferredPrompt) return;
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === 'accepted') {
+        console.log('User accepted install prompt');
+      } else {
+        localStorage.setItem('installPromptDismissed', Date.now().toString());
+      }
+      deferredPrompt = null;
+    });
+  }
+}
+
+// --- What's New changelog dialog ---
+const CURRENT_VERSION = '1.3';
+
+function initWhatsNew() {
+  const lastSeen = localStorage.getItem('lastSeenVersion');
+  if (lastSeen !== CURRENT_VERSION) {
+    const panel = document.getElementById('whatsNewPanel');
+    if (panel) {
+      panel.classList.add('open');
+      panel.setAttribute('aria-hidden', 'false');
+    }
+  }
+  
+  const closeBtn = document.getElementById('whatsNewCloseBtn');
+  if (closeBtn) {
+    closeBtn.addEventListener('click', () => {
+      const panel = document.getElementById('whatsNewPanel');
+      if (panel) {
+        panel.classList.add('closing');
+        setTimeout(() => {
+          panel.classList.remove('open', 'closing');
+          panel.setAttribute('aria-hidden', 'true');
+          localStorage.setItem('lastSeenVersion', CURRENT_VERSION);
+        }, 150);
+      }
+    });
+  }
+}
+
 loadState();
 initTheme();
 initShare();
 bindEvents();
 calculate();
 setupKeyboardUX();
+initInstallPrompt();
+initWhatsNew();
+updateRelativeTime();
+setInterval(updateRelativeTime, 5000);
 // registerServiceWorker();
 
 window.addEventListener('load', () => {

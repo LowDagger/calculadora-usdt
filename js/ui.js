@@ -122,23 +122,37 @@ export function renderResult(r) {
 }
 
 export function openSettings() {
+  els.settingsPanel.classList.remove('closing');
   els.settingsPanel.classList.add('open');
   els.settingsPanel.setAttribute('aria-hidden','false');
 }
 
 export function closeSettings() {
-  els.settingsPanel.classList.remove('open');
-  els.settingsPanel.setAttribute('aria-hidden','true');
+  const panel = els.settingsPanel;
+  if (!panel.classList.contains('open')) return;
+  panel.classList.add('closing');
+  const duration = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 150;
+  setTimeout(() => {
+    panel.classList.remove('open', 'closing');
+    panel.setAttribute('aria-hidden', 'true');
+  }, duration);
 }
 
 export function openBreakdown() {
+  els.breakdownPanel.classList.remove('closing');
   els.breakdownPanel.classList.add('open');
   els.breakdownPanel.setAttribute('aria-hidden','false');
 }
 
 export function closeBreakdown() {
-  els.breakdownPanel.classList.remove('open');
-  els.breakdownPanel.setAttribute('aria-hidden','true');
+  const panel = els.breakdownPanel;
+  if (!panel.classList.contains('open')) return;
+  panel.classList.add('closing');
+  const duration = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 150;
+  setTimeout(() => {
+    panel.classList.remove('open', 'closing');
+    panel.setAttribute('aria-hidden', 'true');
+  }, duration);
 }
 
 // ── Toast / Snackbar ──────────────────────────────────────────────────────
