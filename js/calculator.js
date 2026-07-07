@@ -12,7 +12,7 @@ export function calculateValues({ requestedUsd, bcvRate, bankMargin, p2pRate, ca
   const cardPct = n(cardFee);
   const bpayPct = n(bpayFee);
 
-  if (!requested || !bcv || !p2p) return null;
+  if (requestedUsd === '' || requestedUsd === null || requestedUsd === undefined || requested < 0 || !bcv || !p2p) return null;
 
   const usdUsed = requested;
   const vesNeeded = usdUsed * bank;

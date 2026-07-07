@@ -6,24 +6,20 @@ export const els = {
   lastUpdate: $('lastUpdate'), statusBox: $('statusBox'), opStatus: $('opStatus'), vesNeeded: $('vesNeeded'), vesSub: $('vesSub'),
   profitCard: $('profitCard'), profitUsdtBig: $('profitUsdtBig'), profitVes: $('profitVes'), usdtFinal: $('usdtFinal'), feesSub: $('feesSub'),
   roiView: $('roiView'), returnSub: $('returnSub'), flowUsd: $('flowUsd'), flowVes: $('flowVes'), flowCard: $('flowCard'), flowBpay: $('flowBpay'),
-  flowReturn: $('flowReturn'), formulaText: $('formulaText'), loadRatesBtn: $('loadRatesBtn'), copyBtn: $('copyBtn'), openSettingsBtn: $('openSettingsBtn'),
+  flowReturn: $('flowReturn'), formulaText: $('formulaText'), loadRatesBtn: $('loadRatesBtn'), shareBtn: $('shareBtn'), openSettingsBtn: $('openSettingsBtn'),
   settingsPanel: $('settingsPanel'), closeSettingsBtn: $('closeSettingsBtn'), clearBtn: $('clearBtn'), clearBtnTop: $('clearBtnTop'),
-  resetDefaultsBtn: $('resetDefaultsBtn'), copyBtnSettings: $('copyBtnSettings'), clearBtnMobile: $('clearBtnMobile'), copyBtnMobile: $('copyBtnMobile'), loadRatesBtnMobile: $('loadRatesBtnMobile'), loadRatesBtnSettings: $('loadRatesBtnSettings'),
+  resetDefaultsBtn: $('resetDefaultsBtn'), copyBtnSettings: $('copyBtnSettings'), clearBtnMobile: $('clearBtnMobile'), shareBtnMobile: $('shareBtnMobile'), loadRatesBtnMobile: $('loadRatesBtnMobile'), loadRatesBtnSettings: $('loadRatesBtnSettings'),
   // New elements
   breakdownAmount: $('breakdownAmount'),
   statusPill: $('statusPill'),
   statusPillText: $('statusPillText'),
-  bottomTimestamp: $('bottomTimestamp')
+  bottomTimestamp: $('bottomTimestamp'),
+  openBreakdownBtn: $('openBreakdownBtn'),
+  closeBreakdownBtn: $('closeBreakdownBtn'),
+  breakdownPanel: $('breakdownPanel')
 };
 
 export function updateUsdToBuyDisplay(value) {
-  const displayEl = document.getElementById('usdToBuyDisplay');
-  if (!displayEl) return;
-  const numPart = displayEl.querySelector('.num-part');
-  if (numPart) {
-    numPart.textContent = value || '0';
-  }
-  
   // Highlight active chips
   document.querySelectorAll('[data-quick]').forEach(btn => {
     if (btn.dataset.quick === value) {
@@ -135,10 +131,14 @@ export function closeSettings() {
   els.settingsPanel.setAttribute('aria-hidden','true');
 }
 
-export function collapseDetailsOnMobileLoad() {
-  if (window.matchMedia('(max-width: 860px)').matches) {
-    document.querySelectorAll('details').forEach(detail => { detail.open = false; });
-  }
+export function openBreakdown() {
+  els.breakdownPanel.classList.add('open');
+  els.breakdownPanel.setAttribute('aria-hidden','false');
+}
+
+export function closeBreakdown() {
+  els.breakdownPanel.classList.remove('open');
+  els.breakdownPanel.setAttribute('aria-hidden','true');
 }
 
 // ── Toast / Snackbar ──────────────────────────────────────────────────────

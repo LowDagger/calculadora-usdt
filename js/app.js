@@ -1,8 +1,17 @@
 import { fetchRates } from './api.js';
 import { calculateValues, currentBankRate } from './calculator.js';
+
+// Temporary developer helper to unregister stale service worker cache
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.getRegistrations().then(regs => {
+    for (let reg of regs) {
+      reg.unregister().then(() => console.log('Service worker unregistered'));
+    }
+  });
+}
 import { loadState as readState, saveState as writeState } from './storage.js';
 import { money, n } from './utils.js';
-import { els, setStatus, clearStatus, setLoadingRates, showToast, renderEmpty, renderRates, renderResult, openSettings, closeSettings, collapseDetailsOnMobileLoad } from './ui.js';
+import { els, setStatus, clearStatus, setLoadingRates, showToast, renderEmpty, renderRates, renderResult, openSettings, closeSettings, openBreakdown, closeBreakdown } from './ui.js?v=10';
 
 function getState() {
   return {
@@ -97,39 +106,103 @@ function calculate() {
   return result;
 }
 
-function copySummary() {
+function buildShareText(r) {
+  const amount = money(r.usdUsed, 2);
+  const bsNeeded = money(r.vesNeeded, 2);
+  const finalUsdt = money(r.usdtFinal, 2);
+  const profitUsd = (r.profitUsdt >= 0 ? '+' : '') + money(r.profitUsdt, 2);
+  const profitBs = (r.profitVes >= 0 ? '+' : '') + money(r.profitVes, 2);
+  const roi = (r.roi >= 0 ? '+' : '') + money(r.roi, 2);
+  const bcv = money(r.bcv, 4);
+  const bankRate = money(r.bank, 4);
+  const p2p = money(r.p2p, 4);
+
+  return `💵 Compra Banco → USDT
+
+USD:
+${amount} USD
+
+Bs necesarios:
+${bsNeeded} Bs
+
+USDT finales:
+${finalUsdt} USDT
+
+Ganancia:
+${profitUsd} USD
+${profitBs} Bs
+
+ROI:
+${roi}%
+
+Tasas:
+BCV ${bcv}
+Banco ${bankRate}
+P2P ${p2p}
+
+Calculado con TasaVE:
+https://calculadora-banco-usdt.vercel.app`;
+}
+
+function shareOrCopy(btn) {
   const r = calculate();
-  if (!r) { showToast('Completa los datos antes de copiar.', 'warn'); return; }
-  const text = `Compra banco: ${money(r.usdUsed, 2)} USD
-Tasa BCV: ${money(r.bcv, 4)} Bs
-Tasa banco: ${money(r.bank, 4)} Bs
-Bs necesarios: ${money(r.vesNeeded, 2)} Bs
-USDT final: ${money(r.usdtFinal, 2)} USDT
-P2P/paralelo: ${money(r.p2p, 4)} Bs
-Retorno: ${money(r.vesReturn, 2)} Bs
-Ganancia: ${(r.profitVes >= 0 ? '+' : '') + money(r.profitVes, 2)} Bs (${(r.profitUsdt >= 0 ? '+' : '') + money(r.profitUsdt, 2)} USDT)
-ROI: ${(r.roi >= 0 ? '+' : '') + money(r.roi, 2)}%`;
-  navigator.clipboard.writeText(text)
-    .then(() => {
-      showToast('Resumen copiado.');
-      flashCopyBtn(els.copyBtn);
-      flashCopyBtn(els.copyBtnSettings);
+  if (!r) {
+    const errorMsg = navigator.share ? 'Completa los datos antes de compartir.' : 'Completa los datos antes de copiar.';
+    showToast(errorMsg, 'warn');
+    return;
+  }
+  const text = buildShareText(r);
+
+  if (navigator.share) {
+    navigator.share({
+      title: 'Calculadora Banco → USDT',
+      text: text
     })
-    .catch(() => showToast('No se pudo copiar.', 'err'));
+    .then(() => showToast('Cálculo compartido'))
+    .catch((err) => {
+      if (err.name !== 'AbortError') {
+        showToast('No se pudo compartir el cálculo', 'err');
+      }
+    });
+  } else {
+    navigator.clipboard.writeText(text)
+      .then(() => {
+        showToast('Resumen copiado al portapapeles');
+        flashCopyBtn(btn);
+      })
+      .catch(() => showToast('No se pudo copiar.', 'err'));
+  }
+}
+
+function initShare() {
+  if (navigator.share) {
+    const copyBtn = els.copyBtnSettings;
+    if (copyBtn) {
+      copyBtn.title = "Compartir resumen";
+      copyBtn.setAttribute("aria-label", "Compartir resumen");
+      const icon = copyBtn.querySelector('.material-symbols-rounded');
+      if (icon) {
+        icon.textContent = 'share';
+      }
+    }
+  }
 }
 
 function clearOperation() {
-  els.usdToBuy.value = '500';
-  // Dispatch events so any event listeners on the input element are triggered
-  els.usdToBuy.dispatchEvent(new Event('input', { bubbles: true }));
-  els.usdToBuy.dispatchEvent(new Event('change', { bubbles: true }));
-  
-  // Explicitly call calculation and save state to guarantee UI updates
-  calculate();
-  saveState(false);
-  
-  clearStatus();
-  showToast('Cálculo limpiado');
+  if (els.usdToBuy) {
+    els.usdToBuy.blur();
+  }
+  // Micro-delay to let the browser process focus/blur events and keyboard dismissal,
+  // preventing composition buffer commits from overwriting our reset value.
+  setTimeout(() => {
+    if (els.usdToBuy) {
+      els.usdToBuy.value = '0';
+      // Dispatch input event to trigger the exact same calculation pipeline
+      els.usdToBuy.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+    clearStatus();
+    showToast('Cálculo limpiado');
+  }, 50);
 }
 
 function bindEvents() {
@@ -148,9 +221,9 @@ function bindEvents() {
   els.loadRatesBtn.addEventListener('click', loadRates);
   els.loadRatesBtnMobile.addEventListener('click', loadRates);
   els.loadRatesBtnSettings.addEventListener('click', loadRates);
-  els.copyBtn.addEventListener('click', copySummary);
-  els.copyBtnMobile.addEventListener('click', copySummary);
-  els.copyBtnSettings.addEventListener('click', copySummary);
+  els.shareBtn.addEventListener('click', () => shareOrCopy(els.shareBtn));
+  els.shareBtnMobile.addEventListener('click', () => shareOrCopy(els.shareBtnMobile));
+  els.copyBtnSettings.addEventListener('click', () => shareOrCopy(els.copyBtnSettings));
   els.clearBtn.addEventListener('click', clearOperation);
   els.clearBtnTop.addEventListener('click', clearOperation);
   els.clearBtnMobile.addEventListener('click', clearOperation);
@@ -158,7 +231,15 @@ function bindEvents() {
   els.openSettingsBtn.addEventListener('click', openSettings);
   els.closeSettingsBtn.addEventListener('click', closeSettings);
   els.settingsPanel.addEventListener('click', e => { if (e.target === els.settingsPanel) closeSettings(); });
-  window.addEventListener('keydown', e => { if (e.key === 'Escape') closeSettings(); });
+  els.openBreakdownBtn.addEventListener('click', openBreakdown);
+  els.closeBreakdownBtn.addEventListener('click', closeBreakdown);
+  els.breakdownPanel.addEventListener('click', e => { if (e.target === els.breakdownPanel) closeBreakdown(); });
+  window.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+      closeSettings();
+      closeBreakdown();
+    }
+  });
 }
 
 /**
@@ -235,10 +316,13 @@ function registerServiceWorker() {
  */
 function flashCopyBtn(btn) {
   if (!btn) return;
-  btn.innerHTML = '<span class="material-symbols-rounded">check</span>';
+  const iconSpan = btn.querySelector('.material-symbols-rounded');
+  if (!iconSpan) return;
+  const originalIcon = iconSpan.textContent;
+  iconSpan.textContent = 'check';
   btn.classList.add('copy-success');
   setTimeout(() => {
-    btn.innerHTML = '<span class="material-symbols-rounded">content_copy</span>';
+    iconSpan.textContent = originalIcon;
     btn.classList.remove('copy-success');
   }, 1200);
 }
@@ -320,14 +404,13 @@ function setupKeyboardUX() {
 
 loadState();
 initTheme();
+initShare();
 bindEvents();
 calculate();
-collapseDetailsOnMobileLoad();
 setupKeyboardUX();
-registerServiceWorker();
+// registerServiceWorker();
 
 window.addEventListener('load', () => {
-  collapseDetailsOnMobileLoad();
   if (els.autoRates.checked) loadRates().catch(() => {});
 });
 
