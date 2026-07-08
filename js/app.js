@@ -3,8 +3,8 @@ import { calculateValues, currentBankRate } from './calculator.js';
 
 
 import { loadState as readState, saveState as writeState } from './storage.js';
-import { money, n } from './utils.js';
-import { els, setStatus, clearStatus, setLoadingRates, showToast, renderEmpty, renderRates, renderResult, openSettings, closeSettings, openBreakdown, closeBreakdown } from './ui.js?v=10';
+import { money, n, triggerHaptic } from './utils.js';
+import { els, setStatus, clearStatus, setLoadingRates, showToast, renderEmpty, renderRates, renderResult, openSettings, closeSettings, openBreakdown, closeBreakdown, lockBodyScroll, unlockBodyScroll } from './ui.js?v=10';
 
 let ratesLastUpdated = null;
 
@@ -58,6 +58,29 @@ function parseLastUpdate(str) {
   return isNaN(parsedDate.getTime()) ? null : parsedDate;
 }
 
+function formatRelativeTime(date) {
+  if (!date) return 'Sin actualizar';
+  const diffMs = new Date() - date;
+  const diffSec = Math.max(0, Math.floor(diffMs / 1000));
+  
+  if (diffSec < 15) {
+    return 'Ahora';
+  }
+  if (diffSec < 60) {
+    return `Hace ${diffSec} s`;
+  }
+  const diffMin = Math.floor(diffSec / 60);
+  if (diffMin < 60) {
+    return `Hace ${diffMin} min`;
+  }
+  const diffHour = Math.floor(diffMin / 60);
+  if (diffHour < 24) {
+    return `Hace ${diffHour} h`;
+  }
+  const diffDays = Math.floor(diffHour / 24);
+  return `Hace ${diffDays} d`;
+}
+
 function updateRelativeTime() {
   if (!ratesLastUpdated) {
     els.lastUpdate.textContent = 'Sin actualizar';
@@ -65,30 +88,14 @@ function updateRelativeTime() {
     return;
   }
   
-  const diffMs = new Date() - ratesLastUpdated;
-  const diffSec = Math.floor(diffMs / 1000);
-  
-  let relativeText = '';
-  if (diffSec < 15) {
-    relativeText = 'Actualizado hace un momento';
-  } else if (diffSec < 60) {
-    relativeText = `Actualizado hace ${diffSec} segundos`;
-  } else {
-    const diffMin = Math.floor(diffSec / 60);
-    if (diffMin < 60) {
-      relativeText = `Hace ${diffMin} ${diffMin === 1 ? 'minuto' : 'minutos'}`;
-    } else {
-      const diffHour = Math.floor(diffMin / 60);
-      relativeText = `Hace ${diffHour} ${diffHour === 1 ? 'hora' : 'horas'}`;
-    }
-  }
-  
+  const relativeText = formatRelativeTime(ratesLastUpdated);
   const absoluteStr = els.lastUpdate.dataset.absolute || '';
-  els.lastUpdate.textContent = `${relativeText} · TasaVE`;
+  
+  els.lastUpdate.textContent = relativeText;
   els.lastUpdate.title = absoluteStr;
   
   if (els.bottomTimestamp) {
-    els.bottomTimestamp.textContent = `${relativeText} · TasaVE`;
+    els.bottomTimestamp.textContent = relativeText;
     els.bottomTimestamp.title = absoluteStr;
   }
 }
@@ -145,6 +152,7 @@ function resetDefaults() {
 }
 
 async function loadRates() {
+  triggerHaptic();
   setLoadingRates(true);
   try {
     const { bcv, p2p } = await fetchRates();
@@ -161,6 +169,7 @@ async function loadRates() {
     showToast('No se pudo cargar TasaVE. Conservando tasas manuales.', 'err');
   } finally {
     setLoadingRates(false);
+    updateRelativeTime();
     calculate();
   }
 }
@@ -231,6 +240,7 @@ https://calculadora-banco-usdt.vercel.app`;
 }
 
 function shareOrCopy(btn) {
+  triggerHaptic();
   const r = calculate();
   if (!r) {
     const errorMsg = navigator.share ? 'Completa los datos antes de compartir.' : 'Completa los datos antes de copiar.';
@@ -256,7 +266,7 @@ function shareOrCopy(btn) {
         showToast('Resumen copiado al portapapeles');
         flashCopyBtn(btn);
       })
-      .catch(() => showToast('No se pudo copiar.', 'err'));
+      .catch(() => showToast('No se pudo compartir el cálculo', 'err'));
   }
 }
 
@@ -275,6 +285,7 @@ function initShare() {
 }
 
 function clearOperation() {
+  triggerHaptic();
   if (els.usdToBuy) {
     els.usdToBuy.blur();
   }
@@ -320,6 +331,29 @@ function bindEvents() {
   els.openBreakdownBtn.addEventListener('click', openBreakdown);
   els.closeBreakdownBtn.addEventListener('click', closeBreakdown);
   els.breakdownPanel.addEventListener('click', e => { if (e.target === els.breakdownPanel) closeBreakdown(); });
+
+  // Prevent scroll leaking on mobile backdrop overlays
+  els.settingsPanel.addEventListener('touchmove', e => {
+    if (!e.target.closest('.settings-card')) {
+      if (e.cancelable) e.preventDefault();
+    }
+  }, { passive: false });
+
+  els.breakdownPanel.addEventListener('touchmove', e => {
+    if (!e.target.closest('.breakdown-card')) {
+      if (e.cancelable) e.preventDefault();
+    }
+  }, { passive: false });
+
+  const installPrompt = document.getElementById('installPrompt');
+  if (installPrompt) {
+    installPrompt.addEventListener('touchmove', e => {
+      if (!e.target.closest('.install-prompt-content')) {
+        if (e.cancelable) e.preventDefault();
+      }
+    }, { passive: false });
+  }
+
   window.addEventListener('keydown', e => {
     if (e.key === 'Escape') {
       closeSettings();
@@ -510,6 +544,7 @@ function showAndroidInstallPrompt() {
   const dismissBtn = document.getElementById('installDismissBtn');
   if (dismissBtn) dismissBtn.textContent = 'Ahora no';
   promptEl.classList.add('show');
+  lockBodyScroll();
 }
 
 function showIOSInstallPrompt() {
@@ -522,12 +557,14 @@ function showIOSInstallPrompt() {
   const confirmBtn = document.getElementById('installConfirmBtn');
   if (confirmBtn) confirmBtn.style.display = 'none';
   promptEl.classList.add('show');
+  lockBodyScroll();
 }
 
 function hideInstallPrompt() {
   const promptEl = document.getElementById('installPrompt');
-  if (promptEl) {
+  if (promptEl && promptEl.classList.contains('show')) {
     promptEl.classList.remove('show');
+    unlockBodyScroll();
   }
 }
 

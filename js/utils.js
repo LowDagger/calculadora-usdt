@@ -13,3 +13,13 @@ export function money(value, digits = 2) {
 export function $(id) {
   return document.getElementById(id);
 }
+
+export function triggerHaptic() {
+  if (typeof navigator !== 'undefined' && navigator.vibrate) {
+    try {
+      navigator.vibrate(12);
+    } catch (e) {
+      // Ignore vibration errors (e.g. security blocks)
+    }
+  }
+}

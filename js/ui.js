@@ -1,11 +1,11 @@
-import { $, money, n } from './utils.js';
+import { $, money, n, triggerHaptic } from './utils.js';
 
 export const els = {
   usdToBuy: $('usdToBuy'), bankMargin: $('bankMargin'), bcvRate: $('bcvRate'), p2pRate: $('p2pRate'),
   cardFee: $('cardFee'), bpayFee: $('bpayFee'), autoRates: $('autoRates'), bcvView: $('bcvView'), bankView: $('bankView'), p2pView: $('p2pView'),
   lastUpdate: $('lastUpdate'), statusBox: $('statusBox'), opStatus: $('opStatus'), vesNeeded: $('vesNeeded'), vesSub: $('vesSub'),
   profitCard: $('profitCard'), profitUsdtBig: $('profitUsdtBig'), profitVes: $('profitVes'), usdtFinal: $('usdtFinal'), feesSub: $('feesSub'),
-  roiView: $('roiView'), returnSub: $('returnSub'), flowUsd: $('flowUsd'), flowVes: $('flowVes'), flowCard: $('flowCard'), flowBpay: $('flowBpay'),
+  roiCard: $('roiCard'), roiView: $('roiView'), returnSub: $('returnSub'), flowUsd: $('flowUsd'), flowVes: $('flowVes'), flowCard: $('flowCard'), flowBpay: $('flowBpay'),
   flowReturn: $('flowReturn'), formulaText: $('formulaText'), loadRatesBtn: $('loadRatesBtn'), shareBtn: $('shareBtn'), openSettingsBtn: $('openSettingsBtn'),
   settingsPanel: $('settingsPanel'), closeSettingsBtn: $('closeSettingsBtn'), clearBtn: $('clearBtn'), clearBtnTop: $('clearBtnTop'),
   resetDefaultsBtn: $('resetDefaultsBtn'), copyBtnSettings: $('copyBtnSettings'), clearBtnMobile: $('clearBtnMobile'), shareBtnMobile: $('shareBtnMobile'), loadRatesBtnMobile: $('loadRatesBtnMobile'), loadRatesBtnSettings: $('loadRatesBtnSettings'),
@@ -52,6 +52,14 @@ export function setLoadingRates(isLoading) {
     els.loadRatesBtnSettings.disabled = isLoading;
     els.loadRatesBtnSettings.classList.toggle('loading', isLoading);
   }
+
+  if (isLoading) {
+    const skeletonHTML = '<span class="skeleton-shimmer"></span>';
+    if (els.bcvView) els.bcvView.innerHTML = skeletonHTML;
+    if (els.bankView) els.bankView.innerHTML = skeletonHTML;
+    if (els.p2pView) els.p2pView.innerHTML = skeletonHTML;
+    if (els.lastUpdate) els.lastUpdate.innerHTML = skeletonHTML;
+  }
 }
 
 export function renderEmpty() {
@@ -81,14 +89,74 @@ export function renderRates({ bcv, bank, p2p }) {
   els.p2pView.textContent = p2p ? money(p2p, 2) : '--';
 }
 
+let activeModalsCount = 0;
+let savedScrollY = 0;
+
+export function lockBodyScroll() {
+  if (activeModalsCount === 0) {
+    savedScrollY = window.scrollY;
+    document.body.style.top = `-${savedScrollY}px`;
+    document.body.classList.add('modal-open');
+    document.documentElement.classList.add('modal-open');
+  }
+  activeModalsCount++;
+}
+
+export function unlockBodyScroll() {
+  activeModalsCount = Math.max(0, activeModalsCount - 1);
+  if (activeModalsCount === 0) {
+    document.body.classList.remove('modal-open');
+    document.documentElement.classList.remove('modal-open');
+    document.body.style.top = '';
+    window.scrollTo(0, savedScrollY);
+  }
+}
+
+function animateNumber(el, targetVal, formatFn) {
+  const isReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const oldVal = el._prevVal !== undefined ? el._prevVal : 0;
+  el._prevVal = targetVal;
+  
+  if (el._animFrameId) {
+    cancelAnimationFrame(el._animFrameId);
+    el._animFrameId = null;
+  }
+  
+  if (isReduced || Math.abs(targetVal - oldVal) < 0.05) {
+    el.textContent = formatFn(targetVal);
+    return;
+  }
+  
+  const startTime = performance.now();
+  const duration = 200; // 200ms
+  
+  function update(now) {
+    const elapsed = now - startTime;
+    if (elapsed >= duration) {
+      el.textContent = formatFn(targetVal);
+      el._animFrameId = null;
+      return;
+    }
+    
+    const progress = elapsed / duration;
+    const easeProgress = progress * (2 - progress); // ease-out quad
+    const currentVal = oldVal + (targetVal - oldVal) * easeProgress;
+    
+    el.textContent = formatFn(currentVal);
+    el._animFrameId = requestAnimationFrame(update);
+  }
+  
+  el._animFrameId = requestAnimationFrame(update);
+}
+
 export function renderResult(r) {
   els.opStatus.textContent = r.profitVes >= 0 ? 'Rentable' : 'Pérdida';
-  els.vesNeeded.textContent = money(r.vesNeeded, 2);
+  animateNumber(els.vesNeeded, r.vesNeeded, (v) => money(v, 2));
   els.vesSub.textContent = `Para ${money(r.usdUsed, 2)} USD al banco`;
-  els.usdtFinal.textContent = money(r.usdtFinal, 2);
-  els.profitUsdtBig.textContent = (r.profitUsdt >= 0 ? '+' : '') + money(r.profitUsdt, 2);
-  els.profitVes.textContent = (r.profitVes >= 0 ? '+' : '') + money(r.profitVes, 2) + ' Bs';
-  els.roiView.textContent = (r.roi >= 0 ? '+' : '') + money(r.roi, 2) + '%';
+  animateNumber(els.usdtFinal, r.usdtFinal, (v) => money(v, 2));
+  animateNumber(els.profitUsdtBig, r.profitUsdt, (v) => (v >= 0 ? '+' : '') + money(v, 2));
+  animateNumber(els.profitVes, r.profitVes, (v) => (v >= 0 ? '+' : '') + money(v, 2) + ' Bs');
+  animateNumber(els.roiView, r.roi, (v) => (v >= 0 ? '+' : '') + money(v, 2) + '%');
   els.feesSub.textContent = `Comisiones ${money(r.totalFeesUsd, 2)} USD`;
   els.returnSub.textContent = `${money(r.vesReturn, 2)} Bs al P2P`;
   els.flowUsd.textContent = money(r.usdUsed, 2) + ' USD';
@@ -97,6 +165,9 @@ export function renderResult(r) {
   els.flowBpay.textContent = '-' + money(r.bpayFeeUsd, 2) + ' USD';
   els.flowReturn.textContent = money(r.vesReturn, 2) + ' Bs';
   els.profitCard.className = r.profitVes >= 0 ? 'kpi-card kpi-highlight' : 'kpi-card kpi-highlight kpi-loss';
+  if (els.roiCard) {
+    els.roiCard.className = r.roi >= 0 ? 'kpi-card kpi-highlight' : 'kpi-card kpi-highlight kpi-loss';
+  }
   els.formulaText.innerHTML = `
     <strong>Tasa banco:</strong> ${money(r.bcv, 4)} × ${(1 + n(els.bankMargin.value) / 100).toFixed(4)} = ${money(r.bank, 4)} Bs/USD.<br>
     <strong>Bs necesarios:</strong> ${money(r.usdUsed, 2)} × ${money(r.bank, 4)} = ${money(r.vesNeeded, 2)} Bs.<br>
@@ -117,41 +188,55 @@ export function renderResult(r) {
     els.statusPill.className = 'status-pill ' + (isProfitable ? 'profitable' : 'loss');
   }
   if (els.bottomTimestamp) {
-    els.bottomTimestamp.textContent = els.lastUpdate.textContent.replace(', ', ' · ');
+    els.bottomTimestamp.textContent = els.lastUpdate.textContent;
   }
 }
 
 export function openSettings() {
   els.settingsPanel.classList.remove('closing');
   els.settingsPanel.classList.add('open');
-  els.settingsPanel.setAttribute('aria-hidden','false');
+  els.settingsPanel.setAttribute('aria-hidden', 'false');
+  triggerHaptic();
+  lockBodyScroll();
 }
 
 export function closeSettings() {
   const panel = els.settingsPanel;
   if (!panel.classList.contains('open')) return;
   panel.classList.add('closing');
-  const duration = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 150;
+  triggerHaptic();
+  const duration = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 250;
   setTimeout(() => {
     panel.classList.remove('open', 'closing');
     panel.setAttribute('aria-hidden', 'true');
+    unlockBodyScroll();
   }, duration);
 }
 
 export function openBreakdown() {
   els.breakdownPanel.classList.remove('closing');
   els.breakdownPanel.classList.add('open');
-  els.breakdownPanel.setAttribute('aria-hidden','false');
+  els.breakdownPanel.setAttribute('aria-hidden', 'false');
+  if (els.openBreakdownBtn) {
+    els.openBreakdownBtn.setAttribute('aria-expanded', 'true');
+  }
+  triggerHaptic();
+  lockBodyScroll();
 }
 
 export function closeBreakdown() {
   const panel = els.breakdownPanel;
   if (!panel.classList.contains('open')) return;
   panel.classList.add('closing');
-  const duration = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 150;
+  triggerHaptic();
+  const duration = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 250;
   setTimeout(() => {
     panel.classList.remove('open', 'closing');
     panel.setAttribute('aria-hidden', 'true');
+    if (els.openBreakdownBtn) {
+      els.openBreakdownBtn.setAttribute('aria-expanded', 'false');
+    }
+    unlockBodyScroll();
   }, duration);
 }
 

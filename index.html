@@ -146,7 +146,7 @@
 
       <!-- Card 3: Results KPI grid (2x2) -->
       <div class="kpi-grid">
-        <div class="kpi-card">
+        <div class="kpi-card kpi-operational" id="vesNeededCard">
           <div class="card-header">
             <span class="kpi-label">BS NECESARIOS</span>
             <span class="material-symbols-rounded card-icon">receipt_long</span>
@@ -164,18 +164,18 @@
           <span class="kpi-desc" id="profitVes">-- Bs</span>
         </div>
 
-        <div class="kpi-card">
+        <div class="kpi-card kpi-operational" id="usdtFinalCard">
           <div class="card-header">
-            <span class="rate-label">USDT FINALES</span>
+            <span class="kpi-label">USDT FINALES</span>
             <span class="material-symbols-rounded card-icon">token</span>
           </div>
           <strong class="kpi-val" id="usdtFinal">--</strong>
           <span class="kpi-desc" id="feesSub">Tarjeta + BPay</span>
         </div>
 
-        <div class="kpi-card">
+        <div class="kpi-card kpi-highlight" id="roiCard">
           <div class="card-header">
-            <span class="rate-label">ROI</span>
+            <span class="kpi-label">ROI</span>
             <span class="material-symbols-rounded card-icon">monitoring</span>
           </div>
           <strong class="kpi-val" id="roiView">--</strong>
@@ -184,10 +184,11 @@
       </div>
 
       <!-- Trigger button for Breakdown Modal -->
-      <button class="breakdown-trigger-btn" id="openBreakdownBtn" title="Ver desglose del cálculo" aria-label="Ver desglose del cálculo">
+      <button class="breakdown-trigger-btn" id="openBreakdownBtn" title="Ver desglose del cálculo" aria-label="Ver desglose del cálculo" aria-expanded="false">
         <span class="summary-left">
           <span class="material-symbols-rounded">bar_chart</span>
           <span>Ver desglose</span>
+          <span class="material-symbols-rounded chevron-icon">expand_more</span>
         </span>
         <span class="summary-amount" id="breakdownAmount">-- USD</span>
       </button>
@@ -221,9 +222,9 @@
     <footer>Herramienta personal. Verifica tasas, límites y comisiones antes de operar.</footer>
   </div>
 
-  <!-- Breakdown Panel (Modal / Bottom Sheet) -->
   <section class="breakdown-panel" id="breakdownPanel" aria-hidden="true">
     <div class="breakdown-card">
+      <div class="sheet-grab-handle"></div>
       <div class="breakdown-head">
         <div>
           <h2>Desglose del cálculo</h2>
@@ -289,6 +290,7 @@
 
   <section class="settings-panel" id="settingsPanel" aria-hidden="true">
     <div class="settings-card">
+      <div class="sheet-grab-handle"></div>
       <div class="settings-head">
         <div>
           <h2>Configuración</h2>
