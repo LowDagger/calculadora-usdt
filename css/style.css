@@ -70,6 +70,11 @@ body, .card, .rate-card, .kpi-card, .breakdown-details, .details-body, .step, .i
   padding: 0;
 }
 
+html, body {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
 body {
   font-family: var(--font);
   background: var(--bg);
@@ -257,7 +262,7 @@ body {
   justify-content: center;
 }
 
-.chip-btn:hover {
+.chip-btn:hover:not(.active) {
   background: var(--surface-hover);
   border-color: var(--muted);
 }
@@ -1108,9 +1113,9 @@ footer {
   100% { transform: scale(1); }
 }
 
-.icon-btn.copy-success {
+.icon-btn.copy-success, .tiny-icon.copy-success {
   animation: copy-pop 0.35s ease-out;
-  color: var(--green);
+  color: var(--green) !important;
 }
 
 /* ── Floating keyboard "Done" button ──────────────────────────────────────── */
@@ -1208,7 +1213,7 @@ footer {
   filter: brightness(1.08);
 }
 
-.chip-btn:hover {
+.chip-btn:hover:not(.active) {
   background: var(--surface-hover);
   border-color: var(--muted);
   filter: brightness(1.05);
@@ -1415,4 +1420,24 @@ html[data-theme="light"] .segment-btn:hover:not(.active) {
 
 .whats-new-btn:active {
   transform: scale(0.98);
+}
+
+/* Accessibility & Focus States */
+.icon-btn:focus,
+.chip-btn:focus,
+.segment-btn:focus,
+.tiny-icon:focus,
+.breakdown-trigger-btn:focus,
+.whats-new-btn:focus {
+  outline: none;
+}
+
+.icon-btn:focus-visible,
+.chip-btn:focus-visible,
+.segment-btn:focus-visible,
+.tiny-icon:focus-visible,
+.breakdown-trigger-btn:focus-visible,
+.whats-new-btn:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
 }

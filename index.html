@@ -55,6 +55,22 @@
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,400,0,0"
     rel="stylesheet">
   <link rel="stylesheet" href="/css/style.css" />
+  <style>
+    /* Critical layout fallback to prevent off-screen panels from breaking page flow on first load */
+    .breakdown-panel, .settings-panel, .whats-new-panel {
+      display: none !important;
+    }
+    .breakdown-panel.open, .settings-panel.open, .whats-new-panel.open,
+    .breakdown-panel.closing, .settings-panel.closing, .whats-new-panel.closing {
+      display: grid !important;
+    }
+    @media (max-width: 860px) {
+      .breakdown-panel.open, .settings-panel.open,
+      .breakdown-panel.closing, .settings-panel.closing {
+        display: flex !important;
+      }
+    }
+  </style>
 </head>
 
 <body>

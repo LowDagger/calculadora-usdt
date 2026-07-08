@@ -1,6 +1,6 @@
 // ─── Version ──────────────────────────────────────────────────────────────────
 // Bump APP_VERSION on every new deployment to bust the old cache automatically.
-const APP_VERSION  = '7';
+const APP_VERSION  = '8';
 const CACHE_NAME   = `calculadora-usdt-v${APP_VERSION}`;
 
 // ─── Pre-cache manifest ───────────────────────────────────────────────────────
@@ -80,7 +80,7 @@ self.addEventListener('fetch', (event) => {
   // ── Static assets – Stale-While-Revalidate ──
   event.respondWith(
     caches.open(CACHE_NAME).then((cache) =>
-      cache.match(event.request).then((cachedResponse) => {
+      cache.match(event.request, { ignoreSearch: true }).then((cachedResponse) => {
         // Always kick off a background network fetch to keep the cache fresh
         const networkFetch = fetch(event.request)
           .then((networkResponse) => {

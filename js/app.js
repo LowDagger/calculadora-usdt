@@ -1,14 +1,7 @@
 import { fetchRates } from './api.js';
 import { calculateValues, currentBankRate } from './calculator.js';
 
-// Temporary developer helper to unregister stale service worker cache
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.getRegistrations().then(regs => {
-    for (let reg of regs) {
-      reg.unregister().then(() => console.log('Service worker unregistered'));
-    }
-  });
-}
+
 import { loadState as readState, saveState as writeState } from './storage.js';
 import { money, n } from './utils.js';
 import { els, setStatus, clearStatus, setLoadingRates, showToast, renderEmpty, renderRates, renderResult, openSettings, closeSettings, openBreakdown, closeBreakdown } from './ui.js?v=10';
@@ -624,7 +617,7 @@ initInstallPrompt();
 initWhatsNew();
 updateRelativeTime();
 setInterval(updateRelativeTime, 5000);
-// registerServiceWorker();
+registerServiceWorker();
 
 window.addEventListener('load', () => {
   if (els.autoRates.checked) loadRates().catch(() => {});
