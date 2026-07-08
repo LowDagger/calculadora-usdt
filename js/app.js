@@ -578,34 +578,7 @@ function initInstallPrompt() {
   }
 }
 
-// --- What's New changelog dialog ---
-const CURRENT_VERSION = '1.3';
 
-function initWhatsNew() {
-  const lastSeen = localStorage.getItem('lastSeenVersion');
-  if (lastSeen !== CURRENT_VERSION) {
-    const panel = document.getElementById('whatsNewPanel');
-    if (panel) {
-      panel.classList.add('open');
-      panel.setAttribute('aria-hidden', 'false');
-    }
-  }
-  
-  const closeBtn = document.getElementById('whatsNewCloseBtn');
-  if (closeBtn) {
-    closeBtn.addEventListener('click', () => {
-      const panel = document.getElementById('whatsNewPanel');
-      if (panel) {
-        panel.classList.add('closing');
-        setTimeout(() => {
-          panel.classList.remove('open', 'closing');
-          panel.setAttribute('aria-hidden', 'true');
-          localStorage.setItem('lastSeenVersion', CURRENT_VERSION);
-        }, 150);
-      }
-    });
-  }
-}
 
 loadState();
 initTheme();
@@ -614,7 +587,6 @@ bindEvents();
 calculate();
 setupKeyboardUX();
 initInstallPrompt();
-initWhatsNew();
 updateRelativeTime();
 setInterval(updateRelativeTime, 5000);
 registerServiceWorker();

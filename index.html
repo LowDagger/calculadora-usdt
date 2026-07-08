@@ -57,11 +57,11 @@
   <link rel="stylesheet" href="/css/style.css" />
   <style>
     /* Critical layout fallback to prevent off-screen panels from breaking page flow on first load */
-    .breakdown-panel, .settings-panel, .whats-new-panel {
+    .breakdown-panel, .settings-panel {
       display: none !important;
     }
-    .breakdown-panel.open, .settings-panel.open, .whats-new-panel.open,
-    .breakdown-panel.closing, .settings-panel.closing, .whats-new-panel.closing {
+    .breakdown-panel.open, .settings-panel.open,
+    .breakdown-panel.closing, .settings-panel.closing {
       display: grid !important;
     }
     @media (max-width: 860px) {
@@ -394,22 +394,7 @@
     </div>
   </div>
 
-  <!-- What's New Changelog Popup -->
-  <section class="whats-new-panel" id="whatsNewPanel" aria-hidden="true">
-    <div class="whats-new-card">
-      <div class="whats-new-head">
-        <h2>¿Qué hay de nuevo?</h2>
-      </div>
-      <div class="whats-new-content">
-        <ul class="changelog-list">
-          <li><span>•</span> Compartir nativo en móvil y escritorio</li>
-          <li><span>•</span> Mejoras visuales y menú de ajustes compacto</li>
-          <li><span>•</span> Experiencia de instalación web optimizada</li>
-        </ul>
-      </div>
-      <button class="whats-new-btn" id="whatsNewCloseBtn">Entendido</button>
-    </div>
-  </section>
+
   <script type="module" src="/js/app.js?v=10"></script>
   <script defer src="/_vercel/insights/script.js"></script>
   <script defer src="/_vercel/speed-insights/script.js"></script>

@@ -564,13 +564,13 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .breakdown-panel.open, .settings-panel.open, .whats-new-panel.open {
+  .breakdown-panel.open, .settings-panel.open {
     animation: fade-in 150ms ease-out forwards !important;
   }
-  .breakdown-panel.closing, .settings-panel.closing, .whats-new-panel.closing {
+  .breakdown-panel.closing, .settings-panel.closing {
     animation: fade-out 150ms ease-in forwards !important;
   }
-  .breakdown-card, .settings-card, .whats-new-card {
+  .breakdown-card, .settings-card {
     animation: none !important;
   }
 }
@@ -1327,108 +1327,12 @@ html[data-theme="light"] .segment-btn:hover:not(.active) {
   margin: 0 2px;
 }
 
-/* What's New Changelog Dialog styling */
-.whats-new-panel {
-  position: fixed;
-  inset: 0;
-  display: none;
-  z-index: 110;
-  background: rgba(15, 17, 21, 0.7);
-  backdrop-filter: blur(8px);
-  padding: 24px 16px;
-}
-
-.whats-new-panel.open {
-  display: grid;
-  place-items: center;
-  animation: fade-in 150ms ease-out forwards;
-}
-
-.whats-new-panel.closing {
-  display: grid;
-  place-items: center;
-  animation: fade-out 150ms ease-in forwards;
-}
-
-.whats-new-card {
-  width: 100%;
-  max-width: 320px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 20px;
-  padding: 20px;
-  box-shadow: var(--shadow-lg);
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  animation: modal-in 150ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
-
-.whats-new-panel.closing .whats-new-card {
-  animation: modal-out 150ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
-
-.whats-new-head h2 {
-  font-size: 1.15rem;
-  font-weight: 800;
-  letter-spacing: -0.01em;
-}
-
-.whats-new-content {
-  display: flex;
-  flex-direction: column;
-}
-
-.changelog-list {
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.changelog-list li {
-  font-size: 0.78rem;
-  color: var(--muted);
-  line-height: 1.4;
-  display: flex;
-  gap: 8px;
-  align-items: flex-start;
-}
-
-.changelog-list li span {
-  color: var(--primary);
-  font-weight: 800;
-}
-
-.whats-new-btn {
-  width: 100%;
-  padding: 10px;
-  font-size: 0.8rem;
-  font-weight: 700;
-  border-radius: 10px;
-  border: none;
-  cursor: pointer;
-  background: var(--primary);
-  color: #ffffff;
-  font-family: var(--font);
-  transition: opacity 150ms, filter 150ms, transform 100ms;
-}
-
-.whats-new-btn:hover {
-  filter: brightness(1.08);
-}
-
-.whats-new-btn:active {
-  transform: scale(0.98);
-}
-
 /* Accessibility & Focus States */
 .icon-btn:focus,
 .chip-btn:focus,
 .segment-btn:focus,
 .tiny-icon:focus,
-.breakdown-trigger-btn:focus,
-.whats-new-btn:focus {
+.breakdown-trigger-btn:focus {
   outline: none;
 }
 
@@ -1436,8 +1340,7 @@ html[data-theme="light"] .segment-btn:hover:not(.active) {
 .chip-btn:focus-visible,
 .segment-btn:focus-visible,
 .tiny-icon:focus-visible,
-.breakdown-trigger-btn:focus-visible,
-.whats-new-btn:focus-visible {
+.breakdown-trigger-btn:focus-visible {
   outline: 2px solid var(--primary);
   outline-offset: 2px;
 }
