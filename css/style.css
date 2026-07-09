@@ -234,9 +234,10 @@ body {
 }
 
 .calculator-display-wrap .unit-part {
-  font-size: 1.4rem;
-  font-weight: 700;
+  font-size: 1.1rem;
+  font-weight: 400;
   color: var(--muted);
+  opacity: 0.65;
   margin-left: 8px;
   user-select: none;
   align-self: center;
@@ -721,6 +722,68 @@ html[data-theme="light"] .kpi-loss {
 
 .amount.negative {
   color: var(--red);
+}
+
+.amount.highlight {
+  color: var(--primary);
+}
+
+/* ── Unit label typography — numbers dominate, units secondary ──────────────────────── */
+
+/* Inline unit for KPI big values: Bs, USD, USDT */
+.value-unit {
+  font-size: 0.6em;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  margin-left: 0.25em;
+  vertical-align: middle;
+  color: var(--muted);
+}
+
+/* Highlight/loss cards: echo the accent color at reduced opacity */
+.kpi-highlight .value-unit,
+.kpi-loss .value-unit {
+  color: currentColor;
+  opacity: 0.55;
+}
+
+/* Inline unit for rate-card values: Bs/USD, Bs/USDT */
+.rate-unit {
+  font-size: 0.72em;
+  font-weight: 400;
+  letter-spacing: 0;
+  margin-left: 0.15em;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+/* Breakdown flow amounts: slightly quiet unit */
+.amount .value-unit {
+  font-size: 0.82em;
+  font-weight: 500;
+  opacity: 0.7;
+  margin-left: 0.15em;
+  color: currentColor;
+}
+
+
+/* Highlighted step for "Monto a ingresar en Bpay" */
+.step.step-highlight {
+  border: 1px solid rgba(59, 130, 246, 0.25);
+  background: rgba(59, 130, 246, 0.06);
+}
+
+html[data-theme="light"] .step.step-highlight {
+  background: rgba(59, 130, 246, 0.05);
+}
+
+.step.step-highlight h3 {
+  color: var(--primary);
+}
+
+.num.num-highlight {
+  background: var(--primary);
+  color: #ffffff;
 }
 
 /* Status Alert Message */

@@ -6,7 +6,7 @@ export const els = {
   lastUpdate: $('lastUpdate'), statusBox: $('statusBox'), opStatus: $('opStatus'), vesNeeded: $('vesNeeded'), vesSub: $('vesSub'),
   profitCard: $('profitCard'), profitUsdtBig: $('profitUsdtBig'), profitVes: $('profitVes'), usdtFinal: $('usdtFinal'), feesSub: $('feesSub'),
   roiCard: $('roiCard'), roiView: $('roiView'), returnSub: $('returnSub'), flowUsd: $('flowUsd'), flowVes: $('flowVes'), flowCard: $('flowCard'), flowBpay: $('flowBpay'),
-  flowReturn: $('flowReturn'), formulaText: $('formulaText'), loadRatesBtn: $('loadRatesBtn'), shareBtn: $('shareBtn'), openSettingsBtn: $('openSettingsBtn'),
+  flowReturn: $('flowReturn'), flowAfterCard: $('flowAfterCard'), formulaText: $('formulaText'), loadRatesBtn: $('loadRatesBtn'), shareBtn: $('shareBtn'), openSettingsBtn: $('openSettingsBtn'),
   settingsPanel: $('settingsPanel'), closeSettingsBtn: $('closeSettingsBtn'), clearBtn: $('clearBtn'), clearBtnTop: $('clearBtnTop'),
   resetDefaultsBtn: $('resetDefaultsBtn'), copyBtnSettings: $('copyBtnSettings'), clearBtnMobile: $('clearBtnMobile'), shareBtnMobile: $('shareBtnMobile'), loadRatesBtnMobile: $('loadRatesBtnMobile'), loadRatesBtnSettings: $('loadRatesBtnSettings'),
   // New elements
@@ -64,7 +64,7 @@ export function setLoadingRates(isLoading) {
 
 export function renderEmpty() {
   els.opStatus.textContent = 'Esperando datos';
-  ['vesNeeded','profitUsdtBig','profitVes','usdtFinal','roiView','flowUsd','flowVes','flowCard','flowBpay','flowReturn'].forEach(id => els[id].textContent = '--');
+  ['vesNeeded','profitUsdtBig','profitVes','usdtFinal','roiView','flowUsd','flowVes','flowCard','flowAfterCard','flowBpay','flowReturn'].forEach(id => els[id] && (els[id].textContent = '--'));
   els.feesSub.textContent = 'Tarjeta + BPay';
   els.returnSub.textContent = 'Venta P2P estimada';
   els.vesSub.textContent = 'Para comprar USD al banco';
@@ -84,9 +84,11 @@ export function renderEmpty() {
 }
 
 export function renderRates({ bcv, bank, p2p }) {
-  els.bcvView.textContent = bcv ? money(bcv, 2) : '--';
-  els.bankView.textContent = bank ? money(bank, 2) : '--';
-  els.p2pView.textContent = p2p ? money(p2p, 2) : '--';
+  const uBsUsd  = '<span class="rate-unit">Bs/USD</span>';
+  const uBsUsdt = '<span class="rate-unit">Bs/USDT</span>';
+  els.bcvView.innerHTML  = bcv  ? money(bcv, 2)  + uBsUsd  : '--';
+  els.bankView.innerHTML = bank ? money(bank, 2) + uBsUsd  : '--';
+  els.p2pView.innerHTML  = p2p  ? money(p2p, 2)  + uBsUsdt : '--';
 }
 
 let activeModalsCount = 0;
@@ -112,7 +114,7 @@ export function unlockBodyScroll() {
   }
 }
 
-function animateNumber(el, targetVal, formatFn) {
+function animateNumber(el, targetVal, formatFn, unitHtml = '') {
   const isReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const oldVal = el._prevVal !== undefined ? el._prevVal : 0;
   el._prevVal = targetVal;
@@ -123,7 +125,7 @@ function animateNumber(el, targetVal, formatFn) {
   }
   
   if (isReduced || Math.abs(targetVal - oldVal) < 0.05) {
-    el.textContent = formatFn(targetVal);
+    el.innerHTML = formatFn(targetVal) + unitHtml;
     return;
   }
   
@@ -133,7 +135,7 @@ function animateNumber(el, targetVal, formatFn) {
   function update(now) {
     const elapsed = now - startTime;
     if (elapsed >= duration) {
-      el.textContent = formatFn(targetVal);
+      el.innerHTML = formatFn(targetVal) + unitHtml;
       el._animFrameId = null;
       return;
     }
@@ -142,7 +144,7 @@ function animateNumber(el, targetVal, formatFn) {
     const easeProgress = progress * (2 - progress); // ease-out quad
     const currentVal = oldVal + (targetVal - oldVal) * easeProgress;
     
-    el.textContent = formatFn(currentVal);
+    el.innerHTML = formatFn(currentVal) + unitHtml;
     el._animFrameId = requestAnimationFrame(update);
   }
   
@@ -151,19 +153,20 @@ function animateNumber(el, targetVal, formatFn) {
 
 export function renderResult(r) {
   els.opStatus.textContent = r.profitVes >= 0 ? 'Rentable' : 'Pérdida';
-  animateNumber(els.vesNeeded, r.vesNeeded, (v) => money(v, 2));
+  animateNumber(els.vesNeeded,    r.vesNeeded,  (v) => money(v, 2),                              '<span class="value-unit">Bs</span>');
   els.vesSub.textContent = `Para ${money(r.usdUsed, 2)} USD al banco`;
-  animateNumber(els.usdtFinal, r.usdtFinal, (v) => money(v, 2));
-  animateNumber(els.profitUsdtBig, r.profitUsdt, (v) => (v >= 0 ? '+' : '') + money(v, 2));
-  animateNumber(els.profitVes, r.profitVes, (v) => (v >= 0 ? '+' : '') + money(v, 2) + ' Bs');
-  animateNumber(els.roiView, r.roi, (v) => (v >= 0 ? '+' : '') + money(v, 2) + '%');
-  els.feesSub.textContent = `Comisiones ${money(r.totalFeesUsd, 2)} USD`;
+  animateNumber(els.usdtFinal,    r.usdtFinal,  (v) => money(v, 2),                              '<span class="value-unit">USDT</span>');
+  animateNumber(els.profitUsdtBig, r.profitUsdt, (v) => (v >= 0 ? '+' : '') + money(v, 2),      '<span class="value-unit">USD</span>');
+  animateNumber(els.profitVes,    r.profitVes,  (v) => (v >= 0 ? '+' : '') + money(v, 2) + ' Bs');
+  animateNumber(els.roiView,      r.roi,        (v) => (v >= 0 ? '+' : '') + money(v, 2) + '%');
+  els.feesSub.textContent   = `Comisiones ${money(r.totalFeesUsd, 2)} USD`;
   els.returnSub.textContent = `${money(r.vesReturn, 2)} Bs al P2P`;
-  els.flowUsd.textContent = money(r.usdUsed, 2) + ' USD';
-  els.flowVes.textContent = money(r.vesNeeded, 2) + ' Bs';
-  els.flowCard.textContent = '-' + money(r.cardFeeUsd, 2) + ' USD';
-  els.flowBpay.textContent = '-' + money(r.bpayFeeUsd, 2) + ' USD';
-  els.flowReturn.textContent = money(r.vesReturn, 2) + ' Bs';
+  els.flowUsd.innerHTML     = money(r.usdUsed, 2)   + ' <span class="value-unit">USD</span>';
+  els.flowVes.innerHTML     = money(r.vesNeeded, 2)  + ' <span class="value-unit">Bs</span>';
+  els.flowCard.innerHTML    = '-' + money(r.cardFeeUsd, 2) + ' <span class="value-unit">USD</span> (' + money(r.cardPct, 1) + '%)';
+  if (els.flowAfterCard) els.flowAfterCard.innerHTML = money(r.afterCard, 2) + ' <span class="value-unit">USD</span>';
+  els.flowBpay.innerHTML    = '-' + money(r.bpayFeeUsd, 2) + ' <span class="value-unit">USD</span> (' + money(r.bpayPct, 1) + '%)';
+  els.flowReturn.innerHTML  = money(r.vesReturn, 2)  + ' <span class="value-unit">Bs</span>';
   els.profitCard.className = r.profitVes >= 0 ? 'kpi-card kpi-highlight' : 'kpi-card kpi-highlight kpi-loss';
   if (els.roiCard) {
     els.roiCard.className = r.roi >= 0 ? 'kpi-card kpi-highlight' : 'kpi-card kpi-highlight kpi-loss';
@@ -176,7 +179,7 @@ export function renderResult(r) {
   `;
   
   if (els.breakdownAmount) {
-    els.breakdownAmount.textContent = money(r.usdUsed, 2) + ' USD';
+    els.breakdownAmount.innerHTML = money(r.usdUsed, 2) + ' <span class="value-unit">USD</span>';
   }
   
   updateUsdToBuyDisplay(els.usdToBuy.value);
