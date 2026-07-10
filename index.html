@@ -47,6 +47,8 @@
     content="Calcula automáticamente cuánto pagar en bolívares, ganancia, ROI y USDT finales con tasas TasaVE en tiempo real." />
   <meta property="twitter:image" content="https://calculadora-banco-usdt.vercel.app/preview.png" />
 
+  <link rel="icon" type="image/svg+xml" href="/assets/icon.svg" />
+  <link rel="apple-touch-icon" href="/assets/icon.svg" />
   <link rel="manifest" href="/manifest.json" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -57,16 +59,24 @@
   <link rel="stylesheet" href="/css/style.css" />
   <style>
     /* Critical layout fallback to prevent off-screen panels from breaking page flow on first load */
-    .breakdown-panel, .settings-panel {
+    .breakdown-panel,
+    .settings-panel {
       display: none !important;
     }
-    .breakdown-panel.open, .settings-panel.open,
-    .breakdown-panel.closing, .settings-panel.closing {
+
+    .breakdown-panel.open,
+    .settings-panel.open,
+    .breakdown-panel.closing,
+    .settings-panel.closing {
       display: grid !important;
     }
+
     @media (max-width: 860px) {
-      .breakdown-panel.open, .settings-panel.open,
-      .breakdown-panel.closing, .settings-panel.closing {
+
+      .breakdown-panel.open,
+      .settings-panel.open,
+      .breakdown-panel.closing,
+      .settings-panel.closing {
         display: flex !important;
       }
     }
@@ -77,7 +87,10 @@
   <div class="app">
     <header class="topbar">
       <div class="brand">
-        <h1 class="brand-title">Banco <span class="divider">|</span> USDT</h1>
+        <h1 class="brand-title">
+          <img src="/assets/icon.svg" alt="Calculadora Banco a USDT" class="header-icon" />
+          Banco <span class="divider">|</span> USDT
+        </h1>
         <p class="subtitle">BCV automático · P2P editable</p>
       </div>
       <div class="icon-actions">
@@ -137,7 +150,9 @@
         </div>
         <div class="rate-card updated-card">
           <div class="card-header">
-            <span class="rate-label">ACTUALIZADO</span>
+            <span class="rate-label" style="display: inline-flex; align-items: center; gap: 4px;">
+              <span class="pulse-dot"></span>ACTUALIZADO
+            </span>
             <span class="material-symbols-rounded card-icon">sync</span>
           </div>
           <strong class="rate-val updated-time" id="lastUpdate">Sin actualizar</strong>
@@ -157,7 +172,7 @@
 
         <div class="kpi-card kpi-highlight" id="profitCard">
           <div class="card-header">
-            <span class="kpi-label">GANANCIA</span>
+            <span class="kpi-label">GANANCIA ESTIMADA</span>
             <span class="material-symbols-rounded card-icon">trending_up</span>
           </div>
           <strong class="kpi-val" id="profitUsdtBig">--</strong>
@@ -175,7 +190,7 @@
 
         <div class="kpi-card kpi-highlight" id="roiCard">
           <div class="card-header">
-            <span class="kpi-label">ROI</span>
+            <span class="kpi-label">RETORNO ESTIMADO</span>
             <span class="material-symbols-rounded card-icon">monitoring</span>
           </div>
           <strong class="kpi-val" id="roiView">--</strong>
@@ -184,7 +199,8 @@
       </div>
 
       <!-- Trigger button for Breakdown Modal -->
-      <button class="breakdown-trigger-btn" id="openBreakdownBtn" title="Ver desglose del cálculo" aria-label="Ver desglose del cálculo" aria-expanded="false">
+      <button class="breakdown-trigger-btn" id="openBreakdownBtn" title="Ver desglose del cálculo"
+        aria-label="Ver desglose del cálculo" aria-expanded="false">
         <span class="summary-left">
           <span class="material-symbols-rounded">bar_chart</span>
           <span>Ver desglose</span>
@@ -196,6 +212,14 @@
 
     <!-- General Status Info (used for auto-save notifications, limits, errors) -->
     <div class="status" id="statusBox"></div>
+
+    <!-- Section: Support the Project -->
+    <div class="support-section">
+      <span class="support-title">❤️ Apoya este proyecto</span>
+      <p class="support-desc">Banco → USDT es una herramienta gratuita y sin publicidad. Si te ha sido útil, puedes
+        apoyar su desarrollo.</p>
+      <button class="btn-support-trigger" id="openSupportBtn">Apoyar el proyecto</button>
+    </div>
 
     <!-- Hidden compatibility controls to prevent original JS from throwing errors -->
     <div style="display: none !important;">
@@ -219,7 +243,8 @@
       <div class="timestamp-text" id="bottomTimestamp">--</div>
     </div>
 
-    <footer>Herramienta personal. Verifica tasas, límites y comisiones antes de operar.</footer>
+    <footer>Herramienta personal. Los Bs necesarios son fijos según BCV + banco. La ganancia, USDT finales y venta P2P
+      son estimaciones según la tasa P2P actual.</footer>
   </div>
 
   <section class="breakdown-panel" id="breakdownPanel" aria-hidden="true">
@@ -239,51 +264,204 @@
           <div class="step">
             <div class="num">1</div>
             <div>
-              <h3>Compra banco</h3>
-              <p>USD de la operación.</p>
+              <h3>Vendes USDT</h3>
+              <p>Para obtener los Bs requeridos.</p>
             </div>
-            <div class="amount" id="flowUsd">--</div>
+            <div class="amount" id="flowUsdtToSell">--</div>
           </div>
           <div class="step">
             <div class="num">2</div>
             <div>
-              <h3>Bs requeridos</h3>
-              <p>BCV + margen banco.</p>
+              <h3>Obtienes Bs</h3>
+              <p>Al P2P actual.</p>
             </div>
             <div class="amount" id="flowVes">--</div>
           </div>
           <div class="step">
             <div class="num">3</div>
             <div>
-              <h3>Tarjeta</h3>
-              <p>Comisión sobre USD.</p>
+              <h3>Compras USD banco</h3>
+              <p>BCV + margen banco.</p>
             </div>
-            <div class="amount negative" id="flowCard">--</div>
+            <div class="amount" id="flowUsd">--</div>
           </div>
           <div class="step">
             <div class="num">4</div>
-            <div>
-              <h3>BPay</h3>
-              <p>Comisión después de tarjeta.</p>
+            <div style="width: 100%;">
+              <h3>Comisiones</h3>
+              <div class="commissions-list" style="margin-top: 6px; display: flex; flex-direction: column; gap: 6px;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                  <span style="font-size: 0.68rem; color: var(--muted);">Tarjeta:</span>
+                  <span class="amount negative" id="flowCard">--</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                  <span style="font-size: 0.68rem; color: var(--muted);">BPay:</span>
+                  <span class="amount negative" id="flowBpay">--</span>
+                </div>
+
+                <!-- Monto a ingresar en Bpay nested inside step 4 -->
+                <div class="step-highlight"
+                  style="margin-top: 4px; padding: 8px 10px; border-radius: 8px; border: 1px solid rgba(59, 130, 246, 0.25); background: rgba(59, 130, 246, 0.06); text-align: left;">
+                  <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span
+                      style="font-size: 0.68rem; font-weight: 700; color: var(--primary); display: inline-flex; align-items: center; gap: 4px;">
+                      <span>Ingresar en BPay:</span>
+                      <button class="kpi-copy-btn" data-copy="flowAfterCard" title="Copiar monto a ingresar en BPay"
+                        aria-label="Copiar monto a ingresar en BPay" style="padding: 2px; color: var(--primary);">
+                        <span class="material-symbols-rounded" style="font-size: 0.8rem !important;">content_copy</span>
+                      </button>
+                    </span>
+                    <strong class="amount highlight" id="flowAfterCard" style="font-size: 0.75rem;">--</strong>
+                  </div>
+                  <p style="font-size: 0.58rem; color: var(--muted); margin-top: 2px;">Este es el monto que debes
+                    ingresar en Bpay.</p>
+                </div>
+              </div>
             </div>
-            <div class="amount negative" id="flowBpay">--</div>
           </div>
           <div class="step">
             <div class="num">5</div>
             <div>
-              <h3>Venta P2P</h3>
-              <p>Valor final en bolívares.</p>
+              <h3>USDT finales estimados</h3>
+              <p>Después de comisiones.</p>
             </div>
-            <div class="amount positive" id="flowReturn">--</div>
+            <div class="amount" id="flowUsdtFinal">--</div>
+          </div>
+          <div class="step">
+            <div class="num">6</div>
+            <div style="width: 100%;">
+              <h3>Resultado estimado</h3>
+              <div style="margin-top: 6px; display: flex; flex-direction: column; gap: 6px;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                  <span style="font-size: 0.68rem; color: var(--muted);">Venta P2P:</span>
+                  <span class="amount positive" id="flowReturn">--</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                  <span style="font-size: 0.68rem; color: var(--muted);">Ganancia:</span>
+                  <div style="text-align: right;">
+                    <span class="amount" id="flowProfit">--</span>
+                    <p id="flowProfitSub" style="font-size: 0.58rem; color: var(--muted); margin-top: 1px;">--</p>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
-        
-        <div id="formulaText" class="formula-box">Completa USD, BCV y P2P para ver fórmula.</div>
-        
+
+        <details class="formula-details" style="margin-top: 8px;">
+          <summary
+            style="font-size: 0.72rem; font-weight: 700; color: var(--primary); cursor: pointer; user-select: none; outline: none; display: inline-flex; align-items: center; gap: 6px;">
+            <span class="material-symbols-rounded formula-chevron">expand_more</span>
+            <span>Ver fórmulas</span>
+          </summary>
+          <div id="formulaText" class="formula-box" style="margin-top: 6px;">Completa USD, BCV y P2P para ver fórmula.
+          </div>
+        </details>
+
         <div class="breakdown-note">
           <span class="material-symbols-rounded">info</span>
           <span>Las comisiones se aplican de forma secuencial: Tarjeta → luego BPay.</span>
         </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Support the Project Bottom Sheet -->
+  <section class="breakdown-panel" id="supportPanel" aria-hidden="true">
+    <div class="breakdown-card">
+      <div class="sheet-grab-handle"></div>
+      <div class="breakdown-head">
+        <div>
+          <h2>Apoya Banco → USDT</h2>
+          <p class="subtitle" style="max-width:none">Voluntario y libre de publicidad.</p>
+        </div>
+        <button class="icon-btn" id="closeSupportBtn" title="Cerrar" aria-label="Cerrar"><span
+            class="material-symbols-rounded">close</span></button>
+      </div>
+
+      <div class="breakdown-content">
+        <p style="font-size: 0.75rem; color: var(--muted); line-height: 1.5; margin-bottom: 8px;">
+          Banco → USDT es un proyecto comunitario creado para ayudar a la comunidad venezolana a calcular operaciones
+          Banco → USDT de forma rápida, sencilla y gratuita.
+        </p>
+        <p style="font-size: 0.75rem; color: var(--muted); line-height: 1.5; margin-bottom: 12px;">
+          La aplicación no contiene publicidad y continuará siendo gratuita. Si te ha ayudado en tus operaciones y
+          deseas apoyar su desarrollo, cualquier contribución será muy bienvenida.
+        </p>
+        <p style="font-size: 0.75rem; font-weight: 700; color: var(--text); line-height: 1.5; margin-bottom: 16px;">
+          ❤️ ¡Muchas gracias por formar parte del proyecto!
+        </p>
+
+        <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px;">
+          <!-- USDT TRC20 -->
+          <div style="background: var(--bg-soft); padding: 12px; border-radius: 12px; border: 1px solid var(--border);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+              <span style="font-size: 0.7rem; font-weight: 800; color: var(--muted);">USDT (TRC20)</span>
+              <button class="kpi-copy-btn" data-copy="supportUsdtTrc20" title="Copiar dirección"
+                style="color: var(--primary);">
+                <span class="material-symbols-rounded" style="font-size: 0.95rem !important;">content_copy</span>
+              </button>
+            </div>
+            <strong id="supportUsdtTrc20"
+              style="font-size: 0.72rem; word-break: break-all; color: var(--text);">TRC20_ADDRESS_HERE</strong>
+          </div>
+
+          <!-- USDT BEP20 -->
+          <div style="background: var(--bg-soft); padding: 12px; border-radius: 12px; border: 1px solid var(--border);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+              <span style="font-size: 0.7rem; font-weight: 800; color: var(--muted);">USDT (BEP20)</span>
+              <button class="kpi-copy-btn" data-copy="supportUsdtBep20" title="Copiar dirección"
+                style="color: var(--primary);">
+                <span class="material-symbols-rounded" style="font-size: 0.95rem !important;">content_copy</span>
+              </button>
+            </div>
+            <strong id="supportUsdtBep20"
+              style="font-size: 0.72rem; word-break: break-all; color: var(--text);">0x87e7Bc613e5A795CC159F7b784858EcD15D170CF</strong>
+          </div>
+
+          <!-- Solana -->
+          <div style="background: var(--bg-soft); padding: 12px; border-radius: 12px; border: 1px solid var(--border);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+              <span style="font-size: 0.7rem; font-weight: 800; color: var(--muted);">Solana (SOL)</span>
+              <button class="kpi-copy-btn" data-copy="supportSolana" title="Copiar dirección"
+                style="color: var(--primary);">
+                <span class="material-symbols-rounded" style="font-size: 0.95rem !important;">content_copy</span>
+              </button>
+            </div>
+            <strong id="supportSolana"
+              style="font-size: 0.72rem; word-break: break-all; color: var(--text);">6ppJt1ffNo8U7zZVGxCV5fnVAMm1hkpTmzrBGKMjQCzF</strong>
+          </div>
+
+          <!-- Binance Pay -->
+          <div style="background: var(--bg-soft); padding: 12px; border-radius: 12px; border: 1px solid var(--border);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+              <span style="font-size: 0.7rem; font-weight: 800; color: var(--muted);">Binance Pay ID</span>
+              <button class="kpi-copy-btn" data-copy="supportBinancePay" title="Copiar Binance Pay ID"
+                style="color: var(--primary);">
+                <span class="material-symbols-rounded" style="font-size: 0.95rem !important;">content_copy</span>
+              </button>
+            </div>
+            <strong id="supportBinancePay"
+              style="font-size: 0.72rem; word-break: break-all; color: var(--text);">BINANCE_PAY_ID_HERE</strong>
+          </div>
+
+          <!-- Wallet QR -->
+          <div style="background: var(--bg-soft); padding: 12px; border-radius: 12px; border: 1px solid var(--border);">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span style="font-size: 0.7rem; font-weight: 800; color: var(--muted);">Código QR (USDT TRC20)</span>
+              <button class="btn-support-trigger" id="toggleQrBtn"
+                style="padding: 4px 8px; font-size: 0.65rem; border-radius: 6px;">Mostrar QR</button>
+            </div>
+            <div id="supportQrBox"
+              style="display: none; text-align: center; margin-top: 8px; padding: 10px; background: white; border-radius: 8px; border: 1px solid var(--border);">
+              <span style="font-size: 0.7rem; color: #121212; font-weight: 600;">[ Código QR Placeholder ]</span>
+            </div>
+          </div>
+        </div>
+
+        <p style="font-size: 0.65rem; color: var(--muted); text-align: center; margin-top: 8px;">
+          Por privacidad no se incluye Pago Móvil.
+        </p>
       </div>
     </div>
   </section>
@@ -397,7 +575,14 @@
   </div>
 
 
-  <script type="module" src="/js/app.js?v=10"></script>
+  <script type="module" src="/js/app.js?v=18"></script>
+
+  <!-- PostHog: async stub + lazy loader. Initialised in js/analytics.js. -->
+  <!-- Replace the key below with your real phc_... key when ready.       -->
+  <script>
+    !function (t, e) { var o, n, p, r; e.__SV || (window.posthog = e, e._i = [], e.init = function (i, s, a) { function g(t, e) { var o = e.split("."); 2 == o.length && (t = t[o[0]], e = o[1]), t[e] = function () { t.push([e].concat(Array.prototype.slice.call(arguments, 0))) } } (p = t.createElement("script")).type = "text/javascript", p.crossOrigin = "anonymous", p.async = !0, p.src = s.api_host.replace(".i.posthog.com", "-assets.i.posthog.com") + "/static/array.js", (r = t.getElementsByTagName("script")[0]).parentNode.insertBefore(p, r); var u = e; for (void 0 !== a ? u = e[a] = [] : a = "posthog", u.people = u.people || [], u.toString = function (t) { var e = "posthog"; return "posthog" !== a && (e += "." + a), t || (e += " (stub)"), e }, u.people.toString = function () { return u.toString(1) + " (stub)" }, o = "init capture register register_once register_for_session unregister unregister_for_session getFeatureFlag getFeatureFlagPayload isFeatureEnabled reloadFeatureFlags updateEarlyAccessFeatureEnrollment getEarlyAccessFeatures on onFeatureFlags onSessionId getSurveys getActiveMatchingSurveys renderSurvey canRenderSurvey getNextSurveyStep identify setPersonProperties group resetGroups setPersonPropertiesForFlags resetPersonPropertiesForFlags setGroupPropertiesForFlags resetGroupPropertiesForFlags reset get_distinct_id getGroups get_session_id get_session_replay_url alias set_config startSessionRecording stopSessionRecording sessionRecordingStarted captureException loadToolbar get_property getSessionProperty createPersonProfile opt_in_capturing opt_out_capturing has_opted_in_capturing has_opted_out_capturing clear_opt_in_out_capturing debug".split(" "), n = 0; n < o.length; n++)g(u, o[n]); e._i.push([i, s, a]) }, e.__SV = 1) }(document, window.posthog || []);
+  </script>
+
   <script defer src="/_vercel/insights/script.js"></script>
   <script defer src="/_vercel/speed-insights/script.js"></script>
 

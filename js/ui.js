@@ -6,7 +6,7 @@ export const els = {
   lastUpdate: $('lastUpdate'), statusBox: $('statusBox'), opStatus: $('opStatus'), vesNeeded: $('vesNeeded'), vesSub: $('vesSub'),
   profitCard: $('profitCard'), profitUsdtBig: $('profitUsdtBig'), profitVes: $('profitVes'), usdtFinal: $('usdtFinal'), feesSub: $('feesSub'),
   roiCard: $('roiCard'), roiView: $('roiView'), returnSub: $('returnSub'), flowUsd: $('flowUsd'), flowVes: $('flowVes'), flowCard: $('flowCard'), flowBpay: $('flowBpay'),
-  flowReturn: $('flowReturn'), flowAfterCard: $('flowAfterCard'), formulaText: $('formulaText'), loadRatesBtn: $('loadRatesBtn'), shareBtn: $('shareBtn'), openSettingsBtn: $('openSettingsBtn'),
+  flowReturn: $('flowReturn'), flowAfterCard: $('flowAfterCard'), flowUsdtToSell: $('flowUsdtToSell'), flowUsdtFinal: $('flowUsdtFinal'), flowProfit: $('flowProfit'), flowProfitSub: $('flowProfitSub'), formulaText: $('formulaText'), loadRatesBtn: $('loadRatesBtn'), shareBtn: $('shareBtn'), openSettingsBtn: $('openSettingsBtn'),
   settingsPanel: $('settingsPanel'), closeSettingsBtn: $('closeSettingsBtn'), clearBtn: $('clearBtn'), clearBtnTop: $('clearBtnTop'),
   resetDefaultsBtn: $('resetDefaultsBtn'), copyBtnSettings: $('copyBtnSettings'), clearBtnMobile: $('clearBtnMobile'), shareBtnMobile: $('shareBtnMobile'), loadRatesBtnMobile: $('loadRatesBtnMobile'), loadRatesBtnSettings: $('loadRatesBtnSettings'),
   // New elements
@@ -16,7 +16,12 @@ export const els = {
   bottomTimestamp: $('bottomTimestamp'),
   openBreakdownBtn: $('openBreakdownBtn'),
   closeBreakdownBtn: $('closeBreakdownBtn'),
-  breakdownPanel: $('breakdownPanel')
+  breakdownPanel: $('breakdownPanel'),
+  supportPanel: $('supportPanel'),
+  openSupportBtn: $('openSupportBtn'),
+  closeSupportBtn: $('closeSupportBtn'),
+  toggleQrBtn: $('toggleQrBtn'),
+  supportQrBox: $('supportQrBox')
 };
 
 export function updateUsdToBuyDisplay(value) {
@@ -64,10 +69,12 @@ export function setLoadingRates(isLoading) {
 
 export function renderEmpty() {
   els.opStatus.textContent = 'Esperando datos';
-  ['vesNeeded','profitUsdtBig','profitVes','usdtFinal','roiView','flowUsd','flowVes','flowCard','flowAfterCard','flowBpay','flowReturn'].forEach(id => els[id] && (els[id].textContent = '--'));
+  ['vesNeeded','profitUsdtBig','profitVes','usdtFinal','roiView','flowUsd','flowVes','flowCard','flowAfterCard','flowBpay','flowReturn','flowUsdtToSell','flowUsdtFinal','flowProfit'].forEach(id => els[id] && (els[id].textContent = '--'));
+  if (els.flowProfitSub) els.flowProfitSub.textContent = 'Resultado neto estimado.';
+  if (els.flowProfitSub) els.flowProfitSub.className = '';
   els.feesSub.textContent = 'Tarjeta + BPay';
-  els.returnSub.textContent = 'Venta P2P estimada';
-  els.vesSub.textContent = 'Para comprar USD al banco';
+  els.returnSub.textContent = 'Sobre los Bs usados';
+  els.vesSub.innerHTML = 'Para -- USD · ≈-- USDT';
   els.formulaText.textContent = 'Completa USD, BCV y P2P para ver fórmula.';
   if (els.breakdownAmount) els.breakdownAmount.textContent = '-- USD';
   
@@ -150,32 +157,52 @@ function animateNumber(el, targetVal, formatFn, unitHtml = '') {
   
   el._animFrameId = requestAnimationFrame(update);
 }
-
 export function renderResult(r) {
-  els.opStatus.textContent = r.profitVes >= 0 ? 'Rentable' : 'Pérdida';
+  els.opStatus.textContent = r.profitVes >= 0 ? 'Operación rentable' : 'Pérdida estimada';
   animateNumber(els.vesNeeded,    r.vesNeeded,  (v) => money(v, 2),                              '<span class="value-unit">Bs</span>');
-  els.vesSub.textContent = `Para ${money(r.usdUsed, 2)} USD al banco`;
+  const usdtToSell = r.vesNeeded / r.p2p;
+  const formattedUsd = r.usdUsed % 1 === 0 ? money(r.usdUsed, 0) : money(r.usdUsed, 2);
+  els.vesSub.innerHTML = `Para ${formattedUsd} USD · ≈${money(usdtToSell, 2)} USDT`;
   animateNumber(els.usdtFinal,    r.usdtFinal,  (v) => money(v, 2),                              '<span class="value-unit">USDT</span>');
   animateNumber(els.profitUsdtBig, r.profitUsdt, (v) => (v >= 0 ? '+' : '') + money(v, 2),      '<span class="value-unit">USD</span>');
   animateNumber(els.profitVes,    r.profitVes,  (v) => (v >= 0 ? '+' : '') + money(v, 2) + ' Bs');
   animateNumber(els.roiView,      r.roi,        (v) => (v >= 0 ? '+' : '') + money(v, 2) + '%');
   els.feesSub.textContent   = `Comisiones ${money(r.totalFeesUsd, 2)} USD`;
-  els.returnSub.textContent = `${money(r.vesReturn, 2)} Bs al P2P`;
+  els.returnSub.textContent = 'Sobre los Bs usados';
   els.flowUsd.innerHTML     = money(r.usdUsed, 2)   + ' <span class="value-unit">USD</span>';
   els.flowVes.innerHTML     = money(r.vesNeeded, 2)  + ' <span class="value-unit">Bs</span>';
   els.flowCard.innerHTML    = '-' + money(r.cardFeeUsd, 2) + ' <span class="value-unit">USD</span> (' + money(r.cardPct, 1) + '%)';
   if (els.flowAfterCard) els.flowAfterCard.innerHTML = money(r.afterCard, 2) + ' <span class="value-unit">USD</span>';
   els.flowBpay.innerHTML    = '-' + money(r.bpayFeeUsd, 2) + ' <span class="value-unit">USD</span> (' + money(r.bpayPct, 1) + '%)';
   els.flowReturn.innerHTML  = money(r.vesReturn, 2)  + ' <span class="value-unit">Bs</span>';
+  
+  if (els.flowUsdtToSell) {
+    const usdtToSell = r.vesNeeded / r.p2p;
+    els.flowUsdtToSell.innerHTML = money(usdtToSell, 2) + ' <span class="value-unit">USDT</span>';
+  }
+  if (els.flowUsdtFinal) {
+    els.flowUsdtFinal.innerHTML = money(r.usdtFinal, 2) + ' <span class="value-unit">USDT</span>';
+  }
+  if (els.flowProfit) {
+    els.flowProfit.innerHTML = (r.profitUsdt >= 0 ? '+' : '') + money(r.profitUsdt, 2) + ' <span class="value-unit">USD</span>';
+    els.flowProfit.className = 'amount ' + (r.profitUsdt >= 0 ? 'positive' : 'negative');
+  }
+  if (els.flowProfitSub) {
+    els.flowProfitSub.innerHTML = (r.profitVes >= 0 ? '+' : '') + money(r.profitVes, 2) + ' Bs';
+    els.flowProfitSub.className = r.profitVes >= 0 ? 'step-desc-pos' : 'step-desc-neg';
+  }
+
   els.profitCard.className = r.profitVes >= 0 ? 'kpi-card kpi-highlight' : 'kpi-card kpi-highlight kpi-loss';
   if (els.roiCard) {
     els.roiCard.className = r.roi >= 0 ? 'kpi-card kpi-highlight' : 'kpi-card kpi-highlight kpi-loss';
   }
   els.formulaText.innerHTML = `
+    <strong>USDT a vender:</strong> ${money(r.vesNeeded, 2)} ÷ ${money(r.p2p, 4)} = ${money(r.vesNeeded / r.p2p, 2)} USDT.<br>
     <strong>Tasa banco:</strong> ${money(r.bcv, 4)} × ${(1 + n(els.bankMargin.value) / 100).toFixed(4)} = ${money(r.bank, 4)} Bs/USD.<br>
     <strong>Bs necesarios:</strong> ${money(r.usdUsed, 2)} × ${money(r.bank, 4)} = ${money(r.vesNeeded, 2)} Bs.<br>
     <strong>USDT final:</strong> ${money(r.usdUsed, 2)} - ${money(r.cardFeeUsd, 2)} tarjeta - ${money(r.bpayFeeUsd, 2)} BPay = ${money(r.usdtFinal, 2)} USDT.<br>
-    <strong>Retorno P2P:</strong> ${money(r.usdtFinal, 2)} × ${money(r.p2p, 4)} = ${money(r.vesReturn, 2)} Bs.
+    <strong>Retorno P2P:</strong> ${money(r.usdtFinal, 2)} × ${money(r.p2p, 4)} = ${money(r.vesReturn, 2)} Bs.<br>
+    <strong>Ganancia:</strong> ${money(r.vesReturn, 2)} - ${money(r.vesNeeded, 2)} = ${(r.profitVes >= 0 ? '+' : '') + money(r.profitVes, 2)} Bs (${(r.profitUsdt >= 0 ? '+' : '') + money(r.profitUsdt, 2)} USD).
   `;
   
   if (els.breakdownAmount) {
@@ -187,7 +214,7 @@ export function renderResult(r) {
   // Update bottom status pill
   const isProfitable = r.profitVes >= 0;
   if (els.statusPill && els.statusPillText) {
-    els.statusPillText.textContent = isProfitable ? 'Rentable' : 'Pérdida';
+    els.statusPillText.textContent = isProfitable ? 'Operación rentable' : 'Pérdida estimada';
     els.statusPill.className = 'status-pill ' + (isProfitable ? 'profitable' : 'loss');
   }
   if (els.bottomTimestamp) {
@@ -199,7 +226,7 @@ export function openSettings() {
   els.settingsPanel.classList.remove('closing');
   els.settingsPanel.classList.add('open');
   els.settingsPanel.setAttribute('aria-hidden', 'false');
-  triggerHaptic();
+  triggerHaptic('light');
   lockBodyScroll();
 }
 
@@ -207,7 +234,28 @@ export function closeSettings() {
   const panel = els.settingsPanel;
   if (!panel.classList.contains('open')) return;
   panel.classList.add('closing');
-  triggerHaptic();
+  triggerHaptic('light');
+  const duration = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 250;
+  setTimeout(() => {
+    panel.classList.remove('open', 'closing');
+    panel.setAttribute('aria-hidden', 'true');
+    unlockBodyScroll();
+  }, duration);
+}
+
+export function openSupport() {
+  els.supportPanel.classList.remove('closing');
+  els.supportPanel.classList.add('open');
+  els.supportPanel.setAttribute('aria-hidden', 'false');
+  triggerHaptic('light');
+  lockBodyScroll();
+}
+
+export function closeSupport() {
+  const panel = els.supportPanel;
+  if (!panel.classList.contains('open')) return;
+  panel.classList.add('closing');
+  triggerHaptic('light');
   const duration = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 250;
   setTimeout(() => {
     panel.classList.remove('open', 'closing');
@@ -223,7 +271,7 @@ export function openBreakdown() {
   if (els.openBreakdownBtn) {
     els.openBreakdownBtn.setAttribute('aria-expanded', 'true');
   }
-  triggerHaptic();
+  triggerHaptic('light');
   lockBodyScroll();
 }
 
@@ -231,7 +279,7 @@ export function closeBreakdown() {
   const panel = els.breakdownPanel;
   if (!panel.classList.contains('open')) return;
   panel.classList.add('closing');
-  triggerHaptic();
+  triggerHaptic('light');
   const duration = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 250;
   setTimeout(() => {
     panel.classList.remove('open', 'closing');

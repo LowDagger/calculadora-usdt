@@ -121,6 +121,19 @@ body {
   gap: 8px;
 }
 
+.header-icon {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+}
+
+@media (max-width: 480px) {
+  .header-icon {
+    width: 24px;
+    height: 24px;
+  }
+}
+
 .brand-title .divider {
   color: var(--muted);
   font-weight: 300;
@@ -339,6 +352,12 @@ body {
   flex-direction: column;
   min-height: 96px;
   transition: all 0.2s ease;
+  cursor: pointer;
+  user-select: none;
+}
+
+.kpi-card:active {
+  transform: scale(0.98);
 }
 
 .kpi-label {
@@ -365,6 +384,15 @@ body {
   font-weight: 500;
   line-height: 1.2;
 }
+
+.ves-sub-usdt {
+  display: block;
+  margin-top: 3px;
+  font-weight: 600;
+  color: var(--muted);
+  font-size: 0.65rem;
+}
+
 
 /* KPI Operational (Level 2: Bs necesarios, USDT Finales) */
 .kpi-operational {
@@ -785,6 +813,110 @@ html[data-theme="light"] .step.step-highlight {
   background: var(--primary);
   color: #ffffff;
 }
+
+.step-desc-pos {
+  color: var(--green) !important;
+  font-weight: 500;
+}
+
+.step-desc-neg {
+  color: var(--red) !important;
+  font-weight: 500;
+}
+
+/* Collapsible formula details summary reset */
+.formula-details summary {
+  list-style: none;
+  outline: none;
+}
+.formula-details summary::-webkit-details-marker {
+  display: none;
+}
+
+.formula-chevron {
+  font-size: 1.0rem;
+  color: var(--primary);
+  transition: transform 0.2s ease;
+  display: inline-block;
+}
+
+.formula-details[open] .formula-chevron {
+  transform: rotate(-180deg);
+}
+
+/* Collapsible formula details summary custom design */
+.formula-details summary {
+  list-style: none;
+  outline: none;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+.formula-details summary:hover {
+  opacity: 0.85;
+}
+
+/* Formula list animation when details open */
+.formula-details[open] .formula-box {
+  animation: formula-slide-down 0.15s ease-out;
+}
+
+@keyframes formula-slide-down {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* KPI copy button styles */
+.kpi-copy-btn {
+  background: none;
+  border: none;
+  padding: 4px;
+  color: var(--muted);
+  cursor: pointer;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  margin-right: -4px;
+}
+
+.kpi-copy-btn:hover {
+  color: var(--primary);
+  background: var(--primary-bg);
+}
+
+.kpi-copy-btn span {
+  font-size: 0.95rem !important;
+}
+
+/* Pulse dot for green updated status */
+.pulse-dot {
+  width: 6px;
+  height: 6px;
+  background-color: #10b981; /* emerald green */
+  border-radius: 50%;
+  display: inline-block;
+  box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4);
+  animation: pulse-green 2s infinite;
+}
+
+@keyframes pulse-green {
+  0% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+  }
+  70% {
+    transform: scale(1);
+    box-shadow: 0 0 0 4px rgba(16, 185, 129, 0);
+  }
+  100% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+  }
+}
+
+
 
 /* Status Alert Message */
 .status {
@@ -1567,4 +1699,56 @@ html[data-theme="light"] .skeleton-shimmer::after {
 @keyframes fade-in-skeleton {
   from { opacity: 0; }
   to { opacity: 1; }
+}
+
+/* ── Community Support Section ────────────────────────────────────────── */
+.support-section {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+  text-align: left;
+}
+
+.support-title {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.support-desc {
+  font-size: 0.72rem;
+  color: var(--muted);
+  line-height: 1.4;
+  margin-top: 1px;
+}
+
+.btn-support-trigger {
+  align-self: flex-start;
+  background: var(--bg-soft);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-weight: 700;
+  font-size: 0.75rem;
+  color: var(--text);
+  cursor: pointer;
+  outline: none;
+  font-family: var(--font);
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-support-trigger:hover {
+  background: var(--surface-hover);
+}
+
+.btn-support-trigger:active {
+  transform: scale(0.98);
 }

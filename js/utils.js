@@ -14,12 +14,19 @@ export function $(id) {
   return document.getElementById(id);
 }
 
-export function triggerHaptic() {
-  if (typeof navigator !== 'undefined' && navigator.vibrate) {
-    try {
-      navigator.vibrate(12);
-    } catch (e) {
-      // Ignore vibration errors (e.g. security blocks)
-    }
+export function triggerHaptic(type = 'light') {
+  if (typeof navigator === 'undefined' || !navigator.vibrate) return;
+
+  const patterns = {
+    light: 8,
+    medium: 15,
+    success: [10, 30, 10],
+    warning: [20, 40, 20]
+  };
+
+  try {
+    navigator.vibrate(patterns[type] || patterns.light);
+  } catch (e) {
+    // Ignore vibration errors (e.g. security blocks)
   }
 }

@@ -1,10 +1,10 @@
 import { fetchRates } from './api.js';
 import { calculateValues, currentBankRate } from './calculator.js';
-
+import { track, EVENTS, amountRange } from './analytics.js';
 
 import { loadState as readState, saveState as writeState } from './storage.js';
 import { money, n, triggerHaptic } from './utils.js';
-import { els, setStatus, clearStatus, setLoadingRates, showToast, renderEmpty, renderRates, renderResult, openSettings, closeSettings, openBreakdown, closeBreakdown, lockBodyScroll, unlockBodyScroll } from './ui.js?v=10';
+import { els, setStatus, clearStatus, setLoadingRates, showToast, renderEmpty, renderRates, renderResult, openSettings, closeSettings, openBreakdown, closeBreakdown, openSupport, closeSupport, lockBodyScroll, unlockBodyScroll } from './ui.js?v=17';
 
 let ratesLastUpdated = null;
 
@@ -115,7 +115,10 @@ function getState() {
 
 function saveState(show = true) {
   writeState(getState());
-  if (show) setStatus('Configuración guardada.', 'ok');
+  if (show) {
+    triggerHaptic('success');
+    setStatus('Configuración guardada.', 'ok');
+  }
 }
 
 function loadState() {
@@ -135,6 +138,7 @@ function loadState() {
 }
 
 function resetDefaults() {
+  triggerHaptic('warning');
   els.usdToBuy.value = '500';
   els.bankMargin.value = '0.5';
   els.cardFee.value = '1.5';
@@ -151,7 +155,7 @@ function resetDefaults() {
   setStatus('Valores base restaurados.', 'ok');
 }
 
-async function loadRates() {
+async function loadRates(showSuccessToast = true) {
   triggerHaptic();
   setLoadingRates(true);
   try {
@@ -162,11 +166,15 @@ async function loadRates() {
     const timeStr = ratesLastUpdated.toLocaleString('es-VE', { dateStyle: 'short', timeStyle: 'short' });
     els.lastUpdate.dataset.absolute = `${timeStr} · TasaVE`;
     updateRelativeTime();
-    showToast('Tasas actualizadas desde TasaVE.');
+    if (showSuccessToast === true || (showSuccessToast && typeof showSuccessToast === 'object')) {
+      showToast('Tasas actualizadas desde TasaVE.');
+    }
     calculate();
     saveState(false);
+    track(EVENTS.RATES_LOADED, { rate_status: 'success' });
   } catch (err) {
     showToast('No se pudo cargar TasaVE. Conservando tasas manuales.', 'err');
+    track(EVENTS.RATES_FAILED, { rate_status: 'failure' });
   } finally {
     setLoadingRates(false);
     updateRelativeTime();
@@ -240,7 +248,7 @@ https://calculadora-banco-usdt.vercel.app`;
 }
 
 function shareOrCopy(btn) {
-  triggerHaptic();
+  triggerHaptic('light');
   const r = calculate();
   if (!r) {
     const errorMsg = navigator.share ? 'Completa los datos antes de compartir.' : 'Completa los datos antes de copiar.';
@@ -250,19 +258,25 @@ function shareOrCopy(btn) {
   const text = buildShareText(r);
 
   if (navigator.share) {
+    track(EVENTS.SHARE_CLICKED, { share_method: 'native' });
     navigator.share({
       title: 'Calculadora Banco → USDT',
       text: text
     })
-    .then(() => showToast('Cálculo compartido'))
+    .then(() => {
+      triggerHaptic('success');
+      showToast('Cálculo compartido');
+    })
     .catch((err) => {
       if (err.name !== 'AbortError') {
         showToast('No se pudo compartir el cálculo', 'err');
       }
     });
   } else {
+    track(EVENTS.SHARE_CLICKED, { share_method: 'clipboard' });
     navigator.clipboard.writeText(text)
       .then(() => {
+        triggerHaptic('success');
         showToast('Resumen copiado al portapapeles');
         flashCopyBtn(btn);
       })
@@ -286,6 +300,7 @@ function initShare() {
 
 function clearOperation() {
   triggerHaptic();
+  track(EVENTS.CLEAR_CLICKED);
   if (els.usdToBuy) {
     els.usdToBuy.blur();
   }
@@ -303,15 +318,65 @@ function clearOperation() {
 }
 
 function bindEvents() {
+  // ── Debounce helpers for input-field analytics ──────────────────────────
+  // We track bucketed events with a 500ms debounce to avoid spamming events
+  // while the user is still typing. Raw values never leave the app.
+  let _amountDebounce = null;
+  let _lastAmountBucket = null;
+  let _p2pDebounce = null;
+  let _p2pFiredThisSession = false;
+  let _feesDebounce = null;
+  let _feesFiredThisSession = false;
+
   ['usdToBuy','bankMargin','bcvRate','p2pRate','cardFee','bpayFee','autoRates'].forEach(key => {
-    els[key].addEventListener('input', () => { calculate(); saveState(false); });
+    els[key].addEventListener('input', () => {
+      calculate();
+      saveState(false);
+
+      // amount_range_changed: only when the bucket changes, debounced
+      if (key === 'usdToBuy') {
+        clearTimeout(_amountDebounce);
+        _amountDebounce = setTimeout(() => {
+          const bucket = amountRange(n(els.usdToBuy.value));
+          if (bucket !== _lastAmountBucket) {
+            _lastAmountBucket = bucket;
+            track(EVENTS.AMOUNT_RANGE_CHANGED, { amount_range: bucket });
+          }
+        }, 500);
+      }
+
+      // p2p_edited: fires once per session when user manually edits P2P
+      if (key === 'p2pRate' && !_p2pFiredThisSession) {
+        clearTimeout(_p2pDebounce);
+        _p2pDebounce = setTimeout(() => {
+          _p2pFiredThisSession = true;
+          track(EVENTS.P2P_EDITED);
+        }, 500);
+      }
+
+      // fees_edited: fires once per session when user edits card or bpay fee
+      if ((key === 'cardFee' || key === 'bpayFee') && !_feesFiredThisSession) {
+        clearTimeout(_feesDebounce);
+        _feesDebounce = setTimeout(() => {
+          _feesFiredThisSession = true;
+          track(EVENTS.FEES_EDITED);
+        }, 500);
+      }
+    });
     els[key].addEventListener('change', () => { calculate(); saveState(false); });
   });
 
   document.querySelectorAll('[data-quick]').forEach(btn => btn.addEventListener('click', () => {
+    triggerHaptic('light');
     els.usdToBuy.value = btn.dataset.quick;
     calculate();
     saveState(false);
+    // Quick-chip clicks also count as amount range changes
+    const bucket = amountRange(n(els.usdToBuy.value));
+    if (bucket !== _lastAmountBucket) {
+      _lastAmountBucket = bucket;
+      track(EVENTS.AMOUNT_RANGE_CHANGED, { amount_range: bucket });
+    }
   }));
 
   // maxBtn was removed from the UI; its hidden compat element is also gone
@@ -325,10 +390,10 @@ function bindEvents() {
   els.clearBtnTop.addEventListener('click', clearOperation);
   els.clearBtnMobile.addEventListener('click', clearOperation);
   els.resetDefaultsBtn.addEventListener('click', resetDefaults);
-  els.openSettingsBtn.addEventListener('click', openSettings);
+  els.openSettingsBtn.addEventListener('click', () => { openSettings(); track(EVENTS.SETTINGS_OPENED); });
   els.closeSettingsBtn.addEventListener('click', closeSettings);
   els.settingsPanel.addEventListener('click', e => { if (e.target === els.settingsPanel) closeSettings(); });
-  els.openBreakdownBtn.addEventListener('click', openBreakdown);
+  els.openBreakdownBtn.addEventListener('click', () => { openBreakdown(); track(EVENTS.BREAKDOWN_OPENED); });
   els.closeBreakdownBtn.addEventListener('click', closeBreakdown);
   els.breakdownPanel.addEventListener('click', e => { if (e.target === els.breakdownPanel) closeBreakdown(); });
 
@@ -360,6 +425,107 @@ function bindEvents() {
       closeBreakdown();
     }
   });
+
+  const formulaDetails = document.querySelector('.formula-details');
+  if (formulaDetails) {
+    const summarySpan = formulaDetails.querySelector('summary span:not(.formula-chevron)');
+    formulaDetails.addEventListener('toggle', () => {
+      summarySpan.textContent = formulaDetails.open ? 'Ocultar fórmulas' : 'Ver fórmulas';
+    });
+  }
+
+  // Bind copy clicks on KPI cards
+  const kpiCards = [
+    { id: 'vesNeededCard', targetId: 'vesNeeded', label: 'Bolívares necesarios', getFormat: (v) => `Bs necesarios: ${v}` },
+    { id: 'profitCard', targetId: 'profitUsdtBig', label: 'Ganancia estimada', getFormat: (v, profitVes) => `Ganancia estimada:\n${v}\n${profitVes}` },
+    { id: 'usdtFinalCard', targetId: 'usdtFinal', label: 'USDT finales', getFormat: (v) => `USDT finales estimados: ${v}` },
+    { id: 'roiCard', targetId: 'roiView', label: 'Retorno estimado', getFormat: (v) => `Retorno estimado:\n${v}` }
+  ];
+  
+  kpiCards.forEach(({ id, targetId, label, getFormat }) => {
+    const card = document.getElementById(id);
+    if (!card) return;
+    card.addEventListener('click', () => {
+      const valEl = document.getElementById(targetId);
+      if (!valEl || valEl.textContent === '--') return;
+      
+      let textToCopy = '';
+      if (id === 'profitCard') {
+        const profitVesText = document.getElementById('profitVes').textContent.trim();
+        textToCopy = getFormat(valEl.textContent.trim(), profitVesText);
+      } else {
+        textToCopy = getFormat(valEl.textContent.trim());
+      }
+      
+      const formattedClipboard = `${textToCopy}\n\nCalculado con Banco → USDT\nhttps://calculadora-banco-usdt.vercel.app`;
+      
+      navigator.clipboard.writeText(formattedClipboard)
+        .then(() => {
+          triggerHaptic('success');
+          showToast(`✓ ${label} copiado`);
+        })
+        .catch(() => {
+          showToast('No se pudo copiar', 'err');
+        });
+    });
+  });
+
+  // Keep breakdown BPay amount and donation copy listeners active
+  document.querySelectorAll('.kpi-copy-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const targetId = btn.dataset.copy;
+      const el = document.getElementById(targetId);
+      if (!el || el.textContent === '--') return;
+      
+      const textToCopy = el.textContent.trim();
+      navigator.clipboard.writeText(textToCopy)
+        .then(() => {
+          triggerHaptic('success');
+          const labels = {
+            flowAfterCard: 'Monto a ingresar en BPay',
+            supportUsdtTrc20: 'Dirección USDT TRC20',
+            supportUsdtBep20: 'Dirección USDT BEP20',
+            supportSolana: 'Dirección Solana',
+            supportBinancePay: 'Binance Pay ID'
+          };
+          const label = labels[targetId] || 'Valor';
+          showToast(`✓ ${label} copiado`);
+        })
+        .catch(() => {
+          showToast('No se pudo copiar', 'err');
+        });
+    });
+  });
+
+  // Support bottom sheet triggers
+  if (els.openSupportBtn) {
+    els.openSupportBtn.addEventListener('click', () => {
+      openSupport();
+    });
+  }
+  if (els.closeSupportBtn) {
+    els.closeSupportBtn.addEventListener('click', () => {
+      closeSupport();
+    });
+    if (els.supportPanel) {
+      els.supportPanel.addEventListener('click', (e) => {
+        if (e.target === els.supportPanel) {
+          closeSupport();
+        }
+      });
+    }
+  }
+
+  // Support toggle QR button
+  if (els.toggleQrBtn && els.supportQrBox) {
+    els.toggleQrBtn.addEventListener('click', () => {
+      const isHidden = els.supportQrBox.style.display === 'none';
+      els.supportQrBox.style.display = isHidden ? 'block' : 'none';
+      els.toggleQrBtn.textContent = isHidden ? 'Ocultar QR' : 'Mostrar QR';
+      triggerHaptic('light');
+    });
+  }
 }
 
 /**
@@ -412,9 +578,16 @@ function registerServiceWorker() {
     });
 
     // ── Reload once when the controller (active SW) changes ──
-    // This fires after the new SW calls clients.claim(), meaning our page is
-    // now controlled by the fresh version.
+    // Snapshot whether a controller already existed BEFORE binding this handler.
+    // On a first-ever install the SW claims the page with no prior controller —
+    // that is NOT an update and does NOT need a reload. Only reload when there
+    // was already an active controller (i.e. a genuine app update occurred).
+    const hadController = !!navigator.serviceWorker.controller;
+
     navigator.serviceWorker.addEventListener('controllerchange', () => {
+      // First-install claim: skip the reload entirely.
+      if (!hadController) return;
+
       if (sessionStorage.getItem(RELOAD_KEY)) {
         sessionStorage.removeItem(RELOAD_KEY);
         return; // already reloaded once – do nothing to avoid loops
@@ -545,6 +718,7 @@ function showAndroidInstallPrompt() {
   if (dismissBtn) dismissBtn.textContent = 'Ahora no';
   promptEl.classList.add('show');
   lockBodyScroll();
+  track(EVENTS.INSTALL_PROMPT_SHOWN, { install_state: 'shown' });
 }
 
 function showIOSInstallPrompt() {
@@ -558,6 +732,7 @@ function showIOSInstallPrompt() {
   if (confirmBtn) confirmBtn.style.display = 'none';
   promptEl.classList.add('show');
   lockBodyScroll();
+  track(EVENTS.INSTALL_PROMPT_SHOWN, { install_state: 'shown' });
 }
 
 function hideInstallPrompt() {
@@ -593,6 +768,7 @@ function initInstallPrompt() {
   const dismissBtn = document.getElementById('installDismissBtn');
   if (dismissBtn) {
     dismissBtn.addEventListener('click', () => {
+      track(EVENTS.INSTALL_DISMISSED, { install_state: 'dismissed' });
       hideInstallPrompt();
       localStorage.setItem('installPromptDismissed', Date.now().toString());
     });
@@ -601,12 +777,13 @@ function initInstallPrompt() {
   const confirmBtn = document.getElementById('installConfirmBtn');
   if (confirmBtn) {
     confirmBtn.addEventListener('click', async () => {
+      track(EVENTS.INSTALL_CLICKED, { install_state: 'clicked' });
       hideInstallPrompt();
       if (!deferredPrompt) return;
       deferredPrompt.prompt();
       const { outcome } = await deferredPrompt.userChoice;
       if (outcome === 'accepted') {
-        console.log('User accepted install prompt');
+        // outcome is accepted/dismissed — we do not log identity
       } else {
         localStorage.setItem('installPromptDismissed', Date.now().toString());
       }
@@ -628,8 +805,15 @@ updateRelativeTime();
 setInterval(updateRelativeTime, 5000);
 registerServiceWorker();
 
+// Track app_loaded after the initial render is complete.
+// theme and device_type are safe non-PII context.
+{
+  const savedTheme = localStorage.getItem('theme') || 'system';
+  track(EVENTS.APP_LOADED, { theme: savedTheme });
+}
+
 window.addEventListener('load', () => {
-  if (els.autoRates.checked) loadRates().catch(() => {});
+  if (els.autoRates.checked) loadRates(false).catch(() => {});
 });
 
 // ─── Theme Management ────────────────────────────────────────────────────────
@@ -647,6 +831,7 @@ function initTheme() {
         applyTheme(val);
         updateThemeUI(val);
         localStorage.setItem('theme', val);
+        track(EVENTS.THEME_CHANGED, { theme: val });
       });
     });
   }
