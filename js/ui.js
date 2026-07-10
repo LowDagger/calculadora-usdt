@@ -21,7 +21,8 @@ export const els = {
   openSupportBtn: $('openSupportBtn'),
   closeSupportBtn: $('closeSupportBtn'),
   toggleQrBtn: $('toggleQrBtn'),
-  supportQrBox: $('supportQrBox')
+  supportQrBox: $('supportQrBox'),
+  brechaView: $('brechaView')
 };
 
 export function updateUsdToBuyDisplay(value) {
@@ -64,6 +65,7 @@ export function setLoadingRates(isLoading) {
     if (els.bankView) els.bankView.innerHTML = skeletonHTML;
     if (els.p2pView) els.p2pView.innerHTML = skeletonHTML;
     if (els.lastUpdate) els.lastUpdate.innerHTML = skeletonHTML;
+    if (els.brechaView) els.brechaView.innerHTML = skeletonHTML;
   }
 }
 
@@ -79,6 +81,11 @@ export function renderEmpty() {
   if (els.breakdownAmount) els.breakdownAmount.textContent = '-- USD';
   
   updateUsdToBuyDisplay(els.usdToBuy.value);
+  
+  if (els.brechaView) {
+    els.brechaView.textContent = '--';
+    els.brechaView.className = 'brecha-val';
+  }
   
   // Reset bottom status bar
   if (els.statusPill && els.statusPillText) {
@@ -96,6 +103,17 @@ export function renderRates({ bcv, bank, p2p }) {
   els.bcvView.innerHTML  = bcv  ? money(bcv, 2)  + uBsUsd  : '--';
   els.bankView.innerHTML = bank ? money(bank, 2) + uBsUsd  : '--';
   els.p2pView.innerHTML  = p2p  ? money(p2p, 2)  + uBsUsdt : '--';
+  
+  if (els.brechaView) {
+    if (bcv && p2p) {
+      const brecha = ((p2p - bcv) / bcv) * 100;
+      els.brechaView.textContent = (brecha >= 0 ? '+' : '') + money(brecha, 2) + '%';
+      els.brechaView.className = 'brecha-val ' + (brecha >= 12 ? 'brecha-green' : (brecha >= 5 ? 'brecha-yellow' : 'brecha-red'));
+    } else {
+      els.brechaView.textContent = '--';
+      els.brechaView.className = 'brecha-val';
+    }
+  }
 }
 
 let activeModalsCount = 0;

@@ -4,7 +4,7 @@ import { track, EVENTS, amountRange } from './analytics.js';
 
 import { loadState as readState, saveState as writeState } from './storage.js';
 import { money, n, triggerHaptic } from './utils.js';
-import { els, setStatus, clearStatus, setLoadingRates, showToast, renderEmpty, renderRates, renderResult, openSettings, closeSettings, openBreakdown, closeBreakdown, openSupport, closeSupport, lockBodyScroll, unlockBodyScroll } from './ui.js?v=17';
+import { els, setStatus, clearStatus, setLoadingRates, showToast, renderEmpty, renderRates, renderResult, openSettings, closeSettings, openBreakdown, closeBreakdown, openSupport, closeSupport, lockBodyScroll, unlockBodyScroll } from './ui.js?v=18';
 
 let ratesLastUpdated = null;
 
@@ -63,9 +63,6 @@ function formatRelativeTime(date) {
   const diffMs = new Date() - date;
   const diffSec = Math.max(0, Math.floor(diffMs / 1000));
   
-  if (diffSec < 15) {
-    return 'Ahora';
-  }
   if (diffSec < 60) {
     return `Hace ${diffSec} s`;
   }
@@ -526,6 +523,32 @@ function bindEvents() {
       triggerHaptic('light');
     });
   }
+
+  // Header Overflow Menu
+  const overflowBtn = document.getElementById('overflowMenuBtn');
+  const overflowMenu = document.getElementById('overflowMenu');
+  if (overflowBtn && overflowMenu) {
+    overflowBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isOpen = overflowMenu.classList.contains('show');
+      overflowMenu.classList.toggle('show', !isOpen);
+      overflowBtn.setAttribute('aria-expanded', !isOpen ? 'true' : 'false');
+    });
+    
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('#overflowMenu') && !e.target.closest('#overflowMenuBtn')) {
+        overflowMenu.classList.remove('show');
+        overflowBtn.setAttribute('aria-expanded', 'false');
+      }
+    });
+
+    overflowMenu.querySelectorAll('.menu-item').forEach(item => {
+      item.addEventListener('click', () => {
+        overflowMenu.classList.remove('show');
+        overflowBtn.setAttribute('aria-expanded', 'false');
+      });
+    });
+  }
 }
 
 /**
@@ -802,7 +825,7 @@ calculate();
 setupKeyboardUX();
 initInstallPrompt();
 updateRelativeTime();
-setInterval(updateRelativeTime, 5000);
+setInterval(updateRelativeTime, 1000);
 registerServiceWorker();
 
 // Track app_loaded after the initial render is complete.
