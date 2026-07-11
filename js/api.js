@@ -9,13 +9,20 @@
  *   parallel_usdt  → P2P/parallel (USDT mid-market, preferred)
  *   parallel_buy   → fallback if parallel_usdt is absent
  *   parallel_sell  → fallback if parallel_usdt is absent
+ *   valid_from     → BCV rate effective date (ISO 8601, Venezuela -04:00 offset)
  */
 
 export const TASAVE_RATES = 'https://tasave.sudelca.com/v1/rates';
 
 /**
- * Fetch BCV and P2P rates from TasaVE public endpoint.
- * Returns { bcv, p2p } or throws on network / parse error.
+ * Fetch BCV, P2P rates and BCV effective date from TasaVE public endpoint.
+ *
+ * Returns { bcv, p2p, bcvEffectiveDate } or throws on network / parse error.
+ *
+ * bcvEffectiveDate — ISO 8601 string from `valid_from`, e.g. "2026-07-11T00:00:00-04:00".
+ *   The timezone offset is embedded in the string (Venezuela time, -04:00).
+ *   Returns null if the field is absent or not a parseable date — callers must
+ *   handle null gracefully and never calculate from it.
  */
 export async function fetchRates() {
   const res = await fetch(TASAVE_RATES, { cache: 'no-store' });
@@ -46,5 +53,17 @@ export async function fetchRates() {
     throw new Error('TasaVE: tasa paralela no válida.');
   }
 
-  return { bcv, p2p };
+  // BCV effective date — valid_from encodes the official validity start in
+  // Venezuela time (-04:00 offset embedded in the ISO string).
+  // We validate it is parseable; null is returned if it is absent or invalid.
+  let bcvEffectiveDate = null;
+  const rawDate = data.valid_from;
+  if (typeof rawDate === 'string' && rawDate.length >= 10) {
+    const parsed = new Date(rawDate);
+    if (!isNaN(parsed.getTime())) {
+      bcvEffectiveDate = rawDate; // keep the original string; timezone is already embedded
+    }
+  }
+
+  return { bcv, p2p, bcvEffectiveDate };
 }

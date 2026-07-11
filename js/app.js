@@ -4,7 +4,7 @@ import { track, EVENTS, amountRange } from './analytics.js';
 
 import { loadState as readState, saveState as writeState } from './storage.js';
 import { money, n, triggerHaptic } from './utils.js';
-import { els, setStatus, clearStatus, setLoadingRates, showToast, renderEmpty, renderRates, renderResult, openSettings, closeSettings, openBreakdown, closeBreakdown, openSupport, closeSupport, lockBodyScroll, unlockBodyScroll } from './ui.js?v=18';
+import { els, setStatus, clearStatus, setLoadingRates, showToast, renderEmpty, renderRates, renderResult, renderBcvDate, openSettings, closeSettings, openBreakdown, closeBreakdown, openSupport, closeSupport, lockBodyScroll, unlockBodyScroll } from './ui.js';
 
 let ratesLastUpdated = null;
 
@@ -156,13 +156,14 @@ async function loadRates(showSuccessToast = true) {
   triggerHaptic();
   setLoadingRates(true);
   try {
-    const { bcv, p2p } = await fetchRates();
+    const { bcv, p2p, bcvEffectiveDate } = await fetchRates();
     els.bcvRate.value = bcv.toFixed(4);
     els.p2pRate.value = p2p.toFixed(4);
     ratesLastUpdated = new Date();
     const timeStr = ratesLastUpdated.toLocaleString('es-VE', { dateStyle: 'short', timeStyle: 'short' });
     els.lastUpdate.dataset.absolute = `${timeStr} · TasaVE`;
     updateRelativeTime();
+    renderBcvDate(bcvEffectiveDate);
     if (showSuccessToast === true || (showSuccessToast && typeof showSuccessToast === 'object')) {
       showToast('Tasas actualizadas desde TasaVE.');
     }
@@ -240,8 +241,8 @@ BCV ${bcv}
 Banco ${bankRate}
 P2P ${p2p}
 
-Calculado con TasaVE:
-https://calculadora-banco-usdt.vercel.app`;
+Calculado con CalcuFlow:
+https://calcu-flow.vercel.app`;
 }
 
 function shareOrCopy(btn) {
@@ -257,7 +258,7 @@ function shareOrCopy(btn) {
   if (navigator.share) {
     track(EVENTS.SHARE_CLICKED, { share_method: 'native' });
     navigator.share({
-      title: 'Calculadora Banco → USDT',
+      title: 'CalcuFlow',
       text: text
     })
     .then(() => {
@@ -454,7 +455,7 @@ function bindEvents() {
         textToCopy = getFormat(valEl.textContent.trim());
       }
       
-      const formattedClipboard = `${textToCopy}\n\nCalculado con Banco → USDT\nhttps://calculadora-banco-usdt.vercel.app`;
+      const formattedClipboard = `${textToCopy}\n\nCalculado con CalcuFlow:\nhttps://calcu-flow.vercel.app`;
       
       navigator.clipboard.writeText(formattedClipboard)
         .then(() => {
@@ -735,8 +736,8 @@ function shouldShowInstallPrompt() {
 function showAndroidInstallPrompt() {
   const promptEl = document.getElementById('installPrompt');
   if (!promptEl) return;
-  document.getElementById('installPromptTitle').textContent = 'Instalar Aplicación';
-  document.getElementById('installPromptDesc').textContent = 'Agrega Calculadora Banco → USDT a tu pantalla de inicio para un acceso más rápido.';
+  document.getElementById('installPromptTitle').textContent = 'Instalar CalcuFlow';
+  document.getElementById('installPromptDesc').textContent = 'Agrega CalcuFlow a tu pantalla de inicio para un acceso más rápido.';
   const dismissBtn = document.getElementById('installDismissBtn');
   if (dismissBtn) dismissBtn.textContent = 'Ahora no';
   promptEl.classList.add('show');

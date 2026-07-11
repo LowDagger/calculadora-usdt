@@ -5,8 +5,8 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="theme-color" content="#0F1115" />
-  <title>Calculadora Banco → USDT</title>
-  <link rel="canonical" href="https://calculadora-banco-usdt.vercel.app/" />
+  <title>CalcuFlow — Banco → USDT</title>
+  <link rel="canonical" href="https://calcu-flow.vercel.app/" />
   <script>
     (function () {
       const savedTheme = localStorage.getItem("theme") || "system";
@@ -22,30 +22,30 @@
   </script>
 
   <!-- Primary Meta Tags -->
-  <meta name="title" content="Calculadora Banco → USDT" />
+  <meta name="title" content="CalcuFlow — Banco → USDT" />
   <meta name="description"
-    content="Calcula automáticamente cuánto pagar en bolívares, ganancia, ROI y USDT finales con tasas TasaVE en tiempo real." />
+    content="CalcuFlow: calcula automáticamente cuánto pagar en bolívares, ganancia, ROI y USDT finales con tasas TasaVE en tiempo real." />
 
   <!-- Open Graph / Facebook -->
   <meta property="og:type" content="website" />
   <meta property="og:locale" content="es_VE" />
-  <meta property="og:site_name" content="Calculadora Banco → USDT" />
-  <meta property="og:url" content="https://calculadora-banco-usdt.vercel.app/" />
-  <meta property="og:title" content="Calculadora Banco → USDT" />
+  <meta property="og:site_name" content="CalcuFlow" />
+  <meta property="og:url" content="https://calcu-flow.vercel.app/" />
+  <meta property="og:title" content="CalcuFlow — Banco → USDT" />
   <meta property="og:description"
-    content="Calcula automáticamente cuánto pagar en bolívares, ganancia, ROI y USDT finales con tasas TasaVE en tiempo real." />
-  <meta property="og:image" content="https://calculadora-banco-usdt.vercel.app/preview.png" />
+    content="CalcuFlow: calcula automáticamente cuánto pagar en bolívares, ganancia, ROI y USDT finales con tasas TasaVE en tiempo real." />
+  <meta property="og:image" content="https://calcu-flow.vercel.app/preview.png" />
   <meta property="og:image:width" content="1200" />
   <meta property="og:image:height" content="630" />
   <meta property="og:image:type" content="image/png" />
 
   <!-- Twitter -->
   <meta property="twitter:card" content="summary_large_image" />
-  <meta property="twitter:url" content="https://calculadora-banco-usdt.vercel.app/" />
-  <meta property="twitter:title" content="Calculadora Banco → USDT" />
+  <meta property="twitter:url" content="https://calcu-flow.vercel.app/" />
+  <meta property="twitter:title" content="CalcuFlow — Banco → USDT" />
   <meta property="twitter:description"
-    content="Calcula automáticamente cuánto pagar en bolívares, ganancia, ROI y USDT finales con tasas TasaVE en tiempo real." />
-  <meta property="twitter:image" content="https://calculadora-banco-usdt.vercel.app/preview.png" />
+    content="CalcuFlow: calcula automáticamente cuánto pagar en bolívares, ganancia, ROI y USDT finales con tasas TasaVE en tiempo real." />
+  <meta property="twitter:image" content="https://calcu-flow.vercel.app/preview.png" />
 
   <link rel="icon" type="image/svg+xml" href="/assets/icon.svg" />
   <link rel="apple-touch-icon" href="/assets/icon.svg" />
@@ -88,11 +88,11 @@
     <header class="topbar">
       <div class="brand">
         <h1 class="brand-title">
-          <img src="/assets/icon.svg" alt="Calculadora Banco a USDT" class="header-icon" />
-          Banco <span class="divider">|</span> USDT
+          <img src="/assets/icon.svg" alt="CalcuFlow" class="header-icon" />
+          CalcuFlow
         </h1>
         <div class="subtitle-row">
-          <span class="subtitle">BCV automático · P2P editable</span>
+          <span class="subtitle brand-subtitle">Banco → USDT</span>
           <span class="subtitle-divider">·</span>
           <span class="header-update">
             <span class="pulse-dot"></span>
@@ -106,7 +106,8 @@
         <button class="icon-btn" id="loadRatesBtn" title="Actualizar tasas" aria-label="Actualizar tasas"><span
             class="material-symbols-rounded">sync</span></button>
         <div class="brand-actions-wrap">
-          <button class="icon-btn" id="overflowMenuBtn" title="Más opciones" aria-label="Más opciones" aria-expanded="false">
+          <button class="icon-btn" id="overflowMenuBtn" title="Más opciones" aria-label="Más opciones"
+            aria-expanded="false">
             <span class="material-symbols-rounded">more_vert</span>
           </button>
           <div class="overflow-menu" id="overflowMenu">
@@ -151,6 +152,7 @@
             <span class="material-symbols-rounded card-icon">account_balance</span>
           </div>
           <strong class="rate-val" id="bcvView">--</strong>
+          <span class="rate-effective-date" id="bcvEffectiveDate"></span>
         </div>
         <div class="rate-card">
           <div class="card-header">
@@ -231,12 +233,14 @@
     <!-- Section: Support the Project -->
     <div class="support-section">
       <span class="support-title">❤️ Apoya CalcuFlow</span>
-      <p class="support-desc">CalcuFlow es gratuita y sin publicidad. Si te ha sido útil, puedes apoyar el proyecto o unirte a la comunidad para compartir ideas, reportar errores y conocer las próximas mejoras.</p>
+      <p class="support-desc">CalcuFlow es gratuita y sin publicidad. Si te ha sido útil, puedes apoyar el proyecto o
+        unirte a la comunidad para compartir ideas, reportar errores y conocer las próximas mejoras.</p>
       <div class="support-actions">
         <button class="btn-support-trigger" id="openSupportBtn">❤️ Apoyar</button>
         <a href="https://t.me/calcuflow" target="_blank" rel="noopener noreferrer" class="btn-support-trigger">
           <svg class="telegram-icon" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69.01-.03.01-.14-.07-.2-.08-.06-.19-.04-.27-.02-.12.02-1.96 1.25-5.54 3.69-.52.36-1 .53-1.42.52-.47-.01-1.37-.26-2.03-.48-.82-.27-1.47-.42-1.42-.88.03-.24.35-.49.96-.75 3.78-1.65 6.31-2.74 7.58-3.27 3.61-1.51 4.36-1.77 4.85-1.78.11 0 .35.03.5.16.13.12.17.29.18.41 0 .04 0 .19-.01.25z"/>
+            <path
+              d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69.01-.03.01-.14-.07-.2-.08-.06-.19-.04-.27-.02-.12.02-1.96 1.25-5.54 3.69-.52.36-1 .53-1.42.52-.47-.01-1.37-.26-2.03-.48-.82-.27-1.47-.42-1.42-.88.03-.24.35-.49.96-.75 3.78-1.65 6.31-2.74 7.58-3.27 3.61-1.51 4.36-1.77 4.85-1.78.11 0 .35.03.5.16.13.12.17.29.18.41 0 .04 0 .19-.01.25z" />
           </svg>
           <span>Grupo Telegram</span>
         </a>
@@ -387,7 +391,7 @@
       <div class="sheet-grab-handle"></div>
       <div class="breakdown-head">
         <div>
-          <h2>Apoya Banco → USDT</h2>
+          <h2>Apoya CalcuFlow</h2>
           <p class="subtitle" style="max-width:none">Voluntario y libre de publicidad.</p>
         </div>
         <button class="icon-btn" id="closeSupportBtn" title="Cerrar" aria-label="Cerrar"><span
@@ -396,7 +400,7 @@
 
       <div class="breakdown-content">
         <p style="font-size: 0.75rem; color: var(--muted); line-height: 1.5; margin-bottom: 8px;">
-          Banco → USDT es un proyecto comunitario creado para ayudar a la comunidad venezolana a calcular operaciones
+          CalcuFlow es un proyecto comunitario creado para ayudar a la comunidad venezolana a calcular operaciones
           Banco → USDT de forma rápida, sencilla y gratuita.
         </p>
         <p style="font-size: 0.75rem; color: var(--muted); line-height: 1.5; margin-bottom: 12px;">
@@ -418,7 +422,7 @@
               </button>
             </div>
             <strong id="supportUsdtTrc20"
-              style="font-size: 0.72rem; word-break: break-all; color: var(--text);">TRC20_ADDRESS_HERE</strong>
+              style="font-size: 0.72rem; word-break: break-all; color: var(--text);">TLfE1DxNd7t4prWuGyJb8Js6PWbK9vK2mD</strong>
           </div>
 
           <!-- USDT BEP20 -->
@@ -580,8 +584,8 @@
   <!-- PWA Install Prompt Card -->
   <div class="install-prompt" id="installPrompt">
     <div class="install-prompt-content">
-      <h3 id="installPromptTitle">Instalar Aplicación</h3>
-      <p id="installPromptDesc">Agrega Calculadora Banco → USDT a tu pantalla de inicio para un acceso más rápido.</p>
+      <h3 id="installPromptTitle">Instalar CalcuFlow</h3>
+      <p id="installPromptDesc">Agrega CalcuFlow a tu pantalla de inicio para un acceso más rápido.</p>
     </div>
     <div class="install-prompt-actions">
       <button class="btn-secondary" id="installDismissBtn">Ahora no</button>
@@ -590,7 +594,7 @@
   </div>
 
 
-  <script type="module" src="/js/app.js?v=18"></script>
+  <script type="module" src="/js/app.js"></script>
 
   <!-- PostHog: async stub + lazy loader. Initialised in js/analytics.js. -->
   <!-- Replace the key below with your real phc_... key when ready.       -->

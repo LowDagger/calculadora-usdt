@@ -1,4 +1,4 @@
-# Calculadora Banco → USDT
+# CalcuFlow — Banco → USDT
 
 PWA estática para calcular compra de USD en banco venezolano, comisiones y retorno estimado vendiendo USDT en el mercado paralelo.
 
@@ -46,6 +46,8 @@ El proyecto es 100% estático. No requiere configuración especial en Vercel:
 2. Vercel detecta automáticamente que es un sitio estático
 3. No agregar variables de entorno (no se necesitan)
 
+Producción: https://calcu-flow.vercel.app
+
 ---
 
 ## Estructura
@@ -77,7 +79,6 @@ calculadora-usdt/
 - [ ] Estado muestra "Tasas actualizadas desde TasaVE."
 - [ ] BCV mostrado coincide con `bcv_usd` de la respuesta
 - [ ] P2P mostrado coincide con `parallel_usdt`
-- [ ] Límite por defecto: 1000 USD
 - [ ] Chips rápidos: 100 / 500 / 1000
 - [ ] Cálculos actualizan al cambiar el monto
 - [ ] Sin referencias a DolarApi en código fuente ni en consola

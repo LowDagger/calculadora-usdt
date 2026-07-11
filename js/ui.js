@@ -22,7 +22,8 @@ export const els = {
   closeSupportBtn: $('closeSupportBtn'),
   toggleQrBtn: $('toggleQrBtn'),
   supportQrBox: $('supportQrBox'),
-  brechaView: $('brechaView')
+  brechaView: $('brechaView'),
+  bcvEffectiveDate: $('bcvEffectiveDate')
 };
 
 export function updateUsdToBuyDisplay(value) {
@@ -66,6 +67,8 @@ export function setLoadingRates(isLoading) {
     if (els.p2pView) els.p2pView.innerHTML = skeletonHTML;
     if (els.lastUpdate) els.lastUpdate.innerHTML = skeletonHTML;
     if (els.brechaView) els.brechaView.innerHTML = skeletonHTML;
+    // Clear the BCV date while loading so no stale date shows during refresh
+    if (els.bcvEffectiveDate) els.bcvEffectiveDate.textContent = '';
   }
 }
 
@@ -86,6 +89,9 @@ export function renderEmpty() {
     els.brechaView.textContent = '--';
     els.brechaView.className = 'brecha-val';
   }
+
+  // Clear BCV effective date — no valid date available yet
+  if (els.bcvEffectiveDate) els.bcvEffectiveDate.textContent = '';
   
   // Reset bottom status bar
   if (els.statusPill && els.statusPillText) {
@@ -95,6 +101,39 @@ export function renderEmpty() {
   if (els.bottomTimestamp) {
     els.bottomTimestamp.textContent = '--';
   }
+}
+
+/**
+ * Format a BCV effective date ISO 8601 string into the compact Spanish label.
+ *
+ * @param {string|null} isoStr  e.g. "2026-07-11T00:00:00-04:00"
+ * @returns {string}  e.g. "Vigente 11 jul", or '' if input is absent/invalid.
+ *
+ * Implementation note: The date portion of the ISO string already encodes the
+ * Venezuela date (-04:00 offset baked in).  We parse directly from the string
+ * rather than relying on the device clock, so no timezone conversion is needed.
+ */
+function formatBcvDate(isoStr) {
+  if (!isoStr || typeof isoStr !== 'string') return '';
+  // Extract the YYYY-MM-DD portion directly — the offset is already -04:00 (VE time)
+  const datePart = isoStr.substring(0, 10); // e.g. "2026-07-11"
+  const segments = datePart.split('-');
+  if (segments.length !== 3) return '';
+  const month = parseInt(segments[1], 10);
+  const day   = parseInt(segments[2], 10);
+  if (!month || !day || month < 1 || month > 12 || day < 1 || day > 31) return '';
+  const monthNames = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+  return `Vigente ${day} ${monthNames[month - 1]}`;
+}
+
+/**
+ * Render (or clear) the BCV effective date inside the BCV rate card.
+ *
+ * @param {string|null} isoStr  The `valid_from` string from TasaVE, or null.
+ */
+export function renderBcvDate(isoStr) {
+  if (!els.bcvEffectiveDate) return;
+  els.bcvEffectiveDate.textContent = formatBcvDate(isoStr);
 }
 
 export function renderRates({ bcv, bank, p2p }) {

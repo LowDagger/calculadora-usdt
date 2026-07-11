@@ -1,6 +1,7 @@
 {
-  "name": "Calculadora Banco a USDT",
-  "short_name": "Banco USDT",
+  "name": "CalcuFlow",
+  "short_name": "CalcuFlow",
+  "description": "Calcula operaciones Banco → USDT con tasas TasaVE en tiempo real.",
   "id": "/",
   "start_url": "/",
   "scope": "/",

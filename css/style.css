@@ -109,7 +109,7 @@ body {
 .brand {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 1px;
 }
 
 .brand-title {
@@ -168,6 +168,15 @@ body {
   font-size: 0.7rem;
   color: var(--muted);
   font-weight: 500;
+}
+
+/* Brand descriptor: "Banco → USDT" shown below the CalcuFlow h1 */
+.brand-subtitle {
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  opacity: 0.8;
 }
 
 .icon-actions {
@@ -349,6 +358,18 @@ body {
   color: var(--text);
   letter-spacing: -0.02em;
   line-height: 1.1;
+}
+
+/* BCV effective date — subtle tertiary label below the BCV rate value */
+.rate-effective-date {
+  font-size: 0.55rem;
+  font-weight: 500;
+  color: var(--muted);
+  opacity: 0.75;
+  white-space: nowrap;
+  display: block;
+  margin-top: auto;
+  line-height: 1.2;
 }
 
 .brecha-wrapper {
