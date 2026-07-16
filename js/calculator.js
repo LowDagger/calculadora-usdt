@@ -105,7 +105,7 @@ export function calculateValues({ requestedUsd, bcvRate, bankMargin, p2pRate, ca
     cardBalance: requestedUsd,
     bankFeePercent: cardFee,
     gatewayFeePercent: bpayFee,
-    targetMargin: '0.03'
+    targetMargin: '0.01'
   });
   const usdUsed = requested;
   const vesNeeded = usdUsed * bank;

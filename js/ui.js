@@ -4,9 +4,9 @@ export const els = {
   usdToBuy: $('usdToBuy'), bankMargin: $('bankMargin'), bcvRate: $('bcvRate'), p2pRate: $('p2pRate'),
   cardFee: $('cardFee'), bpayFee: $('bpayFee'), autoRates: $('autoRates'), bcvView: $('bcvView'), bankView: $('bankView'), p2pView: $('p2pView'),
   lastUpdate: $('lastUpdate'), statusBox: $('statusBox'), opStatus: $('opStatus'), vesNeeded: $('vesNeeded'), vesSub: $('vesSub'),
-  profitCard: $('profitCard'), profitUsdtBig: $('profitUsdtBig'), profitVes: $('profitVes'), usdtFinal: $('usdtFinal'), feesSub: $('feesSub'),
-  roiCard: $('roiCard'), roiView: $('roiView'), returnSub: $('returnSub'), flowUsd: $('flowUsd'), flowVes: $('flowVes'), flowCard: $('flowCard'), flowBpay: $('flowBpay'),
-  flowReturn: $('flowReturn'), flowAfterCard: $('flowAfterCard'), flowBankDeduction: $('flowBankDeduction'), flowRemainingBalance: $('flowRemainingBalance'), flowNetToBinance: $('flowNetToBinance'), flowUsdtToSell: $('flowUsdtToSell'), flowUsdtFinal: $('flowUsdtFinal'), flowProfit: $('flowProfit'), flowProfitSub: $('flowProfitSub'), formulaText: $('formulaText'), loadRatesBtn: $('loadRatesBtn'), shareBtn: $('shareBtn'), openSettingsBtn: $('openSettingsBtn'),
+  profitCard: $('profitCard'), profitUsdtBig: $('profitUsdtBig'), profitVes: $('profitVes'), roiMeta: $('roiMeta'), bpayRecommended: $('bpayRecommended'), usdtFinal: $('usdtFinal'), feesSub: $('feesSub'),
+  flowUsd: $('flowUsd'), flowVes: $('flowVes'), flowCard: $('flowCard'), flowBpay: $('flowBpay'),
+  flowReturn: $('flowReturn'), flowAfterCard: $('flowAfterCard'), flowBankDeduction: $('flowBankDeduction'), flowNetToBinance: $('flowNetToBinance'), flowUsdtToSell: $('flowUsdtToSell'), flowUsdtFinal: $('flowUsdtFinal'), flowProfit: $('flowProfit'), flowProfitSub: $('flowProfitSub'), formulaText: $('formulaText'), loadRatesBtn: $('loadRatesBtn'), shareBtn: $('shareBtn'), openSettingsBtn: $('openSettingsBtn'),
   settingsPanel: $('settingsPanel'), closeSettingsBtn: $('closeSettingsBtn'), clearBtn: $('clearBtn'), clearBtnTop: $('clearBtnTop'),
   resetDefaultsBtn: $('resetDefaultsBtn'), copyBtnSettings: $('copyBtnSettings'), clearBtnMobile: $('clearBtnMobile'), shareBtnMobile: $('shareBtnMobile'), loadRatesBtnMobile: $('loadRatesBtnMobile'), loadRatesBtnSettings: $('loadRatesBtnSettings'),
   // New elements
@@ -74,12 +74,12 @@ export function setLoadingRates(isLoading) {
 
 export function renderEmpty() {
   els.opStatus.textContent = 'Esperando datos';
-  ['vesNeeded','profitUsdtBig','profitVes','usdtFinal','roiView','flowUsd','flowVes','flowCard','flowAfterCard','flowBpay','flowReturn','flowUsdtToSell','flowUsdtFinal','flowProfit'].forEach(id => els[id] && (els[id].textContent = '--'));
+  ['vesNeeded','bpayRecommended','profitUsdtBig','profitVes','usdtFinal','flowUsd','flowVes','flowCard','flowAfterCard','flowBpay','flowReturn','flowUsdtToSell','flowUsdtFinal','flowProfit'].forEach(id => els[id] && (els[id].textContent = '--'));
   if (els.flowProfitSub) els.flowProfitSub.textContent = 'Resultado neto estimado.';
   if (els.flowProfitSub) els.flowProfitSub.className = '';
   els.feesSub.textContent = 'Tarjeta + BPay';
-  els.returnSub.textContent = 'Sobre los Bs usados';
-  els.vesSub.innerHTML = 'Para -- USD · ≈-- USDT';
+  els.roiMeta.textContent = 'Retorno --';
+  els.vesSub.innerHTML = 'Vender ≈-- USDT';
   els.formulaText.textContent = 'Completa USD, BCV y P2P para ver fórmula.';
   if (els.breakdownAmount) els.breakdownAmount.textContent = '-- USD';
   
@@ -218,20 +218,18 @@ export function renderResult(r) {
   els.opStatus.textContent = r.profitVes >= 0 ? 'Operación rentable' : 'Pérdida estimada';
   animateNumber(els.vesNeeded,    r.vesNeeded,  (v) => money(v, 2),                              '<span class="value-unit">Bs</span>');
   const usdtToSell = r.vesNeeded / r.p2p;
-  const formattedUsd = r.usdUsed % 1 === 0 ? money(r.usdUsed, 0) : money(r.usdUsed, 2);
-  els.vesSub.innerHTML = `Para ${formattedUsd} USD · ≈${money(usdtToSell, 2)} USDT`;
+  els.vesSub.innerHTML = `Vender ≈${money(usdtToSell, 2)} USDT`;
+  animateNumber(els.bpayRecommended, r.safeGateway.bpayInputAmount, (v) => money(v, 2), '<span class="value-unit">USD</span>');
   animateNumber(els.usdtFinal,    r.usdtFinal,  (v) => money(v, 2),                              '<span class="value-unit">USDT</span>');
   animateNumber(els.profitUsdtBig, r.profitUsdt, (v) => (v >= 0 ? '+' : '') + money(v, 2),      '<span class="value-unit">USD</span>');
   animateNumber(els.profitVes,    r.profitVes,  (v) => (v >= 0 ? '+' : '') + money(v, 2) + ' Bs');
-  animateNumber(els.roiView,      r.roi,        (v) => (v >= 0 ? '+' : '') + money(v, 2) + '%');
-  els.feesSub.textContent   = `Comisiones ${money(r.totalFeesUsd, 2)} USD`;
-  els.returnSub.textContent = 'Sobre los Bs usados';
+  els.roiMeta.textContent = `Retorno ${r.roi >= 0 ? '+' : ''}${money(r.roi, 2)}%`;
+  els.feesSub.textContent = `−${money(r.totalFeesUsd, 2)} USD en comisiones`;
   els.flowUsd.innerHTML     = money(r.usdUsed, 2)   + ' <span class="value-unit">USD</span>';
   els.flowVes.innerHTML     = money(r.vesNeeded, 2)  + ' <span class="value-unit">Bs</span>';
   els.flowCard.innerHTML    = '-' + money(r.cardFeeUsd, 2) + ' <span class="value-unit">USD</span> (' + money(r.cardPct, 1) + '%)';
   if (els.flowAfterCard) els.flowAfterCard.innerHTML = money(r.afterCard, 2) + ' <span class="value-unit">USD</span>';
   if (els.flowBankDeduction) els.flowBankDeduction.innerHTML = money(r.safeGateway.expectedBankDeduction, 2) + ' <span class="value-unit">USD</span>';
-  if (els.flowRemainingBalance) els.flowRemainingBalance.innerHTML = money(r.safeGateway.projectedRemainingBalance, 2) + ' <span class="value-unit">USD</span>';
   if (els.flowNetToBinance) els.flowNetToBinance.innerHTML = money(r.safeGateway.netToBinance, 2) + ' <span class="value-unit">USDT</span>';
   els.flowBpay.innerHTML    = '-' + money(r.bpayFeeUsd, 2) + ' <span class="value-unit">USD</span> (' + money(r.bpayPct, 1) + '%)';
   els.flowReturn.innerHTML  = money(r.vesReturn, 2)  + ' <span class="value-unit">Bs</span>';
@@ -253,9 +251,6 @@ export function renderResult(r) {
   }
 
   els.profitCard.className = r.profitVes >= 0 ? 'kpi-card kpi-highlight' : 'kpi-card kpi-highlight kpi-loss';
-  if (els.roiCard) {
-    els.roiCard.className = r.roi >= 0 ? 'kpi-card kpi-highlight' : 'kpi-card kpi-highlight kpi-loss';
-  }
   els.formulaText.innerHTML = `
     <strong>USDT a vender:</strong> ${money(r.vesNeeded, 2)} ÷ ${money(r.p2p, 4)} = ${money(r.vesNeeded / r.p2p, 2)} USDT.<br>
     <strong>Tasa banco:</strong> ${money(r.bcv, 4)} × ${(1 + n(els.bankMargin.value) / 100).toFixed(4)} = ${money(r.bank, 4)} Bs/USD.<br>
