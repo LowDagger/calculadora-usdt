@@ -103,35 +103,15 @@
       <div class="icon-actions">
         <button class="icon-btn" id="shareBtn" title="Compartir cálculo" aria-label="Compartir cálculo"><span
             class="material-symbols-rounded">share</span></button>
-        <button class="icon-btn" id="loadRatesBtn" title="Actualizar tasas" aria-label="Actualizar tasas"><span
-            class="material-symbols-rounded">sync</span></button>
-        <div class="brand-actions-wrap">
-          <button class="icon-btn" id="overflowMenuBtn" title="Más opciones" aria-label="Más opciones"
-            aria-controls="overflowMenu" aria-expanded="false">
-            <span class="material-symbols-rounded">more_vert</span>
-          </button>
-          <div class="overflow-menu" id="overflowMenu">
-            <button class="menu-item" id="clearBtnTop" title="Limpiar cálculo" aria-label="Limpiar cálculo">
-              <span class="material-symbols-rounded">mop</span>
-              <span>Limpiar cálculo</span>
-            </button>
-            <button class="menu-item" id="openSettingsBtn" title="Configuración" aria-label="Configuración"
-              aria-controls="settingsPanel" aria-expanded="false">
-              <span class="material-symbols-rounded">tune</span>
-              <span>Configuración</span>
-            </button>
-          </div>
-        </div>
+        <button class="icon-btn" id="openSettingsBtn" title="Configuración" aria-label="Configuración"
+          aria-controls="settingsPanel" aria-expanded="false"><span
+            class="material-symbols-rounded">tune</span></button>
       </div>
     </header>
 
     <div class="layout">
       <!-- Card 1: Calculator input card -->
       <section class="card calculator-card">
-        <div class="calculator-header">
-          <span class="calculator-label">SALDO DISPONIBLE EN TARJETA</span>
-        </div>
-
         <div class="calculator-display-wrap">
           <input id="usdToBuy" type="text" inputmode="decimal" value="500" enterkeyhint="done" autocomplete="off"
             autocorrect="off" spellcheck="false" />
@@ -195,13 +175,13 @@
           <span class="kpi-desc" id="vesSub">Para comprar USD al banco</span>
         </div>
 
-        <div class="kpi-card kpi-highlight" id="profitCard">
+        <div class="kpi-card kpi-operational" id="bpayCard">
           <div class="card-header">
-            <span class="kpi-label">GANANCIA ESTIMADA</span>
-            <span class="material-symbols-rounded card-icon">trending_up</span>
+            <span class="kpi-label">MONTO EN BPAY</span>
+            <span class="material-symbols-rounded card-icon">credit_card</span>
           </div>
-          <strong class="kpi-val" id="profitUsdtBig">--</strong>
-          <span class="kpi-desc" id="profitVes">-- Bs</span>
+          <strong class="kpi-val" id="bpayRecommended">--</strong>
+          <span class="kpi-desc">Máximo recomendado</span>
         </div>
 
         <div class="kpi-card kpi-operational" id="usdtFinalCard">
@@ -213,13 +193,14 @@
           <span class="kpi-desc" id="feesSub">Tarjeta + BPay</span>
         </div>
 
-        <div class="kpi-card kpi-highlight" id="roiCard">
+        <div class="kpi-card kpi-highlight" id="profitCard">
           <div class="card-header">
-            <span class="kpi-label">RETORNO ESTIMADO</span>
-            <span class="material-symbols-rounded card-icon">monitoring</span>
+            <span class="kpi-label">GANANCIA ESTIMADA</span>
+            <span class="material-symbols-rounded card-icon">trending_up</span>
           </div>
-          <strong class="kpi-val" id="roiView">--</strong>
-          <span class="kpi-desc" id="returnSub">Venta P2P estimada</span>
+          <strong class="kpi-val" id="profitUsdtBig">--</strong>
+          <span class="kpi-desc" id="profitVes">-- Bs</span>
+          <span class="kpi-meta" id="roiMeta">Retorno --</span>
         </div>
       </div>
 
@@ -240,27 +221,28 @@
 
     <!-- Section: Support the Project -->
     <div class="support-section">
-      <span class="support-title">❤️ Apoya CalcuFlow</span>
-      <p class="support-desc">CalcuFlow es gratuita y sin publicidad. Si te ha sido útil, puedes apoyar el proyecto o
-        unirte a la comunidad para compartir ideas, reportar errores y conocer las próximas mejoras.</p>
+      <span class="support-title">❤️ Comunidad y apoyo</span>
+      <p class="support-desc">Comparte ideas o ayuda a mantener CalcuFlow gratuita y sin publicidad.</p>
       <div class="support-actions">
-        <button class="btn-support-trigger" id="openSupportBtn" aria-controls="supportPanel"
-          aria-expanded="false">❤️ Apoyar</button>
         <a href="https://telegram.me/CalcuFlow" target="_blank" rel="noopener noreferrer" class="btn-support-trigger">
           <svg class="telegram-icon" viewBox="0 0 24 24" fill="currentColor">
             <path
               d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69.01-.03.01-.14-.07-.2-.08-.06-.19-.04-.27-.02-.12.02-1.96 1.25-5.54 3.69-.52.36-1 .53-1.42.52-.47-.01-1.37-.26-2.03-.48-.82-.27-1.47-.42-1.42-.88.03-.24.35-.49.96-.75 3.78-1.65 6.31-2.74 7.58-3.27 3.61-1.51 4.36-1.77 4.85-1.78.11 0 .35.03.5.16.13.12.17.29.18.41 0 .04 0 .19-.01.25z" />
           </svg>
-          <span>Grupo Telegram</span>
+          <span>Unirme al grupo</span>
         </a>
+        <button class="btn-support-trigger" id="openSupportBtn" aria-controls="supportPanel"
+          aria-expanded="false">Apoyar el proyecto</button>
       </div>
     </div>
 
     <!-- Hidden compatibility controls to prevent original JS from throwing errors -->
     <div style="display: none !important;">
       <button id="clearBtn"></button>
+      <button id="clearBtnTop"></button>
       <button id="clearBtnMobile"></button>
       <button id="shareBtnMobile"></button>
+      <button id="loadRatesBtn"></button>
       <button id="loadRatesBtnMobile"></button>
       <span id="opStatus"></span>
       <!-- Extra buttons moved for compatibility -->
@@ -382,15 +364,11 @@
                     </span>
                     <strong class="amount highlight" id="flowAfterCard" style="font-size: 0.75rem;">--</strong>
                   </div>
-                  <p style="font-size: 0.58rem; color: var(--muted); margin-top: 2px;">Estimado con margen de seguridad de 0,03 USD.</p>
+                  <p style="font-size: 0.58rem; color: var(--muted); margin-top: 2px;">Monto máximo recomendado para la operación.</p>
                   <div class="safe-fee-results" style="margin-top: 6px; display: grid; gap: 4px;">
                     <div style="display: flex; justify-content: space-between; gap: 12px;">
                       <span style="font-size: 0.62rem; color: var(--muted);">Débito estimado del banco</span>
                       <strong class="amount" id="flowBankDeduction" style="font-size: 0.68rem;">--</strong>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; gap: 12px;">
-                      <span style="font-size: 0.62rem; color: var(--muted);">Saldo restante estimado</span>
-                      <strong class="amount" id="flowRemainingBalance" style="font-size: 0.68rem;">--</strong>
                     </div>
                     <div style="display: flex; justify-content: space-between; gap: 12px;">
                       <span style="font-size: 0.62rem; color: var(--muted);">Neto estimado en Binance</span>

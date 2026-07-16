@@ -64,18 +64,18 @@ function formatRelativeTime(date) {
   const diffSec = Math.max(0, Math.floor(diffMs / 1000));
   
   if (diffSec < 60) {
-    return `Hace ${diffSec} s`;
+    return `Actualizado hace ${diffSec} s`;
   }
   const diffMin = Math.floor(diffSec / 60);
   if (diffMin < 60) {
-    return `Hace ${diffMin} min`;
+    return `Actualizado hace ${diffMin} min`;
   }
   const diffHour = Math.floor(diffMin / 60);
   if (diffHour < 24) {
-    return `Hace ${diffHour} h`;
+    return `Actualizado hace ${diffHour} h`;
   }
   const diffDays = Math.floor(diffHour / 24);
-  return `Hace ${diffDays} d`;
+  return `Actualizado hace ${diffDays} d`;
 }
 
 function updateRelativeTime() {
@@ -152,7 +152,7 @@ function resetDefaults() {
   setStatus('Valores base restaurados.', 'ok');
 }
 
-async function loadRates(showSuccessToast = true) {
+async function loadRates(showSuccessToast = false) {
   triggerHaptic();
   setLoadingRates(true);
   try {
@@ -164,7 +164,7 @@ async function loadRates(showSuccessToast = true) {
     els.lastUpdate.dataset.absolute = `${timeStr} · TasaVE`;
     updateRelativeTime();
     renderBcvDate(bcvEffectiveDate);
-    if (showSuccessToast === true || (showSuccessToast && typeof showSuccessToast === 'object')) {
+    if (showSuccessToast === true) {
       showToast('Tasas actualizadas desde TasaVE.');
     }
     calculate();
@@ -547,9 +547,9 @@ function bindEvents() {
   }));
 
   // maxBtn was removed from the UI; its hidden compat element is also gone
-  els.loadRatesBtn.addEventListener('click', loadRates);
-  els.loadRatesBtnMobile.addEventListener('click', loadRates);
-  els.loadRatesBtnSettings.addEventListener('click', loadRates);
+  els.loadRatesBtn.addEventListener('click', () => loadRates(true));
+  els.loadRatesBtnMobile.addEventListener('click', () => loadRates(true));
+  els.loadRatesBtnSettings.addEventListener('click', () => loadRates(true));
   els.shareBtn.addEventListener('click', () => shareOrCopy(els.shareBtn));
   els.shareBtnMobile.addEventListener('click', () => shareOrCopy(els.shareBtnMobile));
   els.copyBtnSettings.addEventListener('click', () => shareOrCopy(els.copyBtnSettings));
@@ -558,13 +558,7 @@ function bindEvents() {
   els.clearBtnMobile.addEventListener('click', clearOperation);
   els.resetDefaultsBtn.addEventListener('click', resetDefaults);
   const showSettings = () => {
-    openManagedModal(
-      els.settingsPanel,
-      els.openSettingsBtn,
-      openSettings,
-      els.closeSettingsBtn,
-      document.getElementById('overflowMenuBtn')
-    );
+    openManagedModal(els.settingsPanel, els.openSettingsBtn, openSettings, els.closeSettingsBtn);
     track(EVENTS.SETTINGS_OPENED);
   };
   const dismissSettings = () => closeManagedModal(els.settingsPanel, els.openSettingsBtn, closeSettings);
@@ -690,31 +684,6 @@ function bindEvents() {
     });
   }
 
-  // Header Overflow Menu
-  const overflowBtn = document.getElementById('overflowMenuBtn');
-  const overflowMenu = document.getElementById('overflowMenu');
-  if (overflowBtn && overflowMenu) {
-    overflowBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const isOpen = overflowMenu.classList.contains('show');
-      overflowMenu.classList.toggle('show', !isOpen);
-      overflowBtn.setAttribute('aria-expanded', !isOpen ? 'true' : 'false');
-    });
-    
-    document.addEventListener('click', (e) => {
-      if (!e.target.closest('#overflowMenu') && !e.target.closest('#overflowMenuBtn')) {
-        overflowMenu.classList.remove('show');
-        overflowBtn.setAttribute('aria-expanded', 'false');
-      }
-    });
-
-    overflowMenu.querySelectorAll('.menu-item').forEach(item => {
-      item.addEventListener('click', () => {
-        overflowMenu.classList.remove('show');
-        overflowBtn.setAttribute('aria-expanded', 'false');
-      });
-    });
-  }
 }
 
 /**
