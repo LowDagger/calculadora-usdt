@@ -98,6 +98,44 @@ body {
   gap: 12px;
 }
 
+/* Native-feeling selection policy: chrome and dashboard data stay stable;
+   editable and intentionally copyable content retain normal selection. */
+.topbar,
+.calculator-header,
+.quick-row,
+.bs-helper-trigger,
+.rates-grid,
+.kpi-grid,
+.breakdown-trigger-btn,
+.support-title,
+.support-actions,
+footer,
+.modal-header,
+.icon-btn,
+.chip-btn,
+.segment-btn,
+.tiny-icon,
+.menu-item,
+.bs-helper-confirm,
+.btn-support-trigger,
+.kpi-copy-btn {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.rate-card,
+.kpi-card {
+  -webkit-tap-highlight-color: transparent;
+}
+
+input,
+textarea,
+.formula-box,
+#supportPanel .modal-content {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
 /* Header */
 .topbar {
   display: flex;
@@ -324,6 +362,129 @@ body {
   color: #ffffff;
 }
 
+.bs-helper-trigger {
+  width: 100%;
+  min-height: 44px;
+  margin: -4px 0 -8px;
+  padding: 0 4px;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 8px;
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-align: left;
+}
+
+.bs-helper-trigger .material-symbols-rounded {
+  font-size: 1rem;
+}
+
+.bs-helper-chevron {
+  opacity: 0.65;
+}
+
+.bs-helper-trigger:hover {
+  color: var(--text);
+}
+
+.bs-helper-trigger:focus {
+  outline: none;
+}
+
+.bs-helper-trigger:focus-visible {
+  border-radius: 8px;
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.bs-helper-content {
+  gap: 10px;
+}
+
+.bs-helper-input input {
+  padding-right: 44px;
+  font-size: 1rem;
+}
+
+.bs-helper-preview {
+  padding: 12px;
+  border-radius: 12px;
+  background: var(--bg-soft);
+  color: var(--muted);
+}
+
+.bs-helper-preview-label,
+.bs-helper-preview-detail,
+.bs-helper-message {
+  display: block;
+  font-size: 0.68rem;
+}
+
+.bs-helper-preview-primary {
+  margin: 4px 0;
+  color: var(--text);
+}
+
+.bs-helper-preview-primary strong {
+  font-size: 1.55rem;
+  letter-spacing: -0.02em;
+}
+
+.bs-helper-preview-secondary {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+  font-size: 0.68rem;
+}
+
+.bs-helper-preview-secondary strong {
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.bs-helper-message {
+  margin-top: -2px;
+  color: var(--muted);
+}
+
+.bs-helper-message:empty {
+  display: none;
+}
+
+.bs-helper-actions {
+  display: flex;
+}
+
+.bs-helper-confirm {
+  width: 100%;
+  min-height: 44px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--primary);
+  color: #ffffff;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.bs-helper-confirm:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.bs-helper-confirm:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
 /* Rates Grid */
 .rates-grid {
   display: grid;
@@ -430,13 +591,8 @@ body {
   display: flex;
   flex-direction: column;
   min-height: 84px;
-  transition: all 0.2s ease;
-  cursor: pointer;
-  user-select: none;
-}
-
-.kpi-card:active {
-  transform: scale(0.98);
+  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  cursor: default;
 }
 
 .kpi-label {
@@ -583,8 +739,8 @@ html[data-theme="light"] .kpi-loss {
   color: var(--muted);
 }
 
-/* Breakdown Modal & Bottom Sheet (Visual style matched to Settings) */
-.breakdown-panel {
+/* Shared adaptive modal shell */
+.modal-shell {
   position: fixed;
   inset: 0;
   display: none;
@@ -595,63 +751,85 @@ html[data-theme="light"] .kpi-loss {
 }
 
 @supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
-  .breakdown-panel {
+  .modal-shell {
     background: rgba(15, 17, 21, 0.4);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
   }
 }
 
-.breakdown-panel.open {
+.modal-shell.open {
   display: grid;
   place-items: center;
   animation: fade-in 200ms ease-out forwards;
 }
 
-.breakdown-panel.closing {
+.modal-shell.closing {
   display: grid;
   place-items: center;
   animation: fade-out 200ms ease-in 50ms forwards;
 }
 
-.breakdown-card {
+.modal-panel {
   width: 100%;
-  max-width: 440px;
   background: var(--modal);
-  border: none;
+  border: 1px solid var(--border);
   border-radius: 24px;
   padding: 20px;
   box-shadow: var(--shadow-lg);
   display: flex;
   flex-direction: column;
   gap: 16px;
-  max-height: 90vh;
-  overflow-y: auto;
+  max-height: calc(100dvh - 48px);
+  overflow: hidden;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
   animation: modal-in 200ms cubic-bezier(0.16, 1, 0.3, 1) 50ms backwards;
 }
 
-.breakdown-panel.closing .breakdown-card {
+.modal-panel--compact { max-width: 400px; }
+.modal-panel--medium { max-width: 440px; }
+.modal-panel--large { max-width: 520px; }
+
+.modal-shell.closing .modal-panel {
   animation: modal-out 200ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-.breakdown-head {
+.modal-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
+  gap: 12px;
+  flex: 0 0 auto;
 }
 
-.breakdown-head h2 {
+.modal-title {
   font-size: 1.25rem;
   font-weight: 800;
   letter-spacing: -0.02em;
 }
 
-.breakdown-content {
+.modal-description {
+  max-width: none;
+  margin-top: 2px;
+}
+
+.modal-close {
+  flex: 0 0 auto;
+}
+
+.modal-content {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  min-height: 0;
+}
+
+.modal-panel--medium .modal-content,
+.modal-panel--large .modal-content {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
 }
 
 .formula-box {
@@ -722,40 +900,36 @@ html[data-theme="light"] .kpi-loss {
   to { opacity: 0; transform: translateY(4px); }
 }
 
-.settings-panel.open .settings-content,
-.breakdown-panel.open .breakdown-content {
+.modal-shell.open .modal-content {
   animation: content-fade-in 150ms ease-out 100ms backwards;
 }
 
-.settings-panel.closing .settings-content,
-.breakdown-panel.closing .breakdown-content {
+.modal-shell.closing .modal-content {
   animation: content-fade-out 100ms ease-in forwards;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .breakdown-panel.open, .settings-panel.open {
+  .modal-shell.open {
     animation: fade-in 150ms ease-out forwards !important;
   }
-  .breakdown-panel.closing, .settings-panel.closing {
+  .modal-shell.closing {
     animation: fade-out 150ms ease-in forwards !important;
   }
-  .breakdown-card, .settings-card, .settings-content, .breakdown-content {
+  .modal-panel, .modal-content {
     animation: none !important;
   }
 }
 
 /* Mobile Bottom Sheet adaptation */
 @media (max-width: 860px) {
-  .breakdown-panel.open,
-  .settings-panel.open {
+  .modal-shell.open {
     display: flex;
     align-items: flex-end;
     justify-content: center;
     padding: 0;
   }
 
-  .breakdown-panel.closing,
-  .settings-panel.closing {
+  .modal-shell.closing {
     display: flex;
     align-items: flex-end;
     justify-content: center;
@@ -763,16 +937,17 @@ html[data-theme="light"] .kpi-loss {
     animation: fade-out 200ms ease-in 50ms forwards;
   }
 
-  .breakdown-card,
-  .settings-card {
+  .modal-panel {
     border-radius: 24px 24px 0 0;
-    max-height: 80vh;
+    max-width: none;
+    max-height: calc(100dvh - env(safe-area-inset-top) - 12px);
     width: 100%;
+    padding: 16px 16px calc(16px + env(safe-area-inset-bottom));
+    gap: 12px;
     animation: sheet-in 200ms cubic-bezier(0.16, 1, 0.3, 1) 50ms backwards;
   }
 
-  .breakdown-panel.closing .breakdown-card,
-  .settings-panel.closing .settings-card {
+  .modal-shell.closing .modal-panel {
     animation: sheet-out 200ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
   }
 }
@@ -1093,83 +1268,12 @@ html[data-theme="light"] .step.step-highlight {
   color: var(--muted);
 }
 
-/* Settings Modal styling (keep functional but adapt to dark theme) */
-.settings-panel {
-  position: fixed;
-  inset: 0;
-  display: none;
-  z-index: 100;
-  background: rgba(15, 17, 21, 0.85); /* Fallback */
-  padding: 24px 16px;
-  overflow: hidden; /* Avoid double scrolling */
-}
-
-@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
-  .settings-panel {
-    background: rgba(15, 17, 21, 0.4);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-  }
-}
-
-.settings-panel.open {
-  display: grid;
-  place-items: center;
-  animation: fade-in 200ms ease-out forwards;
-}
-
-.settings-panel.closing {
-  display: grid;
-  place-items: center;
-  animation: fade-out 200ms ease-in 50ms forwards;
-}
-
-.settings-card {
-  width: 100%;
-  max-width: 440px;
-  background: var(--modal);
-  border: none;
-  border-radius: 24px;
-  padding: 20px;
-  box-shadow: var(--shadow-lg);
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  max-height: 90vh;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  -webkit-overflow-scrolling: touch;
-  animation: modal-in 200ms cubic-bezier(0.16, 1, 0.3, 1) 50ms backwards;
-}
-
-.settings-panel.closing .settings-card {
-  animation: modal-out 200ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
-
-.settings-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-}
-
-.settings-head h2 {
-  font-size: 1.25rem;
-  font-weight: 800;
-  letter-spacing: -0.02em;
-}
-
 .settings-content {
-  display: flex;
-  flex-direction: column;
   gap: 14px;
 }
 
 /* Compact mobile overrides for Settings screen */
 @media (max-width: 860px) {
-  .settings-card {
-    padding: 16px 16px 20px 16px !important;
-    gap: 12px !important;
-  }
   .settings-content {
     gap: 10px !important;
   }

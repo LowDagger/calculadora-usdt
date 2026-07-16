@@ -315,6 +315,175 @@ function clearOperation() {
   }, 50);
 }
 
+const modalFocusOrigins = new WeakMap();
+
+const bsHelperEls = {
+  trigger: document.getElementById('openBsHelperBtn'),
+  panel: document.getElementById('bsHelperPanel'),
+  close: document.getElementById('closeBsHelperBtn'),
+  form: document.getElementById('bsHelperForm'),
+  input: document.getElementById('bsHelperInput'),
+  usdtPreview: document.getElementById('bsHelperUsdtPreview'),
+  usdPreview: document.getElementById('bsHelperUsdPreview'),
+  message: document.getElementById('bsHelperMessage'),
+  confirm: document.getElementById('confirmBsHelperBtn')
+};
+
+function openManagedModal(panel, trigger, openFn, initialFocus, returnFocus = null, focusDelay = 0) {
+  const origin = returnFocus || (document.activeElement instanceof HTMLElement ? document.activeElement : trigger);
+  modalFocusOrigins.set(panel, origin);
+  openFn();
+  trigger.setAttribute('aria-expanded', 'true');
+  const focusTarget = initialFocus || panel.querySelector('.modal-close');
+  const focusPanel = () => {
+    if (panel.classList.contains('open')) focusTarget?.focus();
+  };
+  if (focusDelay > 0) setTimeout(focusPanel, focusDelay);
+  else requestAnimationFrame(focusPanel);
+}
+
+function closeManagedModal(panel, trigger, closeFn) {
+  if (!panel.classList.contains('open')) return;
+  closeFn();
+  trigger.setAttribute('aria-expanded', 'false');
+  const duration = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 260;
+  setTimeout(() => {
+    const origin = modalFocusOrigins.get(panel);
+    if (origin && document.contains(origin)) origin.focus();
+    modalFocusOrigins.delete(panel);
+  }, duration);
+}
+
+function trapModalFocus(event) {
+  if (event.key !== 'Tab') return;
+  const panel = document.querySelector('.modal-shell.open');
+  if (!panel) return;
+
+  const focusable = Array.from(panel.querySelectorAll(
+    'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+  )).filter(element => element.offsetParent !== null);
+  if (!focusable.length) return;
+
+  const first = focusable[0];
+  const last = focusable[focusable.length - 1];
+  if (!panel.contains(document.activeElement)) {
+    event.preventDefault();
+    (event.shiftKey ? last : first).focus();
+  } else if (event.shiftKey && document.activeElement === first) {
+    event.preventDefault();
+    last.focus();
+  } else if (!event.shiftKey && document.activeElement === last) {
+    event.preventDefault();
+    first.focus();
+  }
+}
+
+let bsHelperTouched = false;
+
+function parseVesInput(value) {
+  const raw = String(value || '').trim().replace(/\s+/g, '');
+  if (!raw || raw.startsWith('-') || !/^\d[\d.,]*$/.test(raw)) return NaN;
+
+  const commaCount = (raw.match(/,/g) || []).length;
+  const dotCount = (raw.match(/\./g) || []).length;
+  let normalized = raw;
+
+  if (commaCount && dotCount) {
+    if (commaCount !== 1) return NaN;
+    normalized = raw.replace(/\./g, '').replace(',', '.');
+  } else if (commaCount) {
+    if (commaCount !== 1) return NaN;
+    normalized = raw.replace(',', '.');
+  } else if (dotCount) {
+    const groups = raw.split('.');
+    if (dotCount > 1) {
+      if (!groups.slice(1).every(group => group.length === 3)) return NaN;
+      normalized = groups.join('');
+    } else if (groups[1].length === 3 && groups[0].length <= 3) {
+      normalized = groups.join('');
+    }
+  }
+
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : NaN;
+}
+
+function getBsHelperResult() {
+  const targetVes = parseVesInput(bsHelperEls.input.value);
+  const bank = currentBankRate(els.bcvRate.value, els.bankMargin.value);
+  if (!Number.isFinite(targetVes) || !bank) return null;
+
+  const requestedUsd = Math.round((targetVes / bank + Number.EPSILON) * 100) / 100;
+  const result = calculateValues({
+    requestedUsd,
+    bcvRate: els.bcvRate.value,
+    bankMargin: els.bankMargin.value,
+    p2pRate: els.p2pRate.value,
+    cardFee: els.cardFee.value,
+    bpayFee: els.bpayFee.value
+  });
+
+  if (!result) return null;
+  return { requestedUsd, usdtFinal: result.usdtFinal, vesNeeded: result.vesNeeded };
+}
+
+function renderBsHelperPreview() {
+  const result = getBsHelperResult();
+  bsHelperEls.confirm.disabled = !result;
+
+  if (!result) {
+    bsHelperEls.usdtPreview.textContent = '--';
+    bsHelperEls.usdPreview.textContent = '--';
+    const parsedVes = parseVesInput(bsHelperEls.input.value);
+    if (!bsHelperTouched && !bsHelperEls.input.value.trim()) bsHelperEls.message.textContent = '';
+    else if (Number.isFinite(parsedVes)) bsHelperEls.message.textContent = 'Actualiza las tasas para calcular este monto.';
+    else bsHelperEls.message.textContent = 'Ingresa un monto válido en bolívares.';
+    return null;
+  }
+
+  bsHelperEls.usdtPreview.textContent = money(result.usdtFinal, 2);
+  bsHelperEls.usdPreview.textContent = money(result.requestedUsd, 2);
+  bsHelperEls.message.textContent = '';
+  return result;
+}
+
+function showBsHelper() {
+  bsHelperTouched = false;
+  bsHelperEls.input.value = '';
+  renderBsHelperPreview();
+  openManagedModal(bsHelperEls.panel, bsHelperEls.trigger, () => {
+    bsHelperEls.panel.classList.remove('closing');
+    bsHelperEls.panel.classList.add('open');
+    bsHelperEls.panel.setAttribute('aria-hidden', 'false');
+    triggerHaptic('light');
+    lockBodyScroll();
+  }, bsHelperEls.input, null,
+    window.matchMedia('(max-width: 860px)').matches ? 220 : 0
+  );
+}
+
+function dismissBsHelper() {
+  closeManagedModal(bsHelperEls.panel, bsHelperEls.trigger, () => {
+    bsHelperEls.panel.classList.add('closing');
+    triggerHaptic('light');
+    const duration = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 250;
+    setTimeout(() => {
+      bsHelperEls.panel.classList.remove('open', 'closing');
+      bsHelperEls.panel.setAttribute('aria-hidden', 'true');
+      unlockBodyScroll();
+    }, duration);
+  });
+}
+
+function confirmBsHelper() {
+  const result = renderBsHelperPreview();
+  if (!result) return;
+
+  els.usdToBuy.value = result.requestedUsd.toFixed(2);
+  els.usdToBuy.dispatchEvent(new Event('input', { bubbles: true }));
+  dismissBsHelper();
+}
+
 function bindEvents() {
   // ── Debounce helpers for input-field analytics ──────────────────────────
   // We track bucketed events with a 500ms debounce to avoid spamming events
@@ -388,25 +557,58 @@ function bindEvents() {
   els.clearBtnTop.addEventListener('click', clearOperation);
   els.clearBtnMobile.addEventListener('click', clearOperation);
   els.resetDefaultsBtn.addEventListener('click', resetDefaults);
-  els.openSettingsBtn.addEventListener('click', () => { openSettings(); track(EVENTS.SETTINGS_OPENED); });
-  els.closeSettingsBtn.addEventListener('click', closeSettings);
-  els.settingsPanel.addEventListener('click', e => { if (e.target === els.settingsPanel) closeSettings(); });
-  els.openBreakdownBtn.addEventListener('click', () => { openBreakdown(); track(EVENTS.BREAKDOWN_OPENED); });
-  els.closeBreakdownBtn.addEventListener('click', closeBreakdown);
-  els.breakdownPanel.addEventListener('click', e => { if (e.target === els.breakdownPanel) closeBreakdown(); });
+  const showSettings = () => {
+    openManagedModal(
+      els.settingsPanel,
+      els.openSettingsBtn,
+      openSettings,
+      els.closeSettingsBtn,
+      document.getElementById('overflowMenuBtn')
+    );
+    track(EVENTS.SETTINGS_OPENED);
+  };
+  const dismissSettings = () => closeManagedModal(els.settingsPanel, els.openSettingsBtn, closeSettings);
+  const showBreakdown = () => {
+    openManagedModal(els.breakdownPanel, els.openBreakdownBtn, openBreakdown, els.closeBreakdownBtn);
+    track(EVENTS.BREAKDOWN_OPENED);
+  };
+  const dismissBreakdown = () => closeManagedModal(els.breakdownPanel, els.openBreakdownBtn, closeBreakdown);
+  const showSupport = () => openManagedModal(els.supportPanel, els.openSupportBtn, openSupport, els.closeSupportBtn);
+  const dismissSupport = () => closeManagedModal(els.supportPanel, els.openSupportBtn, closeSupport);
 
-  // Prevent scroll leaking on mobile backdrop overlays
-  els.settingsPanel.addEventListener('touchmove', e => {
-    if (!e.target.closest('.settings-card')) {
+  els.openSettingsBtn.addEventListener('click', showSettings);
+  els.closeSettingsBtn.addEventListener('click', dismissSettings);
+  els.settingsPanel.addEventListener('click', e => { if (e.target === els.settingsPanel) dismissSettings(); });
+  els.openBreakdownBtn.addEventListener('click', showBreakdown);
+  els.closeBreakdownBtn.addEventListener('click', dismissBreakdown);
+  els.breakdownPanel.addEventListener('click', e => { if (e.target === els.breakdownPanel) dismissBreakdown(); });
+  bsHelperEls.trigger.addEventListener('click', showBsHelper);
+  bsHelperEls.close.addEventListener('click', dismissBsHelper);
+  bsHelperEls.panel.addEventListener('click', e => { if (e.target === bsHelperEls.panel) dismissBsHelper(); });
+  bsHelperEls.input.addEventListener('input', () => {
+    bsHelperTouched = true;
+    renderBsHelperPreview();
+  });
+  bsHelperEls.input.addEventListener('keydown', e => {
+    if (e.key === '-') {
+      e.preventDefault();
+      return;
+    }
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    confirmBsHelper();
+  });
+  bsHelperEls.form.addEventListener('submit', e => {
+    e.preventDefault();
+    confirmBsHelper();
+  });
+
+  // Prevent scroll leaking through any shared modal backdrop on mobile
+  document.querySelectorAll('.modal-shell').forEach(shell => shell.addEventListener('touchmove', e => {
+    if (!e.target.closest('.modal-panel')) {
       if (e.cancelable) e.preventDefault();
     }
-  }, { passive: false });
-
-  els.breakdownPanel.addEventListener('touchmove', e => {
-    if (!e.target.closest('.breakdown-card')) {
-      if (e.cancelable) e.preventDefault();
-    }
-  }, { passive: false });
+  }, { passive: false }));
 
   const installPrompt = document.getElementById('installPrompt');
   if (installPrompt) {
@@ -418,9 +620,12 @@ function bindEvents() {
   }
 
   window.addEventListener('keydown', e => {
+    trapModalFocus(e);
     if (e.key === 'Escape') {
-      closeSettings();
-      closeBreakdown();
+      if (bsHelperEls.panel.classList.contains('open')) dismissBsHelper();
+      else if (els.settingsPanel.classList.contains('open')) dismissSettings();
+      else if (els.breakdownPanel.classList.contains('open')) dismissBreakdown();
+      else if (els.supportPanel.classList.contains('open')) dismissSupport();
     }
   });
 
@@ -431,42 +636,6 @@ function bindEvents() {
       summarySpan.textContent = formulaDetails.open ? 'Ocultar fórmulas' : 'Ver fórmulas';
     });
   }
-
-  // Bind copy clicks on KPI cards
-  const kpiCards = [
-    { id: 'vesNeededCard', targetId: 'vesNeeded', label: 'Bolívares necesarios', getFormat: (v) => `Bs necesarios: ${v}` },
-    { id: 'profitCard', targetId: 'profitUsdtBig', label: 'Ganancia estimada', getFormat: (v, profitVes) => `Ganancia estimada:\n${v}\n${profitVes}` },
-    { id: 'usdtFinalCard', targetId: 'usdtFinal', label: 'USDT finales', getFormat: (v) => `USDT finales estimados: ${v}` },
-    { id: 'roiCard', targetId: 'roiView', label: 'Retorno estimado', getFormat: (v) => `Retorno estimado:\n${v}` }
-  ];
-  
-  kpiCards.forEach(({ id, targetId, label, getFormat }) => {
-    const card = document.getElementById(id);
-    if (!card) return;
-    card.addEventListener('click', () => {
-      const valEl = document.getElementById(targetId);
-      if (!valEl || valEl.textContent === '--') return;
-      
-      let textToCopy = '';
-      if (id === 'profitCard') {
-        const profitVesText = document.getElementById('profitVes').textContent.trim();
-        textToCopy = getFormat(valEl.textContent.trim(), profitVesText);
-      } else {
-        textToCopy = getFormat(valEl.textContent.trim());
-      }
-      
-      const formattedClipboard = `${textToCopy}\n\nCalculado con CalcuFlow:\nhttps://calcu-flow.vercel.app`;
-      
-      navigator.clipboard.writeText(formattedClipboard)
-        .then(() => {
-          triggerHaptic('success');
-          showToast(`✓ ${label} copiado`);
-        })
-        .catch(() => {
-          showToast('No se pudo copiar', 'err');
-        });
-    });
-  });
 
   // Keep breakdown BPay amount and donation copy listeners active
   document.querySelectorAll('.kpi-copy-btn').forEach(btn => {
@@ -498,18 +667,14 @@ function bindEvents() {
 
   // Support bottom sheet triggers
   if (els.openSupportBtn) {
-    els.openSupportBtn.addEventListener('click', () => {
-      openSupport();
-    });
+    els.openSupportBtn.addEventListener('click', showSupport);
   }
   if (els.closeSupportBtn) {
-    els.closeSupportBtn.addEventListener('click', () => {
-      closeSupport();
-    });
+    els.closeSupportBtn.addEventListener('click', dismissSupport);
     if (els.supportPanel) {
       els.supportPanel.addEventListener('click', (e) => {
         if (e.target === els.supportPanel) {
-          closeSupport();
+          dismissSupport();
         }
       });
     }
