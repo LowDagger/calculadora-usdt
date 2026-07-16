@@ -6,7 +6,7 @@ export const els = {
   lastUpdate: $('lastUpdate'), statusBox: $('statusBox'), opStatus: $('opStatus'), vesNeeded: $('vesNeeded'), vesSub: $('vesSub'),
   profitCard: $('profitCard'), profitUsdtBig: $('profitUsdtBig'), profitVes: $('profitVes'), usdtFinal: $('usdtFinal'), feesSub: $('feesSub'),
   roiCard: $('roiCard'), roiView: $('roiView'), returnSub: $('returnSub'), flowUsd: $('flowUsd'), flowVes: $('flowVes'), flowCard: $('flowCard'), flowBpay: $('flowBpay'),
-  flowReturn: $('flowReturn'), flowAfterCard: $('flowAfterCard'), flowUsdtToSell: $('flowUsdtToSell'), flowUsdtFinal: $('flowUsdtFinal'), flowProfit: $('flowProfit'), flowProfitSub: $('flowProfitSub'), formulaText: $('formulaText'), loadRatesBtn: $('loadRatesBtn'), shareBtn: $('shareBtn'), openSettingsBtn: $('openSettingsBtn'),
+  flowReturn: $('flowReturn'), flowAfterCard: $('flowAfterCard'), flowBankDeduction: $('flowBankDeduction'), flowRemainingBalance: $('flowRemainingBalance'), flowNetToBinance: $('flowNetToBinance'), flowUsdtToSell: $('flowUsdtToSell'), flowUsdtFinal: $('flowUsdtFinal'), flowProfit: $('flowProfit'), flowProfitSub: $('flowProfitSub'), formulaText: $('formulaText'), loadRatesBtn: $('loadRatesBtn'), shareBtn: $('shareBtn'), openSettingsBtn: $('openSettingsBtn'),
   settingsPanel: $('settingsPanel'), closeSettingsBtn: $('closeSettingsBtn'), clearBtn: $('clearBtn'), clearBtnTop: $('clearBtnTop'),
   resetDefaultsBtn: $('resetDefaultsBtn'), copyBtnSettings: $('copyBtnSettings'), clearBtnMobile: $('clearBtnMobile'), shareBtnMobile: $('shareBtnMobile'), loadRatesBtnMobile: $('loadRatesBtnMobile'), loadRatesBtnSettings: $('loadRatesBtnSettings'),
   // New elements
@@ -230,6 +230,9 @@ export function renderResult(r) {
   els.flowVes.innerHTML     = money(r.vesNeeded, 2)  + ' <span class="value-unit">Bs</span>';
   els.flowCard.innerHTML    = '-' + money(r.cardFeeUsd, 2) + ' <span class="value-unit">USD</span> (' + money(r.cardPct, 1) + '%)';
   if (els.flowAfterCard) els.flowAfterCard.innerHTML = money(r.afterCard, 2) + ' <span class="value-unit">USD</span>';
+  if (els.flowBankDeduction) els.flowBankDeduction.innerHTML = money(r.safeGateway.expectedBankDeduction, 2) + ' <span class="value-unit">USD</span>';
+  if (els.flowRemainingBalance) els.flowRemainingBalance.innerHTML = money(r.safeGateway.projectedRemainingBalance, 2) + ' <span class="value-unit">USD</span>';
+  if (els.flowNetToBinance) els.flowNetToBinance.innerHTML = money(r.safeGateway.netToBinance, 2) + ' <span class="value-unit">USDT</span>';
   els.flowBpay.innerHTML    = '-' + money(r.bpayFeeUsd, 2) + ' <span class="value-unit">USD</span> (' + money(r.bpayPct, 1) + '%)';
   els.flowReturn.innerHTML  = money(r.vesReturn, 2)  + ' <span class="value-unit">Bs</span>';
   
@@ -257,7 +260,8 @@ export function renderResult(r) {
     <strong>USDT a vender:</strong> ${money(r.vesNeeded, 2)} ÷ ${money(r.p2p, 4)} = ${money(r.vesNeeded / r.p2p, 2)} USDT.<br>
     <strong>Tasa banco:</strong> ${money(r.bcv, 4)} × ${(1 + n(els.bankMargin.value) / 100).toFixed(4)} = ${money(r.bank, 4)} Bs/USD.<br>
     <strong>Bs necesarios:</strong> ${money(r.usdUsed, 2)} × ${money(r.bank, 4)} = ${money(r.vesNeeded, 2)} Bs.<br>
-    <strong>USDT final:</strong> ${money(r.usdUsed, 2)} - ${money(r.cardFeeUsd, 2)} tarjeta - ${money(r.bpayFeeUsd, 2)} BPay = ${money(r.usdtFinal, 2)} USDT.<br>
+    <strong>Monto máximo BPay:</strong> ${money(r.safeGateway.allowedBankSpend, 2)} ÷ ${(1 + r.cardPct / 100).toFixed(4)}, truncado a centavos = ${money(r.afterCard, 2)} USD.<br>
+    <strong>USDT final:</strong> ${money(r.afterCard, 2)} - ${money(r.bpayFeeUsd, 2)} BPay = ${money(r.usdtFinal, 2)} USDT.<br>
     <strong>Retorno P2P:</strong> ${money(r.usdtFinal, 2)} × ${money(r.p2p, 4)} = ${money(r.vesReturn, 2)} Bs.<br>
     <strong>Ganancia:</strong> ${money(r.vesReturn, 2)} - ${money(r.vesNeeded, 2)} = ${(r.profitVes >= 0 ? '+' : '') + money(r.profitVes, 2)} Bs (${(r.profitUsdt >= 0 ? '+' : '') + money(r.profitUsdt, 2)} USD).
   `;
