@@ -1,6 +1,5 @@
 import { fetchRates } from './api.js';
 import { calculateValues, currentBankRate } from './calculator.js';
-import { track, EVENTS, amountRange } from './analytics.js';
 
 import { loadState as readState, saveState as writeState } from './storage.js';
 import { money, n, triggerHaptic } from './utils.js';
@@ -169,10 +168,8 @@ async function loadRates(showSuccessToast = false) {
     }
     calculate();
     saveState(false);
-    track(EVENTS.RATES_LOADED, { rate_status: 'success' });
   } catch (err) {
     showToast('No se pudo cargar TasaVE. Conservando tasas manuales.', 'err');
-    track(EVENTS.RATES_FAILED, { rate_status: 'failure' });
   } finally {
     setLoadingRates(false);
     updateRelativeTime();
@@ -256,7 +253,6 @@ function shareOrCopy(btn) {
   const text = buildShareText(r);
 
   if (navigator.share) {
-    track(EVENTS.SHARE_CLICKED, { share_method: 'native' });
     navigator.share({
       title: 'CalcuFlow',
       text: text
@@ -271,7 +267,6 @@ function shareOrCopy(btn) {
       }
     });
   } else {
-    track(EVENTS.SHARE_CLICKED, { share_method: 'clipboard' });
     navigator.clipboard.writeText(text)
       .then(() => {
         triggerHaptic('success');
@@ -298,7 +293,6 @@ function initShare() {
 
 function clearOperation() {
   triggerHaptic();
-  track(EVENTS.CLEAR_CLICKED);
   if (els.usdToBuy) {
     els.usdToBuy.blur();
   }
@@ -485,50 +479,10 @@ function confirmBsHelper() {
 }
 
 function bindEvents() {
-  // ── Debounce helpers for input-field analytics ──────────────────────────
-  // We track bucketed events with a 500ms debounce to avoid spamming events
-  // while the user is still typing. Raw values never leave the app.
-  let _amountDebounce = null;
-  let _lastAmountBucket = null;
-  let _p2pDebounce = null;
-  let _p2pFiredThisSession = false;
-  let _feesDebounce = null;
-  let _feesFiredThisSession = false;
-
   ['usdToBuy','bankMargin','bcvRate','p2pRate','cardFee','bpayFee','autoRates'].forEach(key => {
     els[key].addEventListener('input', () => {
       calculate();
       saveState(false);
-
-      // amount_range_changed: only when the bucket changes, debounced
-      if (key === 'usdToBuy') {
-        clearTimeout(_amountDebounce);
-        _amountDebounce = setTimeout(() => {
-          const bucket = amountRange(n(els.usdToBuy.value));
-          if (bucket !== _lastAmountBucket) {
-            _lastAmountBucket = bucket;
-            track(EVENTS.AMOUNT_RANGE_CHANGED, { amount_range: bucket });
-          }
-        }, 500);
-      }
-
-      // p2p_edited: fires once per session when user manually edits P2P
-      if (key === 'p2pRate' && !_p2pFiredThisSession) {
-        clearTimeout(_p2pDebounce);
-        _p2pDebounce = setTimeout(() => {
-          _p2pFiredThisSession = true;
-          track(EVENTS.P2P_EDITED);
-        }, 500);
-      }
-
-      // fees_edited: fires once per session when user edits card or bpay fee
-      if ((key === 'cardFee' || key === 'bpayFee') && !_feesFiredThisSession) {
-        clearTimeout(_feesDebounce);
-        _feesDebounce = setTimeout(() => {
-          _feesFiredThisSession = true;
-          track(EVENTS.FEES_EDITED);
-        }, 500);
-      }
     });
     els[key].addEventListener('change', () => { calculate(); saveState(false); });
   });
@@ -538,12 +492,6 @@ function bindEvents() {
     els.usdToBuy.value = btn.dataset.quick;
     calculate();
     saveState(false);
-    // Quick-chip clicks also count as amount range changes
-    const bucket = amountRange(n(els.usdToBuy.value));
-    if (bucket !== _lastAmountBucket) {
-      _lastAmountBucket = bucket;
-      track(EVENTS.AMOUNT_RANGE_CHANGED, { amount_range: bucket });
-    }
   }));
 
   // maxBtn was removed from the UI; its hidden compat element is also gone
@@ -559,12 +507,10 @@ function bindEvents() {
   els.resetDefaultsBtn.addEventListener('click', resetDefaults);
   const showSettings = () => {
     openManagedModal(els.settingsPanel, els.openSettingsBtn, openSettings, els.closeSettingsBtn);
-    track(EVENTS.SETTINGS_OPENED);
   };
   const dismissSettings = () => closeManagedModal(els.settingsPanel, els.openSettingsBtn, closeSettings);
   const showBreakdown = () => {
     openManagedModal(els.breakdownPanel, els.openBreakdownBtn, openBreakdown, els.closeBreakdownBtn);
-    track(EVENTS.BREAKDOWN_OPENED);
   };
   const dismissBreakdown = () => closeManagedModal(els.breakdownPanel, els.openBreakdownBtn, closeBreakdown);
   const showSupport = () => openManagedModal(els.supportPanel, els.openSupportBtn, openSupport, els.closeSupportBtn);
@@ -876,7 +822,6 @@ function showAndroidInstallPrompt() {
   if (dismissBtn) dismissBtn.textContent = 'Ahora no';
   promptEl.classList.add('show');
   lockBodyScroll();
-  track(EVENTS.INSTALL_PROMPT_SHOWN, { install_state: 'shown' });
 }
 
 function showIOSInstallPrompt() {
@@ -890,7 +835,6 @@ function showIOSInstallPrompt() {
   if (confirmBtn) confirmBtn.style.display = 'none';
   promptEl.classList.add('show');
   lockBodyScroll();
-  track(EVENTS.INSTALL_PROMPT_SHOWN, { install_state: 'shown' });
 }
 
 function hideInstallPrompt() {
@@ -926,7 +870,6 @@ function initInstallPrompt() {
   const dismissBtn = document.getElementById('installDismissBtn');
   if (dismissBtn) {
     dismissBtn.addEventListener('click', () => {
-      track(EVENTS.INSTALL_DISMISSED, { install_state: 'dismissed' });
       hideInstallPrompt();
       localStorage.setItem('installPromptDismissed', Date.now().toString());
     });
@@ -935,14 +878,11 @@ function initInstallPrompt() {
   const confirmBtn = document.getElementById('installConfirmBtn');
   if (confirmBtn) {
     confirmBtn.addEventListener('click', async () => {
-      track(EVENTS.INSTALL_CLICKED, { install_state: 'clicked' });
       hideInstallPrompt();
       if (!deferredPrompt) return;
       deferredPrompt.prompt();
       const { outcome } = await deferredPrompt.userChoice;
-      if (outcome === 'accepted') {
-        // outcome is accepted/dismissed — we do not log identity
-      } else {
+      if (outcome !== 'accepted') {
         localStorage.setItem('installPromptDismissed', Date.now().toString());
       }
       deferredPrompt = null;
@@ -963,13 +903,6 @@ updateRelativeTime();
 setInterval(updateRelativeTime, 1000);
 registerServiceWorker();
 
-// Track app_loaded after the initial render is complete.
-// theme and device_type are safe non-PII context.
-{
-  const savedTheme = localStorage.getItem('theme') || 'system';
-  track(EVENTS.APP_LOADED, { theme: savedTheme });
-}
-
 window.addEventListener('load', () => {
   if (els.autoRates.checked) loadRates(false).catch(() => {});
 });
@@ -989,7 +922,6 @@ function initTheme() {
         applyTheme(val);
         updateThemeUI(val);
         localStorage.setItem('theme', val);
-        track(EVENTS.THEME_CHANGED, { theme: val });
       });
     });
   }
