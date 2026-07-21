@@ -114,9 +114,11 @@
       <section class="card calculator-card">
         <div class="calculator-display-wrap">
           <input id="usdToBuy" type="text" inputmode="decimal" value="500" enterkeyhint="done" autocomplete="off"
-            autocorrect="off" spellcheck="false" />
+            autocorrect="off" spellcheck="false" maxlength="12" aria-describedby="usdAmountError"
+            aria-invalid="false" />
           <span class="unit-part">USD</span>
         </div>
+        <p class="amount-input-error" id="usdAmountError" role="alert" hidden></p>
 
         <div class="quick-row">
           <button class="chip-btn" data-quick="100">100</button>

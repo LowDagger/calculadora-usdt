@@ -1,9 +1,9 @@
 import { fetchRates } from './api.js';
-import { calculateValues, currentBankRate } from './calculator.js';
+import { MAX_REQUESTED_USD, calculateValues, currentBankRate, sanitizeRequestedUsdInput, validateRequestedUsd } from './calculator.js';
 
 import { loadState as readState, saveState as writeState } from './storage.js';
 import { money, n, triggerHaptic } from './utils.js';
-import { els, setStatus, clearStatus, setLoadingRates, showToast, renderEmpty, renderRates, renderResult, renderBcvDate, openSettings, closeSettings, openBreakdown, closeBreakdown, openSupport, closeSupport, lockBodyScroll, unlockBodyScroll } from './ui.js';
+import { els, setStatus, clearStatus, setLoadingRates, showToast, renderEmpty, renderRates, renderResult, renderBcvDate, renderUsdAmountValidation, openSettings, closeSettings, openBreakdown, closeBreakdown, openSupport, closeSupport, lockBodyScroll, unlockBodyScroll } from './ui.js';
 
 let ratesLastUpdated = null;
 
@@ -178,15 +178,16 @@ async function loadRates(showSuccessToast = false) {
 }
 
 function calculate() {
-  const requestedUsd = n(els.usdToBuy.value);
+  const amountValidation = validateRequestedUsd(els.usdToBuy.value);
   const bcv = n(els.bcvRate.value);
   const bank = currentBankRate(bcv, els.bankMargin.value);
   const p2p = n(els.p2pRate.value);
 
   renderRates({ bcv, bank, p2p });
+  renderUsdAmountValidation(amountValidation.error);
 
   const result = calculateValues({
-    requestedUsd, bcvRate: bcv, bankMargin: els.bankMargin.value,
+    requestedUsd: els.usdToBuy.value, bcvRate: bcv, bankMargin: els.bankMargin.value,
     p2pRate: p2p, cardFee: els.cardFee.value, bpayFee: els.bpayFee.value
   });
 
@@ -408,6 +409,7 @@ function getBsHelperResult() {
   if (!Number.isFinite(targetVes) || !bank) return null;
 
   const requestedUsd = Math.round((targetVes / bank + Number.EPSILON) * 100) / 100;
+  if (requestedUsd > MAX_REQUESTED_USD) return null;
   const result = calculateValues({
     requestedUsd,
     bcvRate: els.bcvRate.value,
@@ -429,7 +431,10 @@ function renderBsHelperPreview() {
     bsHelperEls.usdtPreview.textContent = '--';
     bsHelperEls.usdPreview.textContent = '--';
     const parsedVes = parseVesInput(bsHelperEls.input.value);
+    const bank = currentBankRate(els.bcvRate.value, els.bankMargin.value);
+    const exceedsUsdMaximum = Number.isFinite(parsedVes) && bank && parsedVes / bank > MAX_REQUESTED_USD;
     if (!bsHelperTouched && !bsHelperEls.input.value.trim()) bsHelperEls.message.textContent = '';
+    else if (exceedsUsdMaximum) bsHelperEls.message.textContent = 'El equivalente supera el máximo de 1.000.000,00 USD.';
     else if (Number.isFinite(parsedVes)) bsHelperEls.message.textContent = 'Actualiza las tasas para calcular este monto.';
     else bsHelperEls.message.textContent = 'Ingresa un monto válido en bolívares.';
     return null;
@@ -481,6 +486,9 @@ function confirmBsHelper() {
 function bindEvents() {
   ['usdToBuy','bankMargin','bcvRate','p2pRate','cardFee','bpayFee','autoRates'].forEach(key => {
     els[key].addEventListener('input', () => {
+      if (key === 'usdToBuy') {
+        els[key].value = sanitizeRequestedUsdInput(els[key].value);
+      }
       calculate();
       saveState(false);
     });
@@ -736,6 +744,12 @@ function setupKeyboardUX() {
   const input = els.usdToBuy;
   if (!input) return;
 
+  // Stop pasted or autofilled symbols before they reach the field whenever
+  // the browser exposes the inserted text through beforeinput.
+  input.addEventListener('beforeinput', (e) => {
+    if (e.data && /[^\d.,]/.test(e.data)) e.preventDefault();
+  });
+
   // --- Decimal-only filter for type="text" ---
   // Allow: digits, single dot/comma, backspace/delete, arrows, tab, home/end
   input.addEventListener('keydown', (e) => {
@@ -766,16 +780,22 @@ function setupKeyboardUX() {
     }
   });
 
-  // Normalise comma → dot and recalculate on change (covers autofill, paste, etc.)
+  const normalizeAmount = () => {
+    input.value = sanitizeRequestedUsdInput(input.value);
+    const validation = validateRequestedUsd(input.value);
+    if (validation.value !== null) input.value = String(validation.value);
+  };
+
+  // Normalise valid decimal formats and recalculate on change (covers autofill, paste, etc.)
   input.addEventListener('change', () => {
-    input.value = input.value.replace(',', '.');
+    normalizeAmount();
     calculate();
     saveState(false);
   });
 
   // Recalculate whenever the field loses focus (covers all dismissal paths)
   input.addEventListener('blur', () => {
-    input.value = input.value.replace(',', '.');
+    normalizeAmount();
     calculate();
     saveState(false);
   });

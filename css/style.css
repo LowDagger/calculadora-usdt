@@ -289,6 +289,20 @@ textarea,
   box-shadow: 0 0 0 3px var(--primary-bg);
 }
 
+.calculator-display-wrap.is-invalid,
+.calculator-display-wrap.is-invalid:focus-within {
+  border-color: var(--red);
+  box-shadow: 0 0 0 3px var(--red-bg);
+}
+
+.amount-input-error {
+  margin: -4px 4px 0;
+  color: var(--red);
+  font-size: 0.68rem;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
 .calculator-display-wrap input {
   flex: 1;
   min-width: 0;

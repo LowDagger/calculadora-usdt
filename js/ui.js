@@ -23,7 +23,8 @@ export const els = {
   toggleQrBtn: $('toggleQrBtn'),
   supportQrBox: $('supportQrBox'),
   brechaView: $('brechaView'),
-  bcvEffectiveDate: $('bcvEffectiveDate')
+  bcvEffectiveDate: $('bcvEffectiveDate'),
+  usdAmountError: $('usdAmountError')
 };
 
 export function updateUsdToBuyDisplay(value) {
@@ -45,6 +46,15 @@ export function setStatus(text, type = 'ok') {
 export function clearStatus() {
   els.statusBox.className = 'status';
   els.statusBox.textContent = '';
+}
+
+export function renderUsdAmountValidation(error = '') {
+  const hasError = Boolean(error);
+  els.usdToBuy.setAttribute('aria-invalid', String(hasError));
+  els.usdToBuy.closest('.calculator-display-wrap')?.classList.toggle('is-invalid', hasError);
+  if (!els.usdAmountError) return;
+  els.usdAmountError.textContent = error;
+  els.usdAmountError.hidden = !hasError;
 }
 
 export function setLoadingRates(isLoading) {

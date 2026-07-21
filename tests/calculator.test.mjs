@@ -2,9 +2,12 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   MoneyValidationError,
+  MAX_REQUESTED_USD,
   calculateValues,
   calculateSafeGatewayAmount,
-  floorToCurrencyCents
+  floorToCurrencyCents,
+  sanitizeRequestedUsdInput,
+  validateRequestedUsd
 } from '../js/calculator.js';
 
 function assertSafe(result) {
@@ -82,6 +85,41 @@ test('integrated 500 USD flow keeps sequential fees, profit, and ROI consistent'
   assert.ok(Math.abs(result.vesNeeded - 365544.228) < 1e-9);
   assert.equal(result.profitVes, result.vesReturn - result.vesNeeded);
   assert.equal(result.roi, (result.profitVes / result.vesNeeded) * 100);
+});
+
+test('validates user-entered USD amounts without accepting special numeric formats', () => {
+  assert.deepEqual(validateRequestedUsd('.1'), { value: 0.1, error: '' });
+  assert.deepEqual(validateRequestedUsd(',25'), { value: 0.25, error: '' });
+  assert.deepEqual(validateRequestedUsd('1000.50'), { value: 1000.5, error: '' });
+  assert.deepEqual(validateRequestedUsd(String(MAX_REQUESTED_USD)), { value: MAX_REQUESTED_USD, error: '' });
+
+  for (const value of ['', '0', '-1', '1e3', 'Infinity', 'NaN', '12.345', '1,2,3', String(MAX_REQUESTED_USD + 0.01)]) {
+    const validation = validateRequestedUsd(value);
+    if (value === '') assert.equal(validation.error, '');
+    else assert.notEqual(validation.error, '');
+    assert.equal(validation.value, null);
+  }
+});
+
+test('sanitizes the visible USD input without coercing special numeric formats', () => {
+  assert.equal(sanitizeRequestedUsdInput('00003'), '3');
+  assert.equal(sanitizeRequestedUsdInput('01'), '1');
+  assert.equal(sanitizeRequestedUsdInput('000.50'), '0.50');
+  assert.equal(sanitizeRequestedUsdInput('.1'), '0.1');
+  assert.equal(sanitizeRequestedUsdInput(',25'), '0.25');
+  assert.equal(sanitizeRequestedUsdInput('12.345'), '12.34');
+  assert.equal(sanitizeRequestedUsdInput('-1'), '');
+  assert.equal(sanitizeRequestedUsdInput('1e3'), '');
+  assert.equal(sanitizeRequestedUsdInput('$100'), '');
+  assert.equal(sanitizeRequestedUsdInput('1,2,3'), '');
+});
+
+test('integrated calculation rejects invalid and oversized USD input', () => {
+  const base = { bcvRate: '727.4512', bankMargin: '0.5', p2pRate: '849.9495', cardFee: '2.5', bpayFee: '4.1' };
+  assert.equal(calculateValues({ ...base, requestedUsd: '1e3' }), null);
+  assert.equal(calculateValues({ ...base, requestedUsd: '12.345' }), null);
+  assert.equal(calculateValues({ ...base, requestedUsd: String(MAX_REQUESTED_USD + 1) }), null);
+  assert.ok(calculateValues({ ...base, requestedUsd: '.1' }));
 });
 
 test('rejects invalid financial inputs with a controlled domain error', () => {

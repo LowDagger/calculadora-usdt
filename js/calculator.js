@@ -4,12 +4,56 @@ const DECIMAL_SCALE = 1_000_000n;
 const PERCENT_FACTOR_SCALE = 100n * DECIMAL_SCALE;
 const UNITS_PER_CENT = 10_000n;
 const MAX_CORRECTIONS = 100;
+export const MAX_REQUESTED_USD = 1_000_000;
+
+const REQUESTED_USD_PATTERN = /^(?:\d+(?:[.,]\d{0,2})?|[.,]\d{1,2})$/;
+
+export function sanitizeRequestedUsdInput(value) {
+  const source = String(value ?? '').trim();
+  if (!source) return '';
+
+  // Invalid pasted/autofilled content is discarded instead of being coerced
+  // into a different number (for example, "1e3" must not become "13").
+  if (/[^\d.,]/.test(source)) return '';
+
+  const normalized = source.replace(/,/g, '.');
+  if ((normalized.match(/\./g) || []).length > 1) return '';
+
+  const hasDecimal = normalized.includes('.');
+  const [rawWhole = '', rawFraction = ''] = normalized.split('.');
+  const whole = (rawWhole || '0').replace(/^0+(?=\d)/, '');
+
+  if (!hasDecimal) return whole;
+  return `${whole}.${rawFraction.slice(0, 2)}`;
+}
 
 export class MoneyValidationError extends Error {
   constructor(message) {
     super(message);
     this.name = 'MoneyValidationError';
   }
+}
+
+export function validateRequestedUsd(value) {
+  const source = String(value ?? '').trim();
+
+  if (!source) return { value: null, error: '' };
+  if (!REQUESTED_USD_PATTERN.test(source)) {
+    return { value: null, error: 'Usa solo números y hasta 2 decimales.' };
+  }
+
+  const parsed = Number(source.replace(',', '.'));
+  if (!Number.isFinite(parsed)) {
+    return { value: null, error: 'Ingresa un monto válido.' };
+  }
+  if (parsed <= 0) {
+    return { value: null, error: 'El monto debe ser mayor que 0.' };
+  }
+  if (parsed > MAX_REQUESTED_USD) {
+    return { value: null, error: 'El máximo por cálculo es 1.000.000,00 USD.' };
+  }
+
+  return { value: parsed, error: '' };
 }
 
 function parseFixed(value, label) {
@@ -92,17 +136,18 @@ export function currentBankRate(bcvRate, bankMargin) {
 }
 
 export function calculateValues({ requestedUsd, bcvRate, bankMargin, p2pRate, cardFee, bpayFee }) {
-  const requested = n(requestedUsd);
+  const amountValidation = validateRequestedUsd(requestedUsd);
+  const requested = amountValidation.value;
   const bcv = n(bcvRate);
   const bank = currentBankRate(bcv, bankMargin);
   const p2p = n(p2pRate);
   const cardPct = n(cardFee);
   const bpayPct = n(bpayFee);
 
-  if (requestedUsd === '' || requestedUsd === null || requestedUsd === undefined || requested <= 0 || !bcv || !p2p || cardPct < 0 || bpayPct < 0 || bpayPct >= 100) return null;
+  if (requested === null || !bcv || !p2p || cardPct < 0 || bpayPct < 0 || bpayPct >= 100) return null;
 
   const safeGateway = calculateSafeGatewayAmount({
-    cardBalance: requestedUsd,
+    cardBalance: requested,
     bankFeePercent: cardFee,
     gatewayFeePercent: bpayFee,
     targetMargin: '0.01'
