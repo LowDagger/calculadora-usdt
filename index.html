@@ -126,6 +126,21 @@
           <button class="chip-btn" data-quick="1000">1000</button>
         </div>
 
+        <div class="bank-profile-field">
+          <span class="bank-profile-label" id="bankProfileLabel">Banco / tarjeta</span>
+          <button class="bank-profile-trigger" id="openBankProfilesBtn" type="button"
+            aria-labelledby="bankProfileLabel activeBankName" aria-describedby="activeBankFee activeBankStatus"
+            aria-controls="bankProfilesPanel" aria-haspopup="dialog" aria-expanded="false">
+            <span class="bank-profile-avatar" id="activeBankAvatar" aria-hidden="true">BDV</span>
+            <span class="bank-profile-summary">
+              <strong id="activeBankName">Banco de Venezuela · Física</strong>
+              <span class="bank-profile-status" id="activeBankStatus">Comisión reportada</span>
+            </span>
+            <span class="bank-profile-meta" id="activeBankFee">1,5%</span>
+            <span class="material-symbols-rounded bank-profile-chevron" aria-hidden="true">expand_more</span>
+          </button>
+        </div>
+
         <button class="bs-helper-trigger" id="openBsHelperBtn" type="button" aria-label="Calcular desde bolívares"
           aria-controls="bsHelperPanel" aria-expanded="false">
           <span class="material-symbols-rounded" aria-hidden="true">payments</span>
@@ -225,6 +240,17 @@
     <div class="support-section">
       <span class="support-title">❤️ Comunidad y apoyo</span>
       <p class="support-desc">Comparte ideas o ayuda a mantener CalcuFlow gratuita y sin publicidad.</p>
+      <button class="changelog-trigger" id="openChangelogBtn" type="button" aria-controls="changelogPanel"
+        aria-expanded="false">
+        <span class="changelog-trigger-copy">
+          <strong>Novedades</strong>
+          <span>Perfiles bancarios y mejoras recientes</span>
+        </span>
+        <span class="changelog-trigger-end">
+          <span class="changelog-badge" id="changelogBadge">Nuevo</span>
+          <span class="material-symbols-rounded" aria-hidden="true">chevron_right</span>
+        </span>
+      </button>
       <div class="support-actions">
         <a href="https://telegram.me/CalcuFlow" target="_blank" rel="noopener noreferrer" class="btn-support-trigger">
           <svg class="telegram-icon" viewBox="0 0 24 24" fill="currentColor">
@@ -504,6 +530,122 @@
       </div>
   </section>
 
+  <section class="modal-shell changelog-panel" id="changelogPanel" role="dialog" aria-modal="true"
+    aria-labelledby="changelogTitle" aria-describedby="changelogReleaseMeta" aria-hidden="true">
+    <div class="modal-panel modal-panel--medium changelog-card">
+      <div class="modal-handle sheet-grab-handle" aria-hidden="true"></div>
+      <div class="modal-header">
+        <div>
+          <h2 class="modal-title" id="changelogTitle">Novedades</h2>
+          <p class="modal-description subtitle" id="changelogReleaseMeta"></p>
+        </div>
+        <button class="modal-close icon-btn" id="closeChangelogBtn" type="button" title="Cerrar"
+          aria-label="Cerrar novedades"><span class="material-symbols-rounded">close</span></button>
+      </div>
+
+      <div class="modal-content changelog-content">
+        <div class="changelog-release">
+          <h3 id="changelogReleaseTitle"></h3>
+          <ul id="changelogChanges"></ul>
+        </div>
+        <p class="changelog-telegram-copy" id="changelogTelegramText"></p>
+        <a class="changelog-telegram-button" id="changelogTelegramLink" target="_blank"
+          rel="noopener noreferrer">Unirme al grupo de Telegram</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="modal-shell bank-profiles-panel" id="bankProfilesPanel" role="dialog" aria-modal="true"
+    aria-labelledby="bankProfilesTitle" aria-hidden="true">
+    <div class="modal-panel modal-panel--medium bank-profiles-card">
+      <div class="modal-handle sheet-grab-handle" aria-hidden="true"></div>
+      <div class="modal-header bank-profiles-head">
+        <div>
+          <h2 class="modal-title" id="bankProfilesTitle">Banco / tarjeta</h2>
+          <p class="modal-description subtitle">Elige la comisión que aplicará la tarjeta.</p>
+        </div>
+        <button class="modal-close icon-btn" id="closeBankProfilesBtn" type="button" title="Cerrar"
+          aria-label="Cerrar selector de banco"><span class="material-symbols-rounded">close</span></button>
+      </div>
+
+      <div class="modal-content bank-profiles-content">
+        <div class="bank-profile-list-view" id="bankProfileListView">
+          <p class="bank-profile-notice" id="bankProfileNotice">
+            <span class="material-symbols-rounded" aria-hidden="true">info</span>
+            <span>Comisiones reportadas por usuarios. Verifica el porcentaje con tu banco antes de operar.</span>
+          </p>
+          <div class="bank-profile-list" id="bankProfileList" role="list"></div>
+          <div class="bank-profile-list-actions" id="bankProfileSelectionActions">
+            <button class="bank-profile-list-action" id="openTemporaryBankFeeBtn" type="button">
+              <span class="material-symbols-rounded" aria-hidden="true">tune</span>
+              <span>Usar comisión temporal</span>
+            </button>
+            <button class="bank-profile-list-action" id="manageBankProfilesBtn" type="button">
+              <span class="material-symbols-rounded" aria-hidden="true">manage_accounts</span>
+              <span>Administrar perfiles</span>
+            </button>
+          </div>
+          <div class="bank-profile-list-actions" id="bankProfileManagementActions" hidden>
+            <button class="bank-profile-list-action" id="backToBankSelectionBtn" type="button">
+              <span class="material-symbols-rounded" aria-hidden="true">arrow_back</span>
+              <span>Volver a seleccionar</span>
+            </button>
+            <button class="bank-profile-list-action bank-profile-list-action--primary"
+              id="createCustomBankProfileBtn" type="button">
+              <span class="material-symbols-rounded" aria-hidden="true">add</span>
+              <span>Nuevo perfil personalizado</span>
+            </button>
+          </div>
+        </div>
+
+        <form class="bank-profile-editor" id="bankProfileEditor" hidden novalidate>
+          <div class="bank-profile-editor-head">
+            <button class="bank-profile-back" id="backToBankListBtn" type="button">
+              <span class="material-symbols-rounded" aria-hidden="true">arrow_back</span>
+              <span>Volver</span>
+            </button>
+            <strong id="bankProfileEditorTitle">Editar perfil</strong>
+          </div>
+          <p class="bank-profile-editor-description" id="bankProfileEditorDescription"></p>
+
+          <div class="field" id="bankProfileNameField">
+            <div class="label-row"><label for="bankProfileName">Nombre del banco</label></div>
+            <div class="input-wrap"><input id="bankProfileName" type="text" maxlength="64"
+                autocomplete="organization" placeholder="Ej: Banco Mercantil" aria-describedby="bankProfileFormError"></div>
+          </div>
+          <div class="field" id="bankProfileCardTypeField">
+            <div class="label-row"><label for="bankProfileCardType">Tipo de tarjeta <span
+                  class="small">(opcional)</span></label></div>
+            <div class="input-wrap"><input id="bankProfileCardType" type="text" maxlength="40"
+                autocomplete="off" placeholder="Ej: Física o virtual"></div>
+          </div>
+          <div class="field">
+            <div class="label-row"><label for="bankProfileFee">Comisión de tarjeta</label></div>
+            <div class="input-wrap"><input id="bankProfileFee" type="number" inputmode="decimal" min="0"
+                max="100" step="0.1" required aria-describedby="bankProfileFormError"><span class="unit">%</span></div>
+          </div>
+
+          <p class="bank-profile-form-error" id="bankProfileFormError" role="alert" hidden></p>
+
+          <div class="bank-profile-editor-actions">
+            <button class="bank-profile-action bank-profile-action--secondary" id="restoreBankProfileBtn"
+              type="button" hidden>Restaurar predeterminado</button>
+            <button class="bank-profile-action bank-profile-action--danger" id="deleteBankProfileBtn"
+              type="button" hidden>Eliminar perfil</button>
+            <button class="bank-profile-action bank-profile-action--primary" id="saveBankProfileBtn"
+              type="submit" hidden>Guardar cambios</button>
+            <button class="bank-profile-action bank-profile-action--secondary" id="applyManualFeeBtn"
+              type="button" hidden>Aplicar temporal</button>
+            <button class="bank-profile-action bank-profile-action--primary" id="saveManualProfileBtn"
+              type="button" hidden>Guardar como perfil</button>
+            <button class="bank-profile-action bank-profile-action--secondary" id="clearTemporaryBankFeeBtn"
+              type="button" hidden>Usar valor del perfil</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </section>
+
   <section class="modal-shell settings-panel" id="settingsPanel" role="dialog" aria-modal="true"
     aria-labelledby="settingsTitle" aria-hidden="true">
     <div class="modal-panel modal-panel--medium settings-card">
@@ -555,14 +697,33 @@
                 step="0.1"><span class="unit">%</span></div>
           </div>
           <div class="field">
-            <div class="label-row"><label for="cardFee">Tarjeta</label></div>
-            <div class="input-wrap"><input id="cardFee" type="number" inputmode="decimal" value="2.5" min="0"
-                step="0.1"><span class="unit">%</span></div>
+            <div class="label-row"><label for="cardFee">Tarjeta</label><span class="small"
+                id="cardFeeProfile">Perfil: Banco de Venezuela · Física</span></div>
+            <div class="input-wrap"><input id="cardFee" type="number" inputmode="decimal" value="1.5" min="0"
+                max="100" step="0.1"><span class="unit">%</span></div>
           </div>
           <div class="field">
             <div class="label-row"><label for="bpayFee">BPay</label></div>
             <div class="input-wrap"><input id="bpayFee" type="number" inputmode="decimal" value="4.1" min="0"
                 step="0.1"><span class="unit">%</span></div>
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <div class="section-title">
+            <span class="material-symbols-rounded">account_balance_wallet</span>
+            <span>Perfiles de banco</span>
+          </div>
+          <div class="bank-profile-settings-summary">
+            <div>
+              <strong id="bankProfileSettingsName">Banco de Venezuela · Física</strong>
+              <span id="bankProfileSettingsMeta">1,5% · Comisión reportada</span>
+            </div>
+            <button class="bank-profile-settings-manage" id="manageBankProfilesSettingsBtn" type="button"
+              aria-label="Administrar perfiles de banco">
+              <span>Administrar perfiles</span>
+              <span class="material-symbols-rounded" aria-hidden="true">chevron_right</span>
+            </button>
           </div>
         </div>
 

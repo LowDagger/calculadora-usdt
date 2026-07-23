@@ -63,7 +63,7 @@ html[data-theme="light"] {
 }
 
 /* Smooth transition for theme variables */
-body, .card, .rate-card, .kpi-card, .breakdown-details, .details-body, .step, .input-wrap input, .chip-btn, .icon-btn, .tiny-icon, .segmented-control, .segment-btn, .status-pill, .toast, .toggle, .calculator-display-wrap {
+body, .card, .rate-card, .kpi-card, .breakdown-details, .details-body, .step, .input-wrap input, .chip-btn, .icon-btn, .tiny-icon, .segmented-control, .segment-btn, .status-pill, .toast, .toggle, .calculator-display-wrap, .bank-profile-trigger, .bank-profile-option {
   transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
 }
 
@@ -102,6 +102,7 @@ body {
    editable and intentionally copyable content retain normal selection. */
 .topbar,
 .quick-row,
+.bank-profile-field,
 .bs-helper-trigger,
 .rates-grid,
 .kpi-grid,
@@ -119,6 +120,10 @@ footer,
 .kpi-copy-btn {
   -webkit-user-select: none;
   user-select: none;
+}
+
+[hidden] {
+  display: none !important;
 }
 
 .rate-card,
@@ -363,6 +368,115 @@ textarea,
   background: var(--primary);
   border-color: var(--primary);
   color: #ffffff;
+}
+
+.bank-profile-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.bank-profile-label {
+  padding-left: 2px;
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+.bank-profile-trigger {
+  width: 100%;
+  min-height: 52px;
+  padding: 7px 9px;
+  border: 1px solid var(--border);
+  border-radius: 13px;
+  background: var(--bg-soft);
+  color: var(--text);
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 8px;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.bank-profile-trigger:hover {
+  border-color: color-mix(in srgb, var(--primary) 55%, var(--border));
+  background: var(--surface-hover);
+}
+
+.bank-profile-trigger:active {
+  transform: translateY(1px);
+}
+
+.bank-profile-trigger:focus {
+  outline: none;
+}
+
+.bank-profile-trigger:focus-visible {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-bg);
+}
+
+.bank-profile-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  overflow: hidden;
+  background: var(--primary-bg);
+  color: var(--primary);
+  border: 1px solid color-mix(in srgb, var(--primary) 30%, transparent);
+  font-size: 0.62rem;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+}
+
+.bank-profile-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.bank-profile-summary {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.bank-profile-summary strong {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text);
+  font-size: 0.75rem;
+  font-weight: 800;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bank-profile-meta {
+  color: var(--text);
+  font-size: 0.7rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.bank-profile-status {
+  color: var(--muted);
+  font-size: 0.62rem;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.bank-profile-chevron {
+  color: var(--muted);
+  font-size: 1.15rem;
 }
 
 .bs-helper-trigger {
@@ -931,6 +1045,290 @@ html[data-theme="light"] .kpi-loss {
   animation: content-fade-out 100ms ease-in forwards;
 }
 
+.bank-profiles-card {
+  min-height: min(680px, calc(100dvh - 48px));
+}
+
+.bank-profiles-content,
+.bank-profile-list-view {
+  min-height: 0;
+}
+
+.bank-profile-list-view {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.bank-profile-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 9px 10px;
+  border-radius: 11px;
+  background: var(--primary-bg);
+  color: var(--muted);
+  font-size: 0.65rem;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.bank-profile-notice .material-symbols-rounded {
+  flex: 0 0 auto;
+  color: var(--primary);
+  font-size: 1rem;
+}
+
+.bank-profile-list {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.bank-profile-option {
+  width: 100%;
+  min-width: 0;
+  display: block;
+  border: 1px solid var(--border);
+  border-radius: 13px;
+  background: var(--bg-soft);
+  overflow: hidden;
+}
+
+.bank-profile-option.is-selected {
+  border-color: var(--primary);
+  background: var(--primary-bg);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--primary) 35%, transparent);
+}
+
+.bank-profile-select {
+  min-width: 0;
+  min-height: 58px;
+  padding: 8px 7px 8px 9px;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 9px;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.bank-profile-select .bank-profile-avatar {
+  width: 34px;
+  height: 34px;
+  font-size: 0.58rem;
+}
+
+.bank-profile-option-copy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.bank-profile-option-name {
+  overflow: hidden;
+  font-size: 0.75rem;
+  font-weight: 800;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bank-profile-option-detail,
+.bank-profile-option-status {
+  color: var(--muted);
+  font-size: 0.61rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.bank-profile-option-rate {
+  color: var(--text);
+  font-size: 0.72rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.bank-profile-option-trailing {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 7px;
+}
+
+.bank-profile-check {
+  display: none;
+  color: var(--primary);
+  font-size: 1.05rem;
+}
+
+.bank-profile-option.is-selected .bank-profile-check {
+  display: inline;
+}
+
+.bank-profile-option.is-selected .bank-profile-option-rate {
+  display: none;
+}
+
+.bank-profile-manage-icon {
+  color: var(--muted);
+  font-size: 1rem;
+}
+
+.bank-profile-select:hover {
+  background: color-mix(in srgb, var(--surface-hover) 72%, transparent);
+  color: var(--text);
+}
+
+.bank-profile-select:focus,
+.bank-profile-back:focus,
+.bank-profile-action:focus,
+.bank-profile-list-action:focus,
+.bank-profile-settings-manage:focus {
+  outline: none;
+}
+
+.bank-profile-select:focus-visible,
+.bank-profile-back:focus-visible,
+.bank-profile-action:focus-visible,
+.bank-profile-list-action:focus-visible,
+.bank-profile-settings-manage:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: -2px;
+}
+
+.bank-profile-list-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.bank-profile-list-action {
+  min-height: 42px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  background: var(--bg-soft);
+  color: var(--text);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font: inherit;
+  font-size: 0.66rem;
+  font-weight: 800;
+  line-height: 1.2;
+  cursor: pointer;
+}
+
+.bank-profile-list-action .material-symbols-rounded {
+  flex: 0 0 auto;
+  color: var(--primary);
+  font-size: 1rem;
+}
+
+.bank-profile-list-action--primary {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: #ffffff;
+}
+
+.bank-profile-list-action--primary .material-symbols-rounded {
+  color: #ffffff;
+}
+
+.bank-profile-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.bank-profile-editor-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.bank-profile-editor-head strong {
+  font-size: 0.9rem;
+}
+
+.bank-profile-back {
+  min-height: 34px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 9px;
+  background: var(--bg-soft);
+  color: var(--muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font: inherit;
+  font-size: 0.68rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.bank-profile-back .material-symbols-rounded {
+  font-size: 1rem;
+}
+
+.bank-profile-editor-description {
+  color: var(--muted);
+  font-size: 0.68rem;
+  line-height: 1.35;
+}
+
+.bank-profile-form-error {
+  padding: 8px 10px;
+  border-radius: 9px;
+  background: var(--red-bg);
+  color: var(--red);
+  font-size: 0.68rem;
+  font-weight: 600;
+}
+
+.bank-profile-editor-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.bank-profile-action {
+  min-height: 40px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-soft);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.68rem;
+  font-weight: 800;
+  line-height: 1.2;
+  cursor: pointer;
+}
+
+.bank-profile-action--primary {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: #ffffff;
+}
+
+.bank-profile-action--danger {
+  border-color: color-mix(in srgb, var(--red) 45%, var(--border));
+  color: var(--red);
+}
+
+.bank-profile-action:hover {
+  filter: brightness(1.08);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .modal-shell.open {
     animation: fade-in 150ms ease-out forwards !important;
@@ -968,6 +1366,10 @@ html[data-theme="light"] .kpi-loss {
     padding: 16px 16px calc(16px + env(safe-area-inset-bottom));
     gap: 12px;
     animation: sheet-in 200ms cubic-bezier(0.16, 1, 0.3, 1) 50ms backwards;
+  }
+
+  .bank-profiles-card {
+    min-height: min(720px, calc(100dvh - env(safe-area-inset-top) - 12px));
   }
 
   .modal-shell.closing .modal-panel {
@@ -1284,6 +1686,68 @@ html[data-theme="light"] .step.step-highlight {
 .field .small {
   font-size: 0.65rem;
   color: var(--muted);
+}
+
+#cardFeeProfile {
+  max-width: 62%;
+  overflow: hidden;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bank-profile-settings-summary {
+  padding: 10px 11px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg-soft);
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.bank-profile-settings-summary > div {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.bank-profile-settings-summary strong {
+  overflow: hidden;
+  color: var(--text);
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bank-profile-settings-summary span {
+  color: var(--muted);
+  font-size: 0.64rem;
+  font-weight: 600;
+}
+
+.bank-profile-settings-manage {
+  min-height: 38px;
+  padding: 0 9px;
+  border: 0;
+  border-radius: 9px;
+  background: var(--surface);
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font: inherit;
+  font-size: 0.68rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.bank-profile-settings-manage .material-symbols-rounded {
+  color: var(--muted);
+  font-size: 1rem;
 }
 
 .input-wrap {
@@ -1856,6 +2320,86 @@ html[data-theme="light"] .skeleton-shimmer::after {
   width: 100%;
 }
 
+.changelog-trigger {
+  width: 100%;
+  min-height: 48px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-soft);
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.1s ease;
+}
+
+.changelog-trigger-copy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.changelog-trigger-copy strong {
+  font-size: 0.72rem;
+  line-height: 1.2;
+}
+
+.changelog-trigger-copy > span {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 0.63rem;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.changelog-trigger-end {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.changelog-trigger-end .material-symbols-rounded {
+  color: var(--muted);
+  font-size: 1.05rem;
+}
+
+.changelog-badge {
+  padding: 3px 6px;
+  border-radius: 999px;
+  background: var(--primary);
+  color: #ffffff;
+  font-size: 0.56rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.changelog-badge[hidden] {
+  display: none;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .changelog-trigger:hover {
+    background: var(--surface-hover);
+  }
+}
+
+.changelog-trigger:active {
+  transform: scale(0.99);
+}
+
+.changelog-trigger:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
 .btn-support-trigger {
   align-self: stretch;
   background: var(--bg-soft);
@@ -1898,4 +2442,56 @@ html[data-theme="light"] .skeleton-shimmer::after {
   margin-right: 4px;
   fill: currentColor;
   display: inline-block;
+}
+
+.changelog-content {
+  gap: 16px;
+}
+
+.changelog-release {
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--bg-soft);
+}
+
+.changelog-release h3 {
+  margin: 0 0 9px;
+  color: var(--text);
+  font-size: 0.9rem;
+}
+
+.changelog-release ul {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--muted);
+  font-size: 0.72rem;
+  line-height: 1.55;
+}
+
+.changelog-telegram-copy {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.72rem;
+  line-height: 1.5;
+}
+
+.changelog-telegram-button {
+  min-height: 44px;
+  padding: 10px 14px;
+  border-radius: 11px;
+  background: var(--primary);
+  color: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-align: center;
+  text-decoration: none;
+}
+
+.changelog-telegram-button:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: 2px;
 }
