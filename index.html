@@ -109,7 +109,20 @@
       </div>
     </header>
 
-    <div class="layout">
+    <button class="changelog-announcement" id="openTopChangelogBtn" type="button"
+      aria-controls="changelogPanel" aria-expanded="false" hidden>
+      <span class="changelog-announcement-status">
+        <span class="changelog-announcement-dot" aria-hidden="true"></span>
+        <span class="changelog-announcement-copy" id="topChangelogSummary">Nuevo: perfiles bancarios y mejoras
+          recientes</span>
+      </span>
+      <span class="changelog-announcement-action" aria-hidden="true">
+        <span>Ver</span>
+        <span class="material-symbols-rounded">chevron_right</span>
+      </span>
+    </button>
+
+    <main class="layout" id="mainCalculator" tabindex="-1">
       <!-- Card 1: Calculator input card -->
       <section class="card calculator-card">
         <div class="calculator-display-wrap">
@@ -129,14 +142,13 @@
         <div class="bank-profile-field">
           <span class="bank-profile-label" id="bankProfileLabel">Banco / tarjeta</span>
           <button class="bank-profile-trigger" id="openBankProfilesBtn" type="button"
-            aria-labelledby="bankProfileLabel activeBankName" aria-describedby="activeBankFee activeBankStatus"
+            aria-labelledby="bankProfileLabel activeBankName" aria-describedby="activeBankDetail"
             aria-controls="bankProfilesPanel" aria-haspopup="dialog" aria-expanded="false">
             <span class="bank-profile-avatar" id="activeBankAvatar" aria-hidden="true">BDV</span>
             <span class="bank-profile-summary">
-              <strong id="activeBankName">Banco de Venezuela · Física</strong>
-              <span class="bank-profile-status" id="activeBankStatus">Comisión reportada</span>
+              <strong id="activeBankName">Banco de Venezuela</strong>
+              <span class="bank-profile-summary-detail" id="activeBankDetail">Física · 1,5%</span>
             </span>
-            <span class="bank-profile-meta" id="activeBankFee">1,5%</span>
             <span class="material-symbols-rounded bank-profile-chevron" aria-hidden="true">expand_more</span>
           </button>
         </div>
@@ -231,20 +243,20 @@
         </span>
         <span class="summary-amount" id="breakdownAmount">-- USD</span>
       </button>
-    </div>
+    </main>
 
     <!-- General Status Info (used for auto-save notifications, limits, errors) -->
     <div class="status" id="statusBox"></div>
 
     <!-- Section: Support the Project -->
     <div class="support-section">
-      <span class="support-title">❤️ Comunidad y apoyo</span>
-      <p class="support-desc">Comparte ideas o ayuda a mantener CalcuFlow gratuita y sin publicidad.</p>
+      <span class="support-title">💗 Comunidad</span>
+      <p class="support-desc">Comparte sugerencias y conoce las novedades.</p>
       <button class="changelog-trigger" id="openChangelogBtn" type="button" aria-controls="changelogPanel"
         aria-expanded="false">
         <span class="changelog-trigger-copy">
           <strong>Novedades</strong>
-          <span>Perfiles bancarios y mejoras recientes</span>
+          <span id="communityChangelogSummary">Perfiles bancarios y mejoras recientes</span>
         </span>
         <span class="changelog-trigger-end">
           <span class="changelog-badge" id="changelogBadge">Nuevo</span>
@@ -570,15 +582,22 @@
 
       <div class="modal-content bank-profiles-content">
         <div class="bank-profile-list-view" id="bankProfileListView">
-          <p class="bank-profile-notice" id="bankProfileNotice">
+          <div class="bank-profile-notice" id="bankProfileNotice">
             <span class="material-symbols-rounded" aria-hidden="true">info</span>
-            <span>Comisiones reportadas por usuarios. Verifica el porcentaje con tu banco antes de operar.</span>
-          </p>
-          <div class="bank-profile-list" id="bankProfileList" role="list"></div>
+            <span>
+              <strong>Comisiones referenciales</strong>
+              <span>Verifica el porcentaje vigente con tu banco antes de operar.</span>
+            </span>
+          </div>
+          <button class="bank-profile-view-back" id="backToBankListFromModalitiesBtn" type="button" hidden>
+            <span class="material-symbols-rounded" aria-hidden="true">arrow_back</span>
+            <span>Todos los bancos</span>
+          </button>
+          <div class="bank-profile-list" id="bankProfileList"></div>
           <div class="bank-profile-list-actions" id="bankProfileSelectionActions">
             <button class="bank-profile-list-action" id="openTemporaryBankFeeBtn" type="button">
               <span class="material-symbols-rounded" aria-hidden="true">tune</span>
-              <span>Usar comisión temporal</span>
+              <span>Ajustar solo para este cálculo</span>
             </button>
             <button class="bank-profile-list-action" id="manageBankProfilesBtn" type="button">
               <span class="material-symbols-rounded" aria-hidden="true">manage_accounts</span>
@@ -715,9 +734,12 @@
             <span>Perfiles de banco</span>
           </div>
           <div class="bank-profile-settings-summary">
-            <div>
-              <strong id="bankProfileSettingsName">Banco de Venezuela · Física</strong>
-              <span id="bankProfileSettingsMeta">1,5% · Comisión reportada</span>
+            <div class="bank-profile-settings-active">
+              <span class="bank-profile-avatar" id="bankProfileSettingsAvatar" aria-hidden="true">BDV</span>
+              <div class="bank-profile-settings-copy">
+                <strong id="bankProfileSettingsName">Banco de Venezuela</strong>
+                <span id="bankProfileSettingsMeta">Física · 1,5%</span>
+              </div>
             </div>
             <button class="bank-profile-settings-manage" id="manageBankProfilesSettingsBtn" type="button"
               aria-label="Administrar perfiles de banco">

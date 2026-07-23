@@ -5,6 +5,7 @@ export const CURRENT_CHANGELOG_RELEASE = Object.freeze({
   version: CURRENT_CHANGELOG_VERSION,
   dateLabel: '23 de julio de 2026',
   title: 'Perfiles bancarios',
+  summary: 'Perfiles bancarios y mejoras recientes',
   changes: Object.freeze([
     'Selecciona tu banco y tipo de tarjeta.',
     'Edita o restaura las comisiones cuando lo necesites.',
@@ -54,10 +55,14 @@ export function initChangelog({
   lockScroll = () => {},
   unlockScroll = () => {}
 } = {}) {
-  const trigger = documentRef.getElementById('openChangelogBtn');
+  const communityTrigger = documentRef.getElementById('openChangelogBtn');
+  const topTrigger = documentRef.getElementById('openTopChangelogBtn');
   const panel = documentRef.getElementById('changelogPanel');
   const closeButton = documentRef.getElementById('closeChangelogBtn');
   const badge = documentRef.getElementById('changelogBadge');
+  const topSummary = documentRef.getElementById('topChangelogSummary');
+  const communitySummary = documentRef.getElementById('communityChangelogSummary');
+  const topFocusFallback = documentRef.getElementById('mainCalculator');
   const releaseMeta = documentRef.getElementById('changelogReleaseMeta');
   const releaseTitle = documentRef.getElementById('changelogReleaseTitle');
   const changesList = documentRef.getElementById('changelogChanges');
@@ -65,7 +70,7 @@ export function initChangelog({
   const telegramLink = documentRef.getElementById('changelogTelegramLink');
   const communityLink = documentRef.querySelector('.support-actions a[href*="telegram"]');
 
-  if (!trigger || !panel || !closeButton || !badge || !releaseMeta || !releaseTitle
+  if (!communityTrigger || !panel || !closeButton || !badge || !releaseMeta || !releaseTitle
       || !changesList || !telegramText || !telegramLink) {
     return null;
   }
@@ -80,6 +85,16 @@ export function initChangelog({
     })
   );
   telegramText.textContent = CURRENT_CHANGELOG_RELEASE.telegramText;
+  if (topSummary) {
+    topSummary.textContent = `Nuevo: ${CURRENT_CHANGELOG_RELEASE.summary.toLocaleLowerCase('es-VE')}`;
+  }
+  if (communitySummary) communitySummary.textContent = CURRENT_CHANGELOG_RELEASE.summary;
+  if (topTrigger) {
+    topTrigger.setAttribute(
+      'aria-label',
+      `Nueva actualización disponible: ${CURRENT_CHANGELOG_RELEASE.summary}. Ver novedades.`
+    );
+  }
 
   if (communityLink?.href) {
     telegramLink.href = communityLink.href;
@@ -87,18 +102,30 @@ export function initChangelog({
     telegramLink.hidden = true;
   }
 
-  badge.hidden = !hasUnreadChangelog(readLastSeenChangelog(storage));
   let isOpen = false;
+  let seenThisSession = false;
+  let activeTrigger = communityTrigger;
 
-  const open = () => {
+  const renderUnread = (unread = !seenThisSession
+    && hasUnreadChangelog(readLastSeenChangelog(storage))) => {
+    badge.hidden = !unread;
+    if (topTrigger) topTrigger.hidden = !unread;
+  };
+
+  renderUnread();
+
+  const open = (sourceTrigger = communityTrigger) => {
     if (isOpen) return;
     isOpen = true;
+    activeTrigger = sourceTrigger;
     panel.classList.remove('closing');
     panel.classList.add('open');
     panel.setAttribute('aria-hidden', 'false');
-    trigger.setAttribute('aria-expanded', 'true');
-    badge.hidden = true;
+    communityTrigger.setAttribute('aria-expanded', 'true');
+    topTrigger?.setAttribute('aria-expanded', 'true');
+    seenThisSession = true;
     markChangelogSeen(storage);
+    renderUnread(false);
     lockScroll();
     window.requestAnimationFrame(() => closeButton.focus());
   };
@@ -109,14 +136,23 @@ export function initChangelog({
     window.setTimeout(() => {
       panel.classList.remove('open', 'closing');
       panel.setAttribute('aria-hidden', 'true');
-      trigger.setAttribute('aria-expanded', 'false');
+      communityTrigger.setAttribute('aria-expanded', 'false');
+      topTrigger?.setAttribute('aria-expanded', 'false');
       isOpen = false;
       unlockScroll();
-      trigger.focus();
+      const focusTarget = activeTrigger === topTrigger
+        ? topFocusFallback
+        : activeTrigger;
+      if (focusTarget && !focusTarget.hidden && typeof focusTarget.focus === 'function') {
+        focusTarget.focus();
+      } else {
+        communityTrigger.focus();
+      }
     }, getCloseDuration());
   };
 
-  trigger.addEventListener('click', open);
+  communityTrigger.addEventListener('click', () => open(communityTrigger));
+  topTrigger?.addEventListener('click', () => open(topTrigger));
   closeButton.addEventListener('click', close);
   panel.addEventListener('click', event => {
     if (event.target === panel) close();
@@ -125,5 +161,5 @@ export function initChangelog({
     if (event.key === 'Escape' && isOpen) close();
   });
 
-  return { open, close };
+  return { open, close, renderUnread };
 }

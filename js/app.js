@@ -7,6 +7,7 @@ import {
   getBankProfile,
   getBankProfiles,
   getSelectedBankProfile,
+  groupBankProfiles,
   loadBankProfileState,
   removeCustomProfile,
   restorePresetFee,
@@ -16,6 +17,7 @@ import {
   updatePresetFee,
   upsertCustomProfile
 } from './bank-profiles.js';
+import { renderBankLogo } from './bank-logo.js';
 import { initChangelog } from './changelog.js';
 import { loadState as readState, saveState as writeState } from './storage.js';
 import { money, n, triggerHaptic } from './utils.js';
@@ -25,8 +27,11 @@ let ratesLastUpdated = null;
 let bankProfileState = null;
 let manualCardFee = '1.5';
 let temporaryCardFee = null;
+let manualFeeConfigured = false;
 let editingBankProfileId = null;
 let bankProfileListMode = 'select';
+let bankProfileSelectionView = 'banks';
+let activeBankGroupId = null;
 let manualEditorMode = 'manual';
 const TEMPORARY_PROFILE_EDITOR_ID = 'temporary';
 
@@ -36,15 +41,16 @@ const bankProfileEls = {
   close: document.getElementById('closeBankProfilesBtn'),
   activeAvatar: document.getElementById('activeBankAvatar'),
   activeName: document.getElementById('activeBankName'),
-  activeFee: document.getElementById('activeBankFee'),
-  activeStatus: document.getElementById('activeBankStatus'),
+  activeDetail: document.getElementById('activeBankDetail'),
   settingsRelation: document.getElementById('cardFeeProfile'),
+  settingsAvatar: document.getElementById('bankProfileSettingsAvatar'),
   settingsName: document.getElementById('bankProfileSettingsName'),
   settingsMeta: document.getElementById('bankProfileSettingsMeta'),
   settingsManage: document.getElementById('manageBankProfilesSettingsBtn'),
   listView: document.getElementById('bankProfileListView'),
   list: document.getElementById('bankProfileList'),
   notice: document.getElementById('bankProfileNotice'),
+  modalitiesBack: document.getElementById('backToBankListFromModalitiesBtn'),
   selectionActions: document.getElementById('bankProfileSelectionActions'),
   managementActions: document.getElementById('bankProfileManagementActions'),
   openTemporary: document.getElementById('openTemporaryBankFeeBtn'),
@@ -169,20 +175,6 @@ function feeToInputValue(fee) {
   return safeFee === null ? '0' : String(safeFee);
 }
 
-function renderProfileAvatar(container, profile) {
-  container.replaceChildren();
-  if (profile.icon) {
-    const image = document.createElement('img');
-    image.src = profile.icon;
-    image.alt = '';
-    image.width = 36;
-    image.height = 36;
-    container.append(image);
-    return;
-  }
-  container.textContent = profile.initials;
-}
-
 function persistBankProfiles() {
   try {
     bankProfileState = saveBankProfileState(localStorage, bankProfileState);
@@ -197,27 +189,55 @@ function renderActiveBankProfile() {
   if (!bankProfileState) return;
   const savedProfile = getSelectedBankProfile(bankProfileState, manualCardFee);
   const activeProfile = getEffectiveSelectedBankProfile(bankProfileState, manualCardFee, temporaryCardFee);
-  renderProfileAvatar(bankProfileEls.activeAvatar, activeProfile);
-  bankProfileEls.activeName.textContent = [
-    activeProfile.name,
-    activeProfile.cardType,
-  ].filter(Boolean).join(' · ');
-  bankProfileEls.activeFee.textContent = formatProfileFee(activeProfile.fee);
-  bankProfileEls.activeStatus.textContent = activeProfile.status;
-  bankProfileEls.activeStatus.hidden = activeProfile.status === 'Comisión reportada';
+  renderBankLogo(bankProfileEls.activeAvatar, activeProfile);
+  renderBankLogo(bankProfileEls.settingsAvatar, savedProfile);
+  bankProfileEls.activeName.textContent = activeProfile.name;
+  bankProfileEls.activeDetail.textContent = getProfileChoiceDetail(activeProfile, { includeTemporary: true });
   bankProfileEls.settingsRelation.textContent = `Perfil: ${[
     savedProfile.name,
     savedProfile.cardType,
-    activeProfile.isTemporary ? 'Temporal' : ''
+    activeProfile.isTemporary ? 'Solo este cálculo' : ''
   ].filter(Boolean).join(' · ')}`;
-  bankProfileEls.settingsName.textContent = [
-    savedProfile.name,
-    savedProfile.cardType
+  bankProfileEls.settingsName.textContent = savedProfile.name;
+  bankProfileEls.settingsMeta.textContent = getProfileChoiceDetail(activeProfile, { includeTemporary: true });
+}
+
+function getProfileChoiceDetail(profile, { includeTemporary = false } = {}) {
+  if (profile.kind === 'manual') {
+    return manualFeeConfigured
+      ? `Comisión personalizada · ${formatProfileFee(profile.fee)}`
+      : 'Define tu comisión';
+  }
+
+  return [
+    profile.cardType,
+    formatProfileFee(profile.fee),
+    includeTemporary && profile.isTemporary ? 'Solo este cálculo' : ''
   ].filter(Boolean).join(' · ');
-  bankProfileEls.settingsMeta.textContent = [
-    formatProfileFee(activeProfile.fee),
-    activeProfile.status
-  ].join(' · ');
+}
+
+function getSelectableBankGroups() {
+  return groupBankProfiles([
+    ...getBankProfiles(bankProfileState),
+    getBankProfile(bankProfileState, MANUAL_PROFILE_ID, manualCardFee)
+  ]);
+}
+
+function createBankProfileAvatar(profile) {
+  const avatar = document.createElement('span');
+  avatar.className = 'bank-profile-avatar';
+  avatar.setAttribute('aria-hidden', 'true');
+  renderBankLogo(avatar, profile);
+  return avatar;
+}
+
+function createSelectionCheck(isSelected) {
+  const check = document.createElement('span');
+  check.className = 'material-symbols-rounded bank-profile-check';
+  check.textContent = 'check_circle';
+  check.setAttribute('aria-hidden', 'true');
+  check.hidden = !isSelected;
+  return check;
 }
 
 function buildBankProfileOption(profile, mode = 'select') {
@@ -225,70 +245,120 @@ function buildBankProfileOption(profile, mode = 'select') {
   const displayProfile = mode === 'select' && isSelected
     ? getEffectiveSelectedBankProfile(bankProfileState, manualCardFee, temporaryCardFee)
     : profile;
-  const option = document.createElement('div');
+  const isModalityView = mode === 'select' && bankProfileSelectionView === 'modalities';
+  const option = document.createElement('button');
+  option.type = 'button';
   option.className = `bank-profile-option${isSelected ? ' is-selected' : ''}`;
-  option.setAttribute('role', 'listitem');
-
-  const select = document.createElement('button');
-  select.type = 'button';
-  select.className = 'bank-profile-select';
   if (mode === 'select') {
-    select.dataset.selectProfile = profile.id;
-    select.setAttribute('aria-current', String(isSelected));
+    option.dataset.selectProfile = profile.id;
+    option.setAttribute('aria-pressed', String(isSelected));
   } else {
-    select.dataset.editProfile = profile.id;
+    option.dataset.editProfile = profile.id;
   }
-  select.setAttribute(
+  option.setAttribute(
     'aria-label',
-    `${mode === 'manage' ? 'Editar ' : ''}${displayProfile.name}${displayProfile.cardType ? `, ${displayProfile.cardType}` : ''}, ${formatProfileFee(displayProfile.fee)}, ${displayProfile.status}`
+    isModalityView
+      ? `${displayProfile.cardType || displayProfile.name}, comisión ${formatProfileFee(displayProfile.fee)}${isSelected ? ', seleccionada' : ''}`
+      : `${mode === 'manage' ? 'Editar ' : ''}${displayProfile.name}${displayProfile.cardType ? `, ${displayProfile.cardType}` : ''}, comisión ${formatProfileFee(displayProfile.fee)}${mode === 'select' && isSelected ? ', seleccionado' : ''}`
   );
-
-  const avatar = document.createElement('span');
-  avatar.className = 'bank-profile-avatar';
-  avatar.setAttribute('aria-hidden', 'true');
-  renderProfileAvatar(avatar, displayProfile);
 
   const copy = document.createElement('span');
   copy.className = 'bank-profile-option-copy';
   const name = document.createElement('strong');
   name.className = 'bank-profile-option-name';
-  name.textContent = displayProfile.name;
+  name.textContent = isModalityView && displayProfile.cardType
+    ? displayProfile.cardType
+    : displayProfile.name;
   copy.append(name);
-  if (displayProfile.cardType) {
-    const detail = document.createElement('span');
-    detail.className = 'bank-profile-option-detail';
-    detail.textContent = displayProfile.cardType;
-    copy.append(detail);
-  }
-  const status = document.createElement('span');
-  status.className = 'bank-profile-option-status';
-  status.textContent = displayProfile.status;
-  copy.append(status);
+  const detail = document.createElement('span');
+  detail.className = 'bank-profile-option-detail';
+  detail.textContent = isModalityView && displayProfile.cardType
+    ? formatProfileFee(displayProfile.fee)
+    : getProfileChoiceDetail(displayProfile);
+  copy.append(detail);
 
   const trailing = document.createElement('span');
   trailing.className = 'bank-profile-option-trailing';
-  const rate = document.createElement('span');
-  rate.className = 'bank-profile-option-rate';
-  rate.textContent = formatProfileFee(displayProfile.fee);
-  trailing.append(rate);
-  const actionIcon = document.createElement('span');
-  actionIcon.className = `material-symbols-rounded ${mode === 'select' ? 'bank-profile-check' : 'bank-profile-manage-icon'}`;
-  actionIcon.textContent = mode === 'select' ? 'check_circle' : 'edit';
-  actionIcon.setAttribute('aria-hidden', 'true');
-  trailing.append(actionIcon);
+  if (mode === 'select') {
+    trailing.append(createSelectionCheck(isSelected));
+  } else {
+    const editLabel = document.createElement('span');
+    editLabel.className = 'bank-profile-manage-label';
+    editLabel.textContent = 'Editar';
+    trailing.append(editLabel);
+  }
 
-  select.append(avatar, copy, trailing);
-  option.append(select);
+  option.append(createBankProfileAvatar(displayProfile), copy, trailing);
+  return option;
+}
+
+function buildBankGroupOption(group) {
+  const selectedProfile = group.profiles.find(profile => profile.id === bankProfileState.selectedId);
+  const isSelected = Boolean(selectedProfile);
+  const isMultiple = group.profiles.length > 1;
+  const displayProfile = selectedProfile
+    ? getEffectiveSelectedBankProfile(bankProfileState, manualCardFee, temporaryCardFee)
+    : group.profiles[0];
+
+  const option = document.createElement('button');
+  option.type = 'button';
+  option.className = `bank-profile-option${isSelected ? ' is-selected' : ''}`;
+  if (isMultiple) option.dataset.selectBank = group.id;
+  else option.dataset.selectProfile = displayProfile.id;
+  option.setAttribute('aria-pressed', String(isSelected));
+
+  const detailText = isMultiple && !isSelected
+    ? `${group.profiles.length} modalidades`
+    : getProfileChoiceDetail(displayProfile, { includeTemporary: true });
+  option.setAttribute(
+    'aria-label',
+    `${group.name}, ${detailText}${isSelected ? ', seleccionado' : ''}${isMultiple ? ', elegir modalidad' : ''}`
+  );
+
+  const copy = document.createElement('span');
+  copy.className = 'bank-profile-option-copy';
+  const name = document.createElement('strong');
+  name.className = 'bank-profile-option-name';
+  name.textContent = group.name;
+  const detail = document.createElement('span');
+  detail.className = 'bank-profile-option-detail';
+  detail.textContent = detailText;
+  copy.append(name, detail);
+
+  const trailing = document.createElement('span');
+  trailing.className = 'bank-profile-option-trailing';
+  if (isSelected) trailing.append(createSelectionCheck(true));
+  if (isMultiple) {
+    const chevron = document.createElement('span');
+    chevron.className = 'material-symbols-rounded bank-profile-group-chevron';
+    chevron.textContent = 'chevron_right';
+    chevron.setAttribute('aria-hidden', 'true');
+    trailing.append(chevron);
+  }
+
+  option.append(createBankProfileAvatar(displayProfile), copy, trailing);
   return option;
 }
 
 function renderBankProfileList(mode = bankProfileListMode) {
   if (!bankProfileState) return;
   const profiles = getBankProfiles(bankProfileState);
-  if (mode === 'select') {
-    profiles.push(getBankProfile(bankProfileState, MANUAL_PROFILE_ID, manualCardFee));
+  if (mode === 'manage') {
+    bankProfileEls.list.replaceChildren(...profiles.map(profile => buildBankProfileOption(profile, mode)));
+    return;
   }
-  bankProfileEls.list.replaceChildren(...profiles.map(profile => buildBankProfileOption(profile, mode)));
+
+  const groups = getSelectableBankGroups();
+  if (bankProfileSelectionView === 'modalities') {
+    const group = groups.find(candidate => candidate.id === activeBankGroupId);
+    if (group) {
+      bankProfileEls.list.replaceChildren(...group.profiles.map(profile => buildBankProfileOption(profile, mode)));
+      return;
+    }
+    bankProfileSelectionView = 'banks';
+    activeBankGroupId = null;
+  }
+  bankProfileEls.list.replaceChildren(...groups.map(buildBankGroupOption));
 }
 
 function renderBankProfiles() {
@@ -303,6 +373,7 @@ function initBankProfiles(legacyState) {
   manualCardFee = feeToInputValue(legacyFee ?? els.cardFee.value);
   temporaryCardFee = null;
   bankProfileState = loadBankProfileState(localStorage, { hasLegacyCardFee });
+  manualFeeConfigured = bankProfileState.selectedId === MANUAL_PROFILE_ID;
 
   const activeProfile = getSelectedBankProfile(bankProfileState, manualCardFee);
   if (activeProfile.kind !== 'manual') {
@@ -320,6 +391,7 @@ function applySelectedBankProfile(profileId, manualFeeOverride = null, closeAfte
     const safeManualFee = sanitizeCardFee(manualFeeOverride ?? manualCardFee ?? els.cardFee.value);
     if (safeManualFee === null) return false;
     manualCardFee = feeToInputValue(safeManualFee);
+    manualFeeConfigured = true;
   }
 
   temporaryCardFee = null;
@@ -355,6 +427,7 @@ function syncActiveProfileFromCardFee() {
     persistBankProfiles();
   } else {
     manualCardFee = feeToInputValue(fee);
+    manualFeeConfigured = true;
   }
   renderBankProfiles();
 }
@@ -368,17 +441,35 @@ function setBankProfileFormError(message = '', invalidField = null) {
 
 function showBankProfileList({ focusBack = false, mode = bankProfileListMode } = {}) {
   bankProfileListMode = mode;
+  if (mode === 'manage') {
+    bankProfileSelectionView = 'banks';
+    activeBankGroupId = null;
+  }
+  const isModalities = mode === 'select' && bankProfileSelectionView === 'modalities';
+  const activeGroup = isModalities
+    ? getSelectableBankGroups().find(group => group.id === activeBankGroupId)
+    : null;
+  if (isModalities && !activeGroup) {
+    bankProfileSelectionView = 'banks';
+    activeBankGroupId = null;
+  }
+  const showingModalities = mode === 'select' && bankProfileSelectionView === 'modalities';
   editingBankProfileId = null;
   manualEditorMode = 'manual';
   bankProfileEls.editor.hidden = true;
   bankProfileEls.listView.hidden = false;
-  bankProfileEls.notice.hidden = mode === 'manage';
-  bankProfileEls.selectionActions.hidden = mode !== 'select';
+  bankProfileEls.notice.hidden = mode === 'manage' || showingModalities;
+  bankProfileEls.modalitiesBack.hidden = !showingModalities;
+  bankProfileEls.selectionActions.hidden = mode !== 'select' || showingModalities;
   bankProfileEls.managementActions.hidden = mode !== 'manage';
-  bankProfileEls.title.textContent = mode === 'select' ? 'Banco / tarjeta' : 'Administrar perfiles';
-  bankProfileEls.description.textContent = mode === 'select'
-    ? 'Elige la comisión que aplicará la tarjeta.'
-    : 'Edita valores guardados o crea un perfil personalizado.';
+  bankProfileEls.title.textContent = showingModalities
+    ? activeGroup.name
+    : mode === 'select' ? 'Banco / tarjeta' : 'Administrar perfiles';
+  bankProfileEls.description.textContent = showingModalities
+    ? 'Elige la modalidad que usarás.'
+    : mode === 'select'
+      ? 'Selecciona el banco para este cálculo.'
+      : 'Edita valores guardados o crea un perfil personalizado.';
   setBankProfileFormError();
   renderBankProfileList(mode);
   if (focusBack) {
@@ -390,6 +481,28 @@ function showBankProfileList({ focusBack = false, mode = bankProfileListMode } =
         || bankProfileEls.list.querySelector('[data-edit-profile]'))?.focus();
     });
   }
+}
+
+function showBankModalities(groupId) {
+  const group = getSelectableBankGroups().find(candidate => candidate.id === groupId);
+  if (!group || group.profiles.length < 2) return;
+  activeBankGroupId = group.id;
+  bankProfileSelectionView = 'modalities';
+  showBankProfileList({ mode: 'select' });
+  requestAnimationFrame(() => {
+    (bankProfileEls.list.querySelector(`[data-select-profile="${bankProfileState.selectedId}"]`)
+      || bankProfileEls.list.querySelector('[data-select-profile]'))?.focus();
+  });
+}
+
+function returnToBankGroups() {
+  const previousGroupId = activeBankGroupId;
+  bankProfileSelectionView = 'banks';
+  activeBankGroupId = null;
+  showBankProfileList({ mode: 'select' });
+  requestAnimationFrame(() => {
+    bankProfileEls.list.querySelector(`[data-select-bank="${previousGroupId}"]`)?.focus();
+  });
 }
 
 function showBankProfileEditor(profileId, { manualMode = 'manual' } = {}) {
@@ -415,29 +528,26 @@ function showBankProfileEditor(profileId, { manualMode = 'manual' } = {}) {
   bankProfileEls.applyManual.hidden = (!isManual || isCustomOnly) && !isTemporary;
   bankProfileEls.saveManual.hidden = !isManual || isTemporary;
   bankProfileEls.clearTemporary.hidden = !isTemporary || temporaryCardFee === null;
-  bankProfileEls.applyManual.textContent = isTemporary ? 'Aplicar temporalmente' : 'Usar sin guardar';
+  bankProfileEls.applyManual.textContent = isTemporary ? 'Aplicar a este cálculo' : 'Usar sin guardar';
   bankProfileEls.name.value = isManual ? '' : profile.name;
   bankProfileEls.cardType.value = isManual ? '' : profile.cardType;
   bankProfileEls.fee.value = feeToInputValue(profile.fee);
   setBankProfileFormError();
 
   if (isTemporary) {
-    const savedProfile = getSelectedBankProfile(bankProfileState, manualCardFee);
-    bankProfileEls.editorTitle.textContent = 'Comisión temporal';
-    bankProfileEls.editorDescription.textContent = `Se aplicará a ${[
-      savedProfile.name,
-      savedProfile.cardType
-    ].filter(Boolean).join(' · ')} sin modificar su valor guardado.`;
+    bankProfileEls.editorTitle.textContent = 'Ajustar comisión';
+    bankProfileEls.editorDescription.textContent =
+      'Este cambio se aplicará únicamente al cálculo actual y no modificará el perfil guardado.';
   } else if (isCustomOnly) {
     bankProfileEls.editorTitle.textContent = 'Nuevo perfil personalizado';
     bankProfileEls.editorDescription.textContent = 'Guarda un banco, modalidad y comisión para volver a usarlo.';
   } else if (isManual) {
-    bankProfileEls.editorTitle.textContent = 'Manual / Otro banco';
+    bankProfileEls.editorTitle.textContent = 'Otro banco / Manual';
     bankProfileEls.editorDescription.textContent = 'Úsalo sin guardar o completa el nombre para crear un perfil.';
   } else if (isPreset) {
     bankProfileEls.editorTitle.textContent = `Editar ${profile.name}`;
     bankProfileEls.editorDescription.textContent = `${profile.cardType ? `${profile.cardType} · ` : ''}Predeterminado: ${formatProfileFee(profile.defaultFee)}.`;
-    bankProfileEls.restore.textContent = `Restaurar ${formatProfileFee(profile.defaultFee)} reportado`;
+    bankProfileEls.restore.textContent = `Restaurar ${formatProfileFee(profile.defaultFee)} predeterminado`;
   } else {
     bankProfileEls.editorTitle.textContent = 'Editar perfil personalizado';
     bankProfileEls.editorDescription.textContent = 'Actualiza el nombre, la modalidad o la comisión.';
@@ -504,7 +614,7 @@ function applyManualFee() {
     calculate();
     saveState(false);
     triggerHaptic('success');
-    showToast('Comisión temporal aplicada.');
+    showToast('Ajuste aplicado a este cálculo.');
     dismissBankProfiles();
     return;
   }
@@ -574,6 +684,7 @@ function deleteEditingCustomProfile() {
 
   if (bankProfileState.selectedId === profile.id) {
     manualCardFee = feeToInputValue(els.cardFee.value);
+    manualFeeConfigured = true;
     temporaryCardFee = null;
   }
   bankProfileState = removeCustomProfile(bankProfileState, profile.id);
@@ -585,6 +696,8 @@ function deleteEditingCustomProfile() {
 }
 
 function showBankProfiles(mode = 'select') {
+  bankProfileSelectionView = 'banks';
+  activeBankGroupId = null;
   showBankProfileList({ mode });
   openManagedModal(bankProfileEls.panel, bankProfileEls.trigger, () => {
     bankProfileEls.panel.classList.remove('closing');
@@ -620,6 +733,11 @@ function bindBankProfileEvents() {
       showBankProfileEditor(editButton.dataset.editProfile);
       return;
     }
+    const bankButton = event.target.closest('[data-select-bank]');
+    if (bankButton) {
+      showBankModalities(bankButton.dataset.selectBank);
+      return;
+    }
     const selectButton = event.target.closest('[data-select-profile]');
     if (!selectButton) return;
     const profileId = selectButton.dataset.selectProfile;
@@ -627,6 +745,7 @@ function bindBankProfileEvents() {
     else applySelectedBankProfile(profileId);
   });
   bankProfileEls.back.addEventListener('click', () => showBankProfileList({ focusBack: true }));
+  bankProfileEls.modalitiesBack.addEventListener('click', returnToBankGroups);
   bankProfileEls.openTemporary.addEventListener('click', () => showBankProfileEditor(TEMPORARY_PROFILE_EDITOR_ID));
   bankProfileEls.manage.addEventListener('click', () => showBankProfileList({ mode: 'manage' }));
   bankProfileEls.backToSelection.addEventListener('click', () => showBankProfileList({ mode: 'select', focusBack: true }));
@@ -690,6 +809,7 @@ function resetDefaults() {
   els.bpayFee.value = '4.1';
   els.autoRates.checked = true;
   temporaryCardFee = null;
+  manualFeeConfigured = false;
   bankProfileState = restorePresetFee(bankProfileState, DEFAULT_PROFILE_ID);
   bankProfileState = selectBankProfile(bankProfileState, DEFAULT_PROFILE_ID);
   persistBankProfiles();

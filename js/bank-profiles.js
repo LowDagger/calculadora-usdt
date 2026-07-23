@@ -4,6 +4,38 @@ export const MANUAL_PROFILE_ID = 'manual';
 export const DEFAULT_PROFILE_ID = 'bdv-fisica';
 export const MAX_CARD_FEE = 100;
 
+export const BANK_ICONS = Object.freeze({
+  bdv: Object.freeze({
+    src: '/assets/banks/banco-de-venezuela.png',
+    scale: 0.70
+  }),
+  bbva: Object.freeze({
+    src: '/assets/banks/bbva-provisional.png',
+    scale: 0.86
+  }),
+  tesoro: Object.freeze({
+    src: '/assets/banks/banco-del-tesoro.png',
+    scale: 0.82
+  }),
+  bancamiga: Object.freeze({
+    src: '/assets/banks/bancamiga.png',
+    scale: 0.82
+  }),
+  banesco: Object.freeze({
+    src: '/assets/banks/banesco-provisional.png',
+    scale: 0.82
+  }),
+  bnc: Object.freeze({
+    src: '/assets/banks/bnc.png',
+    scale: 0.80,
+    darkFilter: 'brightness(0) invert(1)'
+  }),
+  manual: Object.freeze({
+    symbol: 'account_balance',
+    scale: 0.58
+  })
+});
+
 export const DEFAULT_BANK_PROFILES = Object.freeze([
   {
     id: 'bdv-fisica',
@@ -11,7 +43,7 @@ export const DEFAULT_BANK_PROFILES = Object.freeze([
     cardType: 'Física',
     defaultFee: 1.5,
     initials: 'BDV',
-    icon: null,
+    iconKey: 'bdv',
     defaultStatus: 'Comisión reportada'
   },
   {
@@ -20,7 +52,7 @@ export const DEFAULT_BANK_PROFILES = Object.freeze([
     cardType: 'Virtual / otra modalidad',
     defaultFee: 2.5,
     initials: 'BDV',
-    icon: null,
+    iconKey: 'bdv',
     defaultStatus: 'Pendiente de confirmar'
   },
   {
@@ -29,7 +61,7 @@ export const DEFAULT_BANK_PROFILES = Object.freeze([
     cardType: '',
     defaultFee: 0,
     initials: 'BBVA',
-    icon: null,
+    iconKey: 'bbva',
     defaultStatus: 'Comisión reportada'
   },
   {
@@ -38,7 +70,7 @@ export const DEFAULT_BANK_PROFILES = Object.freeze([
     cardType: '',
     defaultFee: 2.5,
     initials: 'BT',
-    icon: null,
+    iconKey: 'tesoro',
     defaultStatus: 'Comisión reportada'
   },
   {
@@ -47,7 +79,7 @@ export const DEFAULT_BANK_PROFILES = Object.freeze([
     cardType: '',
     defaultFee: 5,
     initials: 'BA',
-    icon: null,
+    iconKey: 'bancamiga',
     defaultStatus: 'Comisión reportada'
   },
   {
@@ -56,7 +88,7 @@ export const DEFAULT_BANK_PROFILES = Object.freeze([
     cardType: 'Física',
     defaultFee: 1.5,
     initials: 'B',
-    icon: null,
+    iconKey: 'banesco',
     defaultStatus: 'Comisión reportada'
   },
   {
@@ -65,7 +97,7 @@ export const DEFAULT_BANK_PROFILES = Object.freeze([
     cardType: 'Virtual',
     defaultFee: 2.5,
     initials: 'B',
-    icon: null,
+    iconKey: 'banesco',
     defaultStatus: 'Comisión reportada'
   },
   {
@@ -74,7 +106,7 @@ export const DEFAULT_BANK_PROFILES = Object.freeze([
     cardType: '',
     defaultFee: 1.5,
     initials: 'BNC',
-    icon: null,
+    iconKey: 'bnc',
     defaultStatus: 'Comisión reportada'
   }
 ]);
@@ -114,6 +146,16 @@ export function sanitizeIconPath(icon) {
   const value = cleanText(icon, 180);
   if (!value || value.includes('..') || !ASSET_ICON_PATTERN.test(value)) return null;
   return value;
+}
+
+function getIconPresentation(iconKey, fallbackIcon = null) {
+  const icon = BANK_ICONS[iconKey];
+  return {
+    icon: icon?.src || fallbackIcon,
+    iconScale: icon?.scale || 0.80,
+    iconSymbol: icon?.symbol || null,
+    iconDarkFilter: icon?.darkFilter || null
+  };
 }
 
 function sanitizeCustomProfile(profile, usedIds) {
@@ -188,6 +230,7 @@ export function getBankProfiles(state) {
     const fee = hasOverride ? safeState.presetFees[profile.id] : profile.defaultFee;
     return {
       ...profile,
+      ...getIconPresentation(profile.iconKey),
       fee,
       kind: 'preset',
       isModified: hasOverride,
@@ -196,6 +239,9 @@ export function getBankProfiles(state) {
   });
   const customProfiles = safeState.customProfiles.map(profile => ({
     ...profile,
+    iconScale: 0.80,
+    iconSymbol: null,
+    iconDarkFilter: null,
     defaultFee: null,
     defaultStatus: 'Personalizado',
     kind: 'custom',
@@ -206,16 +252,48 @@ export function getBankProfiles(state) {
   return [...presets, ...customProfiles];
 }
 
+export function groupBankProfiles(profiles) {
+  const groups = [];
+  const presetGroups = new Map();
+
+  for (const profile of Array.isArray(profiles) ? profiles : []) {
+    if (!profile || typeof profile !== 'object') continue;
+    if (profile.kind !== 'preset') {
+      groups.push({
+        id: profile.id,
+        name: profile.name,
+        profiles: [profile]
+      });
+      continue;
+    }
+
+    const groupKey = profile.name.toLocaleLowerCase('es-VE');
+    let group = presetGroups.get(groupKey);
+    if (!group) {
+      group = {
+        id: profile.id,
+        name: profile.name,
+        profiles: []
+      };
+      presetGroups.set(groupKey, group);
+      groups.push(group);
+    }
+    group.profiles.push(profile);
+  }
+
+  return groups;
+}
+
 export function getBankProfile(state, profileId, manualFee = 0) {
   if (profileId === MANUAL_PROFILE_ID) {
     return {
       id: MANUAL_PROFILE_ID,
-      name: 'Manual / Otro banco',
+      name: 'Otro banco / Manual',
       cardType: '',
       fee: sanitizeCardFee(manualFee) ?? 0,
       defaultFee: null,
       initials: 'M',
-      icon: null,
+      ...getIconPresentation('manual'),
       kind: 'manual',
       isModified: true,
       status: 'Personalizado'

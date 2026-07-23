@@ -1,7 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { existsSync } from 'node:fs';
 
 import {
+  BANK_ICONS,
   BANK_PROFILE_STORAGE_KEY,
   DEFAULT_BANK_PROFILES,
   MANUAL_PROFILE_ID,
@@ -9,9 +11,11 @@ import {
   getBankProfile,
   getBankProfiles,
   getSelectedBankProfile,
+  groupBankProfiles,
   loadBankProfileState,
   removeCustomProfile,
   restorePresetFee,
+  saveBankProfileState,
   sanitizeBankProfileState,
   selectBankProfile,
   updatePresetFee,
@@ -56,7 +60,43 @@ test('includes every initial bank profile and reported percentage', () => {
   assert.equal(getBankProfile({}, 'bdv-virtual').status, 'Pendiente de confirmar');
   assert.equal(getBankProfile({}, 'banesco-fisica').fee, 1.5);
   assert.equal(getBankProfile({}, 'banesco-virtual').fee, 2.5);
-  assert.ok(profiles.every(profile => profile.icon === null));
+  assert.ok(profiles.every(profile => profile.icon?.startsWith('/assets/banks/')));
+  assert.ok(profiles.every(profile => profile.iconScale > 0 && profile.iconScale <= 1));
+});
+
+test('uses one icon map for every preset and a neutral manual symbol', () => {
+  const profiles = getBankProfiles({});
+  const iconPaths = new Set(Object.values(BANK_ICONS).map(icon => icon.src).filter(Boolean));
+
+  assert.equal(iconPaths.size, 6);
+  for (const iconPath of iconPaths) {
+    assert.equal(existsSync(new URL(`..${iconPath}`, import.meta.url)), true, iconPath);
+  }
+  assert.deepEqual(
+    new Set(profiles.map(profile => profile.icon)),
+    iconPaths
+  );
+  assert.equal(getBankProfile({}, MANUAL_PROFILE_ID).icon, null);
+  assert.equal(getBankProfile({}, MANUAL_PROFILE_ID).iconSymbol, 'account_balance');
+  assert.equal(getBankProfile({}, 'bnc').iconDarkFilter, 'brightness(0) invert(1)');
+});
+
+test('groups multimodality banks while keeping single-modality banks direct', () => {
+  const profiles = [
+    ...getBankProfiles({}),
+    getBankProfile({}, MANUAL_PROFILE_ID, 2.75)
+  ];
+  const groups = groupBankProfiles(profiles);
+  const bdv = groups.find(group => group.name === 'Banco de Venezuela');
+  const banesco = groups.find(group => group.name === 'Banesco');
+  const bbva = groups.find(group => group.name === 'BBVA Provincial');
+  const manual = groups.find(group => group.name === 'Otro banco / Manual');
+
+  assert.equal(groups.length, 7);
+  assert.deepEqual(bdv.profiles.map(profile => profile.id), ['bdv-fisica', 'bdv-virtual']);
+  assert.deepEqual(banesco.profiles.map(profile => profile.id), ['banesco-fisica', 'banesco-virtual']);
+  assert.deepEqual(bbva.profiles.map(profile => profile.id), ['bbva-provincial']);
+  assert.deepEqual(manual.profiles.map(profile => profile.id), [MANUAL_PROFILE_ID]);
 });
 
 test('modifies a preset, marks it custom, and restores its reported value', () => {
@@ -148,6 +188,27 @@ test('preserves the legacy manual commission when no profile state exists', () =
     [BANK_PROFILE_STORAGE_KEY]: '{invalid json'
   });
   assert.equal(loadBankProfileState(saved, { hasLegacyCardFee: true }).selectedId, MANUAL_PROFILE_ID);
+});
+
+test('persists the selected profile, edited defaults, and custom profiles across reloads', () => {
+  const storage = memoryStorage();
+  let state = sanitizeBankProfileState({});
+  state = updatePresetFee(state, 'bancamiga', 4.5);
+  state = upsertCustomProfile(state, {
+    name: 'Banco Familiar',
+    cardType: 'Débito',
+    fee: 1.25
+  }, 'custom-banco-familiar');
+  state = selectBankProfile(state, 'custom-banco-familiar');
+
+  saveBankProfileState(storage, state);
+  const reloaded = loadBankProfileState(storage);
+
+  assert.equal(reloaded.selectedId, 'custom-banco-familiar');
+  assert.equal(getBankProfile(reloaded, 'bancamiga').fee, 4.5);
+  assert.equal(getSelectedBankProfile(reloaded).name, 'Banco Familiar');
+  assert.equal(getSelectedBankProfile(reloaded).cardType, 'Débito');
+  assert.equal(getSelectedBankProfile(reloaded).fee, 1.25);
 });
 
 test('applies a temporary fee without changing the selected profile or its saved value', () => {

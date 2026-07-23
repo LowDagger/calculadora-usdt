@@ -1,6 +1,6 @@
 // ─── Version ──────────────────────────────────────────────────────────────────
 // Bump APP_VERSION on every new deployment to bust the old cache automatically.
-const APP_VERSION  = '24';
+const APP_VERSION  = '28';
 const CACHE_NAME   = `calcuflow-v${APP_VERSION}`;
 
 // ─── Pre-cache manifest ───────────────────────────────────────────────────────
@@ -11,6 +11,7 @@ const PRECACHE_ASSETS = [
   '/css/style.css',
   '/js/app.js',
   '/js/api.js',
+  '/js/bank-logo.js',
   '/js/bank-profiles.js',
   '/js/calculator.js',
   '/js/changelog.js',
@@ -18,6 +19,12 @@ const PRECACHE_ASSETS = [
   '/js/ui.js',
   '/js/utils.js',
   '/assets/icon.svg',
+  '/assets/banks/banco-de-venezuela.png',
+  '/assets/banks/bbva-provisional.png',
+  '/assets/banks/banco-del-tesoro.png',
+  '/assets/banks/bancamiga.png',
+  '/assets/banks/banesco-provisional.png',
+  '/assets/banks/bnc.png',
 ];
 
 // ─── Install ──────────────────────────────────────────────────────────────────
