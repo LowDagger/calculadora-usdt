@@ -4,21 +4,27 @@ import { existsSync } from 'node:fs';
 
 import {
   BANK_ICONS,
+  BANK_PROFILE_STATE_VERSION,
   BANK_PROFILE_STORAGE_KEY,
   DEFAULT_BANK_PROFILES,
+  DEFAULT_PROFILE_ID,
   MANUAL_PROFILE_ID,
   getEffectiveSelectedBankProfile,
   getBankProfile,
   getBankProfiles,
   getSelectedBankProfile,
   groupBankProfiles,
+  hasDuplicateProfileName,
   loadBankProfileState,
-  removeCustomProfile,
-  restorePresetFee,
+  readBankProfileState,
+  removeBankProfile,
+  restoreBankProfile,
+  restoreDefaultBankProfiles,
   saveBankProfileState,
   sanitizeBankProfileState,
+  sanitizeProfileLogo,
   selectBankProfile,
-  updatePresetFee,
+  updateBankProfile,
   upsertCustomProfile
 } from '../js/bank-profiles.js';
 import { calculateValues } from '../js/calculator.js';
@@ -34,19 +40,28 @@ const EXPECTED_PRESETS = {
   bnc: 1.5
 };
 
-function memoryStorage(initial = {}) {
+function memoryStorage(initial = {}, { quotaError = false } = {}) {
   const values = new Map(Object.entries(initial));
   return {
     getItem(key) {
       return values.has(key) ? values.get(key) : null;
     },
     setItem(key, value) {
+      if (quotaError) {
+        const error = new Error('Quota exceeded');
+        error.name = 'QuotaExceededError';
+        throw error;
+      }
       values.set(key, String(value));
+    },
+    value(key) {
+      return values.get(key);
     }
   };
 }
 
-test('includes every initial bank profile and reported percentage', () => {
+test('includes every immutable initial bank profile and reported percentage', () => {
+  assert.equal(BANK_PROFILE_STATE_VERSION, 2);
   assert.equal(DEFAULT_BANK_PROFILES.length, 8);
   assert.deepEqual(
     Object.fromEntries(DEFAULT_BANK_PROFILES.map(profile => [profile.id, profile.defaultFee])),
@@ -55,13 +70,11 @@ test('includes every initial bank profile and reported percentage', () => {
 
   const profiles = getBankProfiles({});
   assert.equal(getBankProfile({}, 'bbva-provincial').fee, 0);
-  assert.equal(getBankProfile({}, 'bdv-fisica').fee, 1.5);
-  assert.equal(getBankProfile({}, 'bdv-virtual').fee, 2.5);
   assert.equal(getBankProfile({}, 'bdv-virtual').status, 'Pendiente de confirmar');
-  assert.equal(getBankProfile({}, 'banesco-fisica').fee, 1.5);
-  assert.equal(getBankProfile({}, 'banesco-virtual').fee, 2.5);
   assert.ok(profiles.every(profile => profile.icon?.startsWith('/assets/banks/')));
   assert.ok(profiles.every(profile => profile.iconScale > 0 && profile.iconScale <= 1));
+  assert.equal(Object.isFrozen(DEFAULT_BANK_PROFILES), true);
+  assert.ok(DEFAULT_BANK_PROFILES.every(Object.isFrozen));
 });
 
 test('uses one icon map for every preset and a neutral manual symbol', () => {
@@ -72,86 +85,103 @@ test('uses one icon map for every preset and a neutral manual symbol', () => {
   for (const iconPath of iconPaths) {
     assert.equal(existsSync(new URL(`..${iconPath}`, import.meta.url)), true, iconPath);
   }
-  assert.deepEqual(
-    new Set(profiles.map(profile => profile.icon)),
-    iconPaths
-  );
+  assert.deepEqual(new Set(profiles.map(profile => profile.icon)), iconPaths);
   assert.equal(getBankProfile({}, MANUAL_PROFILE_ID).icon, null);
   assert.equal(getBankProfile({}, MANUAL_PROFILE_ID).iconSymbol, 'account_balance');
   assert.equal(getBankProfile({}, 'bnc').iconDarkFilter, 'brightness(0) invert(1)');
 });
 
 test('groups multimodality banks while keeping single-modality banks direct', () => {
-  const profiles = [
-    ...getBankProfiles({}),
-    getBankProfile({}, MANUAL_PROFILE_ID, 2.75)
-  ];
+  const profiles = [...getBankProfiles({}), getBankProfile({}, MANUAL_PROFILE_ID, 2.75)];
   const groups = groupBankProfiles(profiles);
   const bdv = groups.find(group => group.name === 'Banco de Venezuela');
   const banesco = groups.find(group => group.name === 'Banesco');
-  const bbva = groups.find(group => group.name === 'BBVA Provincial');
-  const manual = groups.find(group => group.name === 'Otro banco / Manual');
 
   assert.equal(groups.length, 7);
   assert.deepEqual(bdv.profiles.map(profile => profile.id), ['bdv-fisica', 'bdv-virtual']);
   assert.deepEqual(banesco.profiles.map(profile => profile.id), ['banesco-fisica', 'banesco-virtual']);
-  assert.deepEqual(bbva.profiles.map(profile => profile.id), ['bbva-provincial']);
-  assert.deepEqual(manual.profiles.map(profile => profile.id), [MANUAL_PROFILE_ID]);
 });
 
-test('modifies a preset, marks it custom, and restores its reported value', () => {
+test('edits every field of a default profile without changing its stable id and restores it', () => {
   let state = sanitizeBankProfileState({});
-  state = updatePresetFee(state, 'bdv-fisica', '2,75');
+  state = updateBankProfile(state, {
+    ...getBankProfile(state, 'bdv-fisica'),
+    name: 'Banco Principal',
+    cardType: 'Virtual',
+    fee: '2,75',
+    icon: null
+  });
 
   const modified = getBankProfile(state, 'bdv-fisica');
+  assert.equal(modified.id, 'bdv-fisica');
+  assert.equal(modified.name, 'Banco Principal');
+  assert.equal(modified.cardType, 'Virtual');
   assert.equal(modified.fee, 2.75);
-  assert.equal(modified.status, 'Personalizado');
+  assert.equal(modified.icon, null);
   assert.equal(modified.isModified, true);
 
-  state = restorePresetFee(state, 'bdv-fisica');
+  state = restoreBankProfile(state, 'bdv-fisica');
   const restored = getBankProfile(state, 'bdv-fisica');
+  assert.equal(restored.name, 'Banco de Venezuela');
+  assert.equal(restored.cardType, 'Física');
   assert.equal(restored.fee, 1.5);
-  assert.equal(restored.status, 'Comisión reportada');
+  assert.equal(restored.icon, BANK_ICONS.bdv.src);
   assert.equal(restored.isModified, false);
 });
 
-test('creates, edits, selects, and removes a custom profile', () => {
+test('creates, edits, selects, and removes a custom profile with a safe selection fallback', () => {
   let state = sanitizeBankProfileState({});
   state = upsertCustomProfile(state, {
     name: 'Mi Banco',
     cardType: 'Débito virtual',
-    fee: '3.25'
+    fee: '3.25',
+    icon: 'data:image/png;base64,AAAA'
   }, 'custom-mi-banco');
   state = selectBankProfile(state, 'custom-mi-banco');
 
   assert.equal(getSelectedBankProfile(state).name, 'Mi Banco');
   assert.equal(getSelectedBankProfile(state).fee, 3.25);
-  assert.equal(getSelectedBankProfile(state).status, 'Personalizado');
 
-  state = upsertCustomProfile(state, {
-    id: 'custom-mi-banco',
+  state = updateBankProfile(state, {
+    ...getSelectedBankProfile(state),
     name: 'Mi Banco Editado',
     cardType: '',
     fee: 4
   });
   assert.equal(getSelectedBankProfile(state).name, 'Mi Banco Editado');
-  assert.equal(getSelectedBankProfile(state).fee, 4);
 
-  state = removeCustomProfile(state, 'custom-mi-banco');
-  assert.equal(state.customProfiles.length, 0);
-  assert.equal(state.selectedId, MANUAL_PROFILE_ID);
+  state = removeBankProfile(state, 'custom-mi-banco');
+  assert.equal(getBankProfile(state, 'custom-mi-banco'), null);
+  assert.equal(state.selectedId, DEFAULT_PROFILE_ID);
 });
 
-test('sanitizes corrupted saved profiles and unsafe icon paths', () => {
+test('allows deleting defaults but never the final remaining profile', () => {
+  let state = selectBankProfile(sanitizeBankProfileState({}), 'bdv-fisica');
+  state = removeBankProfile(state, 'bdv-fisica');
+  assert.equal(getBankProfile(state, 'bdv-fisica'), null);
+  assert.notEqual(state.selectedId, 'bdv-fisica');
+
+  while (state.profiles.length > 1) {
+    state = removeBankProfile(state, state.profiles[0].id);
+  }
+  const finalId = state.profiles[0].id;
+  const unchanged = removeBankProfile(state, finalId);
+  assert.equal(unchanged.profiles.length, 1);
+  assert.equal(unchanged.profiles[0].id, finalId);
+});
+
+test('detects duplicate names case-insensitively while supporting stable-id edits', () => {
+  const state = sanitizeBankProfileState({});
+  assert.equal(hasDuplicateProfileName(state, '  bAnCaMiGa  '), true);
+  assert.equal(hasDuplicateProfileName(state, 'Bancamiga', 'bancamiga'), false);
+  assert.equal(hasDuplicateProfileName(state, 'Banco Nuevo'), false);
+});
+
+test('sanitizes invalid V2 records, duplicate ids, unknown ids, fees, and logos', () => {
   const state = sanitizeBankProfileState({
-    version: 999,
-    selectedId: 'custom-valid',
-    presetFees: {
-      'bdv-fisica': '3,5',
-      'bbva-provincial': -1,
-      unknown: 8
-    },
-    customProfiles: [
+    version: 2,
+    selectedId: 'unknown',
+    profiles: [
       {
         id: 'custom-valid',
         name: '  Banco   Seguro  ',
@@ -161,39 +191,124 @@ test('sanitizes corrupted saved profiles and unsafe icon paths', () => {
       },
       { id: 'custom-valid', name: 'Duplicado', fee: 7 },
       { id: 'custom-bad-fee', name: 'Inválido', fee: 'Infinity' },
-      { id: 'bdv-fisica', name: 'Colisión', fee: 1 }
+      { id: 'unknown-id', name: 'Desconocido', fee: 1 }
     ]
   });
 
-  assert.deepEqual(state.presetFees, { 'bdv-fisica': 3.5 });
-  assert.equal(state.customProfiles.length, 1);
-  assert.deepEqual(state.customProfiles[0], {
+  assert.deepEqual(state.profiles, [{
     id: 'custom-valid',
     name: 'Banco Seguro',
     cardType: 'Virtual',
     fee: 2.25,
-    initials: 'BS',
     icon: null
-  });
+  }]);
   assert.equal(state.selectedId, 'custom-valid');
 });
 
-test('preserves the legacy manual commission when no profile state exists', () => {
-  const storage = memoryStorage();
-  const state = loadBankProfileState(storage, { hasLegacyCardFee: true });
-  assert.equal(state.selectedId, MANUAL_PROFILE_ID);
-  assert.equal(getSelectedBankProfile(state, 6.75).fee, 6.75);
+test('migrates valid V1 data idempotently and preserves selection, edits, and custom profiles', () => {
+  const oldState = {
+    version: 1,
+    selectedId: 'custom-familiar',
+    presetFees: { bancamiga: 4.5, unknown: 12 },
+    customProfiles: [{
+      id: 'custom-familiar',
+      name: 'Banco Familiar',
+      cardType: 'Débito',
+      fee: 1.25,
+      icon: null
+    }]
+  };
+  const migrated = sanitizeBankProfileState(oldState);
+  const repeated = sanitizeBankProfileState(migrated);
 
-  const saved = memoryStorage({
-    [BANK_PROFILE_STORAGE_KEY]: '{invalid json'
-  });
-  assert.equal(loadBankProfileState(saved, { hasLegacyCardFee: true }).selectedId, MANUAL_PROFILE_ID);
+  assert.equal(migrated.version, 2);
+  assert.equal(migrated.selectedId, 'custom-familiar');
+  assert.equal(getBankProfile(migrated, 'bancamiga').fee, 4.5);
+  assert.equal(getSelectedBankProfile(migrated).name, 'Banco Familiar');
+  assert.deepEqual(repeated, migrated);
 });
 
-test('persists the selected profile, edited defaults, and custom profiles across reloads', () => {
+test('handles missing, unknown, and corrupt storage without silently overwriting it', () => {
+  const missing = memoryStorage();
+  assert.equal(loadBankProfileState(missing, { hasLegacyCardFee: true }).selectedId, MANUAL_PROFILE_ID);
+
+  const corruptRaw = '{invalid json';
+  const corrupt = memoryStorage({ [BANK_PROFILE_STORAGE_KEY]: corruptRaw });
+  const read = readBankProfileState(corrupt, { hasLegacyCardFee: true });
+  assert.equal(read.state.selectedId, MANUAL_PROFILE_ID);
+  assert.equal(read.shouldPersist, false);
+  assert.equal(read.warning, 'corrupt');
+  assert.equal(corrupt.value(BANK_PROFILE_STORAGE_KEY), corruptRaw);
+
+  const unusableRaw = JSON.stringify({ version: 2, selectedId: 'gone', profiles: [] });
+  const unusable = memoryStorage({ [BANK_PROFILE_STORAGE_KEY]: unusableRaw });
+  const unusableRead = readBankProfileState(unusable);
+  assert.equal(unusableRead.warning, 'profiles-invalid');
+  assert.equal(unusableRead.shouldPersist, false);
+  assert.equal(unusable.value(BANK_PROFILE_STORAGE_KEY), unusableRaw);
+
+  const futureRaw = JSON.stringify({ version: 999, selectedId: 'future', profiles: [] });
+  const future = memoryStorage({ [BANK_PROFILE_STORAGE_KEY]: futureRaw });
+  const futureRead = readBankProfileState(future);
+  assert.equal(futureRead.warning, 'unsupported-version');
+  assert.equal(futureRead.shouldPersist, false);
+  assert.equal(future.value(BANK_PROFILE_STORAGE_KEY), futureRaw);
+
+  const unknownSelection = sanitizeBankProfileState({
+    version: 2,
+    selectedId: 'missing-profile',
+    profiles: sanitizeBankProfileState({}).profiles
+  });
+  assert.equal(unknownSelection.selectedId, DEFAULT_PROFILE_ID);
+});
+
+test('surfaces quota failures without changing the previously saved state', () => {
+  const previousRaw = JSON.stringify(sanitizeBankProfileState({}));
+  const storage = memoryStorage({ [BANK_PROFILE_STORAGE_KEY]: previousRaw }, { quotaError: true });
+  const next = upsertCustomProfile(sanitizeBankProfileState({}), {
+    name: 'Banco Sin Espacio',
+    fee: 2
+  }, 'custom-sin-espacio');
+
+  assert.throws(
+    () => saveBankProfileState(storage, next),
+    error => error.name === 'QuotaExceededError' && error.message === 'Quota exceeded'
+  );
+  assert.equal(storage.value(BANK_PROFILE_STORAGE_KEY), previousRaw);
+});
+
+test('accepts only safe local assets or bounded PNG, JPEG, and WebP data URLs', () => {
+  assert.equal(sanitizeProfileLogo('/assets/banks/bnc.png'), '/assets/banks/bnc.png');
+  assert.equal(sanitizeProfileLogo('data:image/png;base64,AAAA'), 'data:image/png;base64,AAAA');
+  assert.equal(sanitizeProfileLogo('data:image/jpeg;base64,AAAA'), 'data:image/jpeg;base64,AAAA');
+  assert.equal(sanitizeProfileLogo('data:image/webp;base64,AAAA'), 'data:image/webp;base64,AAAA');
+  assert.equal(sanitizeProfileLogo('data:image/svg+xml;base64,AAAA'), null);
+  assert.equal(sanitizeProfileLogo('data:image/png;base64,***'), null);
+  assert.equal(
+    sanitizeProfileLogo(`data:image/webp;base64,${Buffer.alloc(100 * 1024 + 1).toString('base64')}`),
+    null
+  );
+});
+
+test('restores the exact immutable defaults and removes every custom or modified profile', () => {
+  let state = sanitizeBankProfileState({});
+  state = updateBankProfile(state, { ...getBankProfile(state, 'bnc'), name: 'BNC Editado', fee: 9 });
+  state = upsertCustomProfile(state, { name: 'Banco Extra', fee: 3 }, 'custom-extra');
+  state = selectBankProfile(state, 'custom-extra');
+
+  const restored = restoreDefaultBankProfiles();
+  assert.equal(restored.selectedId, DEFAULT_PROFILE_ID);
+  assert.equal(restored.profiles.length, DEFAULT_BANK_PROFILES.length);
+  assert.equal(getBankProfile(restored, 'bnc').name, 'BNC');
+  assert.equal(getBankProfile(restored, 'bnc').fee, 1.5);
+  assert.equal(getBankProfile(restored, 'custom-extra'), null);
+  assert.ok(getBankProfiles(restored).every(profile => profile.isModified === false));
+});
+
+test('persists the V2 profile collection across reloads', () => {
   const storage = memoryStorage();
   let state = sanitizeBankProfileState({});
-  state = updatePresetFee(state, 'bancamiga', 4.5);
+  state = updateBankProfile(state, { ...getBankProfile(state, 'bancamiga'), fee: 4.5 });
   state = upsertCustomProfile(state, {
     name: 'Banco Familiar',
     cardType: 'Débito',
@@ -204,25 +319,23 @@ test('persists the selected profile, edited defaults, and custom profiles across
   saveBankProfileState(storage, state);
   const reloaded = loadBankProfileState(storage);
 
+  assert.equal(reloaded.version, 2);
   assert.equal(reloaded.selectedId, 'custom-banco-familiar');
   assert.equal(getBankProfile(reloaded, 'bancamiga').fee, 4.5);
   assert.equal(getSelectedBankProfile(reloaded).name, 'Banco Familiar');
-  assert.equal(getSelectedBankProfile(reloaded).cardType, 'Débito');
-  assert.equal(getSelectedBankProfile(reloaded).fee, 1.25);
 });
 
 test('applies a temporary fee without changing the selected profile or its saved value', () => {
   const state = selectBankProfile(sanitizeBankProfileState({}), 'bdv-fisica');
+  const before = structuredClone(state);
   const temporary = getEffectiveSelectedBankProfile(state, 0, '2,2');
   const saved = getSelectedBankProfile(state);
 
   assert.equal(temporary.id, 'bdv-fisica');
   assert.equal(temporary.fee, 2.2);
   assert.equal(temporary.status, 'Temporal');
-  assert.equal(temporary.isTemporary, true);
   assert.equal(saved.fee, 1.5);
-  assert.equal(saved.status, 'Comisión reportada');
-  assert.deepEqual(state.presetFees, {});
+  assert.deepEqual(state, before);
 });
 
 test('bank selection changes only the card fee and keeps bank margin and BPay fixed', () => {

@@ -1,8 +1,9 @@
 export const BANK_PROFILE_STORAGE_KEY = 'calcuflowBankProfilesV1';
-export const BANK_PROFILE_STATE_VERSION = 1;
+export const BANK_PROFILE_STATE_VERSION = 2;
 export const MANUAL_PROFILE_ID = 'manual';
 export const DEFAULT_PROFILE_ID = 'bdv-fisica';
 export const MAX_CARD_FEE = 100;
+export const MAX_PERSISTED_LOGO_BYTES = 100 * 1024;
 
 export const BANK_ICONS = Object.freeze({
   bdv: Object.freeze({
@@ -37,7 +38,7 @@ export const BANK_ICONS = Object.freeze({
 });
 
 export const DEFAULT_BANK_PROFILES = Object.freeze([
-  {
+  Object.freeze({
     id: 'bdv-fisica',
     name: 'Banco de Venezuela',
     cardType: 'Física',
@@ -45,8 +46,8 @@ export const DEFAULT_BANK_PROFILES = Object.freeze([
     initials: 'BDV',
     iconKey: 'bdv',
     defaultStatus: 'Comisión reportada'
-  },
-  {
+  }),
+  Object.freeze({
     id: 'bdv-virtual',
     name: 'Banco de Venezuela',
     cardType: 'Virtual / otra modalidad',
@@ -54,8 +55,8 @@ export const DEFAULT_BANK_PROFILES = Object.freeze([
     initials: 'BDV',
     iconKey: 'bdv',
     defaultStatus: 'Pendiente de confirmar'
-  },
-  {
+  }),
+  Object.freeze({
     id: 'bbva-provincial',
     name: 'BBVA Provincial',
     cardType: '',
@@ -63,8 +64,8 @@ export const DEFAULT_BANK_PROFILES = Object.freeze([
     initials: 'BBVA',
     iconKey: 'bbva',
     defaultStatus: 'Comisión reportada'
-  },
-  {
+  }),
+  Object.freeze({
     id: 'banco-tesoro',
     name: 'Banco del Tesoro',
     cardType: '',
@@ -72,8 +73,8 @@ export const DEFAULT_BANK_PROFILES = Object.freeze([
     initials: 'BT',
     iconKey: 'tesoro',
     defaultStatus: 'Comisión reportada'
-  },
-  {
+  }),
+  Object.freeze({
     id: 'bancamiga',
     name: 'Bancamiga',
     cardType: '',
@@ -81,8 +82,8 @@ export const DEFAULT_BANK_PROFILES = Object.freeze([
     initials: 'BA',
     iconKey: 'bancamiga',
     defaultStatus: 'Comisión reportada'
-  },
-  {
+  }),
+  Object.freeze({
     id: 'banesco-fisica',
     name: 'Banesco',
     cardType: 'Física',
@@ -90,8 +91,8 @@ export const DEFAULT_BANK_PROFILES = Object.freeze([
     initials: 'B',
     iconKey: 'banesco',
     defaultStatus: 'Comisión reportada'
-  },
-  {
+  }),
+  Object.freeze({
     id: 'banesco-virtual',
     name: 'Banesco',
     cardType: 'Virtual',
@@ -99,8 +100,8 @@ export const DEFAULT_BANK_PROFILES = Object.freeze([
     initials: 'B',
     iconKey: 'banesco',
     defaultStatus: 'Comisión reportada'
-  },
-  {
+  }),
+  Object.freeze({
     id: 'bnc',
     name: 'BNC',
     cardType: '',
@@ -108,12 +109,14 @@ export const DEFAULT_BANK_PROFILES = Object.freeze([
     initials: 'BNC',
     iconKey: 'bnc',
     defaultStatus: 'Comisión reportada'
-  }
+  })
 ]);
 
-const DEFAULT_PROFILE_IDS = new Set(DEFAULT_BANK_PROFILES.map(profile => profile.id));
+const DEFAULT_PROFILE_MAP = new Map(DEFAULT_BANK_PROFILES.map(profile => [profile.id, profile]));
+const DEFAULT_PROFILE_IDS = new Set(DEFAULT_PROFILE_MAP.keys());
 const CUSTOM_ID_PATTERN = /^custom-[a-z0-9-]{1,80}$/;
 const ASSET_ICON_PATTERN = /^(?:\.?\/)?assets\/[a-z0-9/_-]+\.(?:png|webp)$/i;
+const DATA_LOGO_PATTERN = /^data:image\/(png|jpeg|webp);base64,([a-z0-9+/]+={0,2})$/i;
 
 function isRecord(value) {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
@@ -123,6 +126,37 @@ function cleanText(value, maxLength) {
   return typeof value === 'string'
     ? value.replace(/\s+/g, ' ').trim().slice(0, maxLength)
     : '';
+}
+
+function getBase64ByteLength(value) {
+  const padding = value.endsWith('==') ? 2 : value.endsWith('=') ? 1 : 0;
+  return Math.floor(value.length * 3 / 4) - padding;
+}
+
+function getDefaultIcon(profile) {
+  return BANK_ICONS[profile.iconKey]?.src || null;
+}
+
+function createDefaultStoredProfile(profile) {
+  return {
+    id: profile.id,
+    name: profile.name,
+    cardType: profile.cardType,
+    fee: profile.defaultFee,
+    icon: getDefaultIcon(profile)
+  };
+}
+
+function getFreshDefaultProfiles() {
+  return DEFAULT_BANK_PROFILES.map(createDefaultStoredProfile);
+}
+
+function isSameStoredProfile(first, second) {
+  return first.id === second.id
+    && first.name === second.name
+    && first.cardType === second.cardType
+    && first.fee === second.fee
+    && first.icon === second.icon;
 }
 
 export function sanitizeCardFee(value) {
@@ -142,30 +176,30 @@ export function createProfileInitials(name) {
   return initials.toUpperCase();
 }
 
-export function sanitizeIconPath(icon) {
-  const value = cleanText(icon, 180);
-  if (!value || value.includes('..') || !ASSET_ICON_PATTERN.test(value)) return null;
-  return value;
+export function sanitizeProfileLogo(icon) {
+  if (typeof icon !== 'string') return null;
+  const value = icon.trim();
+  if (!value || value.includes('..')) return null;
+  if (value.length <= 180 && ASSET_ICON_PATTERN.test(value)) return value;
+
+  const match = value.match(DATA_LOGO_PATTERN);
+  if (!match || match[2].length % 4 !== 0) return null;
+  return getBase64ByteLength(match[2]) <= MAX_PERSISTED_LOGO_BYTES ? value : null;
 }
 
-function getIconPresentation(iconKey, fallbackIcon = null) {
-  const icon = BANK_ICONS[iconKey];
-  return {
-    icon: icon?.src || fallbackIcon,
-    iconScale: icon?.scale || 0.80,
-    iconSymbol: icon?.symbol || null,
-    iconDarkFilter: icon?.darkFilter || null
-  };
-}
+export const sanitizeIconPath = sanitizeProfileLogo;
 
-function sanitizeCustomProfile(profile, usedIds) {
+function sanitizeStoredProfile(profile, usedIds) {
   if (!isRecord(profile)) return null;
   const id = cleanText(profile.id, 87).toLowerCase();
+  const isDefaultId = DEFAULT_PROFILE_IDS.has(id);
   const name = cleanText(profile.name, 64);
   const cardType = cleanText(profile.cardType, 40);
   const fee = sanitizeCardFee(profile.fee);
 
-  if (!CUSTOM_ID_PATTERN.test(id) || usedIds.has(id) || !name || fee === null) return null;
+  if ((!isDefaultId && !CUSTOM_ID_PATTERN.test(id)) || usedIds.has(id) || !name || fee === null) {
+    return null;
+  }
   usedIds.add(id);
 
   return {
@@ -173,83 +207,105 @@ function sanitizeCustomProfile(profile, usedIds) {
     name,
     cardType,
     fee,
-    initials: createProfileInitials(name),
-    icon: sanitizeIconPath(profile.icon)
+    icon: sanitizeProfileLogo(profile.icon)
+  };
+}
+
+function migrateVersionOneState(source, fallbackSelectedId) {
+  const profiles = getFreshDefaultProfiles();
+  const presetFees = isRecord(source.presetFees) ? source.presetFees : {};
+
+  for (const profile of profiles) {
+    const fee = sanitizeCardFee(presetFees[profile.id]);
+    if (fee !== null) profile.fee = fee;
+  }
+
+  const usedIds = new Set(DEFAULT_PROFILE_IDS);
+  const customProfiles = Array.isArray(source.customProfiles) ? source.customProfiles : [];
+  for (const profile of customProfiles.slice(0, 50)) {
+    const sanitized = sanitizeStoredProfile(profile, usedIds);
+    if (sanitized && !DEFAULT_PROFILE_IDS.has(sanitized.id)) profiles.push(sanitized);
+  }
+
+  const validIds = new Set(profiles.map(profile => profile.id));
+  validIds.add(MANUAL_PROFILE_ID);
+  const requestedSelectedId = cleanText(source.selectedId, 87).toLowerCase();
+  const safeFallback = validIds.has(fallbackSelectedId) ? fallbackSelectedId : DEFAULT_PROFILE_ID;
+
+  return {
+    version: BANK_PROFILE_STATE_VERSION,
+    selectedId: validIds.has(requestedSelectedId) ? requestedSelectedId : safeFallback,
+    profiles
   };
 }
 
 export function createEmptyBankProfileState(selectedId = DEFAULT_PROFILE_ID) {
+  const profiles = getFreshDefaultProfiles();
+  const validSelectedId = selectedId === MANUAL_PROFILE_ID || profiles.some(profile => profile.id === selectedId)
+    ? selectedId
+    : DEFAULT_PROFILE_ID;
   return {
     version: BANK_PROFILE_STATE_VERSION,
-    selectedId,
-    presetFees: {},
-    customProfiles: []
+    selectedId: validSelectedId,
+    profiles
   };
 }
 
 export function sanitizeBankProfileState(value, fallbackSelectedId = DEFAULT_PROFILE_ID) {
   const source = isRecord(value) ? value : {};
-  const presetFees = {};
-  const sourcePresetFees = isRecord(source.presetFees) ? source.presetFees : {};
-
-  for (const profile of DEFAULT_BANK_PROFILES) {
-    if (!Object.prototype.hasOwnProperty.call(sourcePresetFees, profile.id)) continue;
-    const fee = sanitizeCardFee(sourcePresetFees[profile.id]);
-    if (fee !== null && fee !== profile.defaultFee) presetFees[profile.id] = fee;
+  if (source.version !== BANK_PROFILE_STATE_VERSION || !Array.isArray(source.profiles)) {
+    return migrateVersionOneState(source, fallbackSelectedId);
   }
 
-  const usedIds = new Set(DEFAULT_PROFILE_IDS);
-  usedIds.add(MANUAL_PROFILE_ID);
-  const sourceCustomProfiles = Array.isArray(source.customProfiles) ? source.customProfiles : [];
-  const customProfiles = sourceCustomProfiles
-    .slice(0, 50)
-    .map(profile => sanitizeCustomProfile(profile, usedIds))
+  const usedIds = new Set();
+  const profiles = source.profiles
+    .slice(0, 58)
+    .map(profile => sanitizeStoredProfile(profile, usedIds))
     .filter(Boolean);
-
-  const validIds = new Set([
-    ...DEFAULT_PROFILE_IDS,
-    ...customProfiles.map(profile => profile.id),
-    MANUAL_PROFILE_ID
-  ]);
+  const safeProfiles = profiles.length ? profiles : getFreshDefaultProfiles();
+  const validIds = new Set(safeProfiles.map(profile => profile.id));
+  validIds.add(MANUAL_PROFILE_ID);
   const requestedSelectedId = cleanText(source.selectedId, 87).toLowerCase();
-  const safeFallback = validIds.has(fallbackSelectedId) ? fallbackSelectedId : DEFAULT_PROFILE_ID;
-  const selectedId = validIds.has(requestedSelectedId) ? requestedSelectedId : safeFallback;
+  const safeFallback = validIds.has(fallbackSelectedId)
+    ? fallbackSelectedId
+    : safeProfiles[0]?.id || DEFAULT_PROFILE_ID;
 
   return {
     version: BANK_PROFILE_STATE_VERSION,
-    selectedId,
-    presetFees,
-    customProfiles
+    selectedId: validIds.has(requestedSelectedId) ? requestedSelectedId : safeFallback,
+    profiles: safeProfiles
+  };
+}
+
+function getIconPresentation(profile) {
+  const preset = DEFAULT_PROFILE_MAP.get(profile.id);
+  const presetIcon = preset ? BANK_ICONS[preset.iconKey] : null;
+  const usesOriginalIcon = Boolean(presetIcon?.src && profile.icon === presetIcon.src);
+  return {
+    iconScale: usesOriginalIcon ? presetIcon.scale : 0.80,
+    iconSymbol: null,
+    iconDarkFilter: usesOriginalIcon ? presetIcon.darkFilter || null : null
   };
 }
 
 export function getBankProfiles(state) {
   const safeState = sanitizeBankProfileState(state);
-  const presets = DEFAULT_BANK_PROFILES.map(profile => {
-    const hasOverride = Object.prototype.hasOwnProperty.call(safeState.presetFees, profile.id);
-    const fee = hasOverride ? safeState.presetFees[profile.id] : profile.defaultFee;
+  return safeState.profiles.map(profile => {
+    const preset = DEFAULT_PROFILE_MAP.get(profile.id);
+    const isModified = preset
+      ? !isSameStoredProfile(profile, createDefaultStoredProfile(preset))
+      : true;
     return {
       ...profile,
-      ...getIconPresentation(profile.iconKey),
-      fee,
-      kind: 'preset',
-      isModified: hasOverride,
-      status: hasOverride ? 'Personalizado' : profile.defaultStatus
+      initials: createProfileInitials(profile.name),
+      ...getIconPresentation(profile),
+      defaultFee: preset?.defaultFee ?? null,
+      defaultStatus: preset?.defaultStatus || 'Personalizado',
+      kind: preset ? 'preset' : 'custom',
+      isModified,
+      status: isModified ? 'Personalizado' : preset.defaultStatus
     };
   });
-  const customProfiles = safeState.customProfiles.map(profile => ({
-    ...profile,
-    iconScale: 0.80,
-    iconSymbol: null,
-    iconDarkFilter: null,
-    defaultFee: null,
-    defaultStatus: 'Personalizado',
-    kind: 'custom',
-    isModified: true,
-    status: 'Personalizado'
-  }));
-
-  return [...presets, ...customProfiles];
 }
 
 export function groupBankProfiles(profiles) {
@@ -259,22 +315,14 @@ export function groupBankProfiles(profiles) {
   for (const profile of Array.isArray(profiles) ? profiles : []) {
     if (!profile || typeof profile !== 'object') continue;
     if (profile.kind !== 'preset') {
-      groups.push({
-        id: profile.id,
-        name: profile.name,
-        profiles: [profile]
-      });
+      groups.push({ id: profile.id, name: profile.name, profiles: [profile] });
       continue;
     }
 
     const groupKey = profile.name.toLocaleLowerCase('es-VE');
     let group = presetGroups.get(groupKey);
     if (!group) {
-      group = {
-        id: profile.id,
-        name: profile.name,
-        profiles: []
-      };
+      group = { id: profile.id, name: profile.name, profiles: [] };
       presetGroups.set(groupKey, group);
       groups.push(group);
     }
@@ -293,7 +341,10 @@ export function getBankProfile(state, profileId, manualFee = 0) {
       fee: sanitizeCardFee(manualFee) ?? 0,
       defaultFee: null,
       initials: 'M',
-      ...getIconPresentation('manual'),
+      icon: null,
+      iconScale: BANK_ICONS.manual.scale,
+      iconSymbol: BANK_ICONS.manual.symbol,
+      iconDarkFilter: null,
       kind: 'manual',
       isModified: true,
       status: 'Personalizado'
@@ -305,7 +356,7 @@ export function getBankProfile(state, profileId, manualFee = 0) {
 export function getSelectedBankProfile(state, manualFee = 0) {
   const safeState = sanitizeBankProfileState(state);
   return getBankProfile(safeState, safeState.selectedId, manualFee)
-    || getBankProfile(safeState, DEFAULT_PROFILE_ID, manualFee);
+    || getBankProfile(safeState, safeState.profiles[0]?.id, manualFee);
 }
 
 export function getEffectiveSelectedBankProfile(state, manualFee = 0, temporaryFee = null) {
@@ -327,76 +378,140 @@ export function selectBankProfile(state, profileId) {
   return { ...safeState, selectedId: profileId };
 }
 
-export function updatePresetFee(state, profileId, feeValue) {
-  const safeState = sanitizeBankProfileState(state);
-  const preset = DEFAULT_BANK_PROFILES.find(profile => profile.id === profileId);
-  const fee = sanitizeCardFee(feeValue);
-  if (!preset || fee === null) return safeState;
-
-  const presetFees = { ...safeState.presetFees };
-  if (fee === preset.defaultFee) delete presetFees[profileId];
-  else presetFees[profileId] = fee;
-  return { ...safeState, presetFees };
+export function hasDuplicateProfileName(state, name, excludedId = '') {
+  const normalizedName = cleanText(name, 64).toLocaleLowerCase('es-VE');
+  if (!normalizedName) return false;
+  return getBankProfiles(state).some(profile => (
+    profile.id !== excludedId
+    && profile.name.toLocaleLowerCase('es-VE') === normalizedName
+  ));
 }
 
-export function restorePresetFee(state, profileId) {
+export function updateBankProfile(state, profile) {
   const safeState = sanitizeBankProfileState(state);
-  if (!DEFAULT_PROFILE_IDS.has(profileId)) return safeState;
-  const presetFees = { ...safeState.presetFees };
-  delete presetFees[profileId];
-  return { ...safeState, presetFees };
+  const existingIndex = safeState.profiles.findIndex(item => item.id === profile?.id);
+  if (existingIndex < 0) return safeState;
+  const usedIds = new Set(safeState.profiles.filter((_, index) => index !== existingIndex).map(item => item.id));
+  const sanitized = sanitizeStoredProfile(profile, usedIds);
+  if (!sanitized) return safeState;
+  const profiles = [...safeState.profiles];
+  profiles[existingIndex] = sanitized;
+  return { ...safeState, profiles };
+}
+
+export function updatePresetFee(state, profileId, feeValue) {
+  const profile = getBankProfile(state, profileId);
+  const fee = sanitizeCardFee(feeValue);
+  if (!profile || profile.kind !== 'preset' || fee === null) return sanitizeBankProfileState(state);
+  return updateBankProfile(state, { ...profile, fee });
+}
+
+export function restoreBankProfile(state, profileId) {
+  const safeState = sanitizeBankProfileState(state);
+  const preset = DEFAULT_PROFILE_MAP.get(profileId);
+  if (!preset || !safeState.profiles.some(profile => profile.id === profileId)) return safeState;
+  return updateBankProfile(safeState, createDefaultStoredProfile(preset));
+}
+
+export const restorePresetFee = restoreBankProfile;
+
+export function restoreDefaultBankProfiles() {
+  return createEmptyBankProfileState(DEFAULT_PROFILE_ID);
 }
 
 export function upsertCustomProfile(state, profile, requestedId = '') {
   const safeState = sanitizeBankProfileState(state);
   const existingId = cleanText(profile?.id, 87).toLowerCase();
-  let id = existingId;
-
-  if (!safeState.customProfiles.some(item => item.id === id)) {
-    const baseId = cleanText(requestedId, 80).toLowerCase().replace(/[^a-z0-9-]/g, '-');
-    id = baseId.startsWith('custom-') ? baseId : `custom-${baseId || Date.now().toString(36)}`;
-    let suffix = 2;
-    const usedIds = new Set([...DEFAULT_PROFILE_IDS, MANUAL_PROFILE_ID, ...safeState.customProfiles.map(item => item.id)]);
-    const originalId = id;
-    while (usedIds.has(id)) {
-      id = `${originalId}-${suffix}`;
-      suffix += 1;
-    }
+  if (safeState.profiles.some(item => item.id === existingId)) {
+    return updateBankProfile(safeState, { ...profile, id: existingId });
   }
 
-  const usedIds = new Set([...DEFAULT_PROFILE_IDS, MANUAL_PROFILE_ID]);
-  const otherProfiles = safeState.customProfiles.filter(item => item.id !== existingId);
-  otherProfiles.forEach(item => usedIds.add(item.id));
-  const sanitized = sanitizeCustomProfile({ ...profile, id }, usedIds);
+  const baseId = cleanText(requestedId, 80).toLowerCase().replace(/[^a-z0-9-]/g, '-');
+  let id = baseId.startsWith('custom-') ? baseId : `custom-${baseId || Date.now().toString(36)}`;
+  const usedIds = new Set([...DEFAULT_PROFILE_IDS, MANUAL_PROFILE_ID, ...safeState.profiles.map(item => item.id)]);
+  const originalId = id;
+  let suffix = 2;
+  while (usedIds.has(id)) {
+    id = `${originalId}-${suffix}`;
+    suffix += 1;
+  }
+  const sanitized = sanitizeStoredProfile({ ...profile, id }, usedIds);
   if (!sanitized) return safeState;
-
-  const existingIndex = safeState.customProfiles.findIndex(item => item.id === existingId);
-  const customProfiles = [...safeState.customProfiles];
-  if (existingIndex >= 0) customProfiles[existingIndex] = sanitized;
-  else customProfiles.push(sanitized);
-
-  return { ...safeState, customProfiles };
+  return { ...safeState, profiles: [...safeState.profiles, sanitized] };
 }
 
-export function removeCustomProfile(state, profileId) {
+export function removeBankProfile(state, profileId) {
   const safeState = sanitizeBankProfileState(state);
-  if (!safeState.customProfiles.some(profile => profile.id === profileId)) return safeState;
+  if (safeState.profiles.length <= 1 || !safeState.profiles.some(profile => profile.id === profileId)) {
+    return safeState;
+  }
+  const profiles = safeState.profiles.filter(profile => profile.id !== profileId);
   return {
     ...safeState,
-    selectedId: safeState.selectedId === profileId ? MANUAL_PROFILE_ID : safeState.selectedId,
-    customProfiles: safeState.customProfiles.filter(profile => profile.id !== profileId)
+    selectedId: safeState.selectedId === profileId ? profiles[0].id : safeState.selectedId,
+    profiles
   };
 }
 
-export function loadBankProfileState(storage, { hasLegacyCardFee = false } = {}) {
+export function removeCustomProfile(state, profileId) {
+  const profile = getBankProfile(state, profileId);
+  return profile?.kind === 'custom' ? removeBankProfile(state, profileId) : sanitizeBankProfileState(state);
+}
+
+export function readBankProfileState(storage, { hasLegacyCardFee = false } = {}) {
   const fallbackSelectedId = hasLegacyCardFee ? MANUAL_PROFILE_ID : DEFAULT_PROFILE_ID;
+  let raw;
   try {
-    const raw = storage.getItem(BANK_PROFILE_STORAGE_KEY);
-    if (!raw) return createEmptyBankProfileState(fallbackSelectedId);
-    return sanitizeBankProfileState(JSON.parse(raw), fallbackSelectedId);
+    raw = storage.getItem(BANK_PROFILE_STORAGE_KEY);
   } catch {
-    return createEmptyBankProfileState(fallbackSelectedId);
+    return {
+      state: createEmptyBankProfileState(fallbackSelectedId),
+      shouldPersist: false,
+      warning: 'storage-unavailable'
+    };
   }
+  if (!raw) {
+    return {
+      state: createEmptyBankProfileState(fallbackSelectedId),
+      shouldPersist: false,
+      warning: null
+    };
+  }
+
+  try {
+    const parsed = JSON.parse(raw);
+    const state = sanitizeBankProfileState(parsed, fallbackSelectedId);
+    const isUnsupportedVersion = isRecord(parsed)
+      && Object.prototype.hasOwnProperty.call(parsed, 'version')
+      && parsed.version !== 1
+      && parsed.version !== BANK_PROFILE_STATE_VERSION;
+    const hasUnusableProfileCollection = parsed?.version === BANK_PROFILE_STATE_VERSION
+      && Array.isArray(parsed.profiles)
+      && !parsed.profiles.some(profile => sanitizeStoredProfile(profile, new Set()));
+    if (isUnsupportedVersion || hasUnusableProfileCollection) {
+      return {
+        state,
+        shouldPersist: false,
+        warning: isUnsupportedVersion ? 'unsupported-version' : 'profiles-invalid'
+      };
+    }
+    return {
+      state,
+      shouldPersist: parsed?.version !== BANK_PROFILE_STATE_VERSION
+        || JSON.stringify(parsed) !== JSON.stringify(state),
+      warning: null
+    };
+  } catch {
+    return {
+      state: createEmptyBankProfileState(fallbackSelectedId),
+      shouldPersist: false,
+      warning: 'corrupt'
+    };
+  }
+}
+
+export function loadBankProfileState(storage, options = {}) {
+  return readBankProfileState(storage, options).state;
 }
 
 export function saveBankProfileState(storage, state) {
