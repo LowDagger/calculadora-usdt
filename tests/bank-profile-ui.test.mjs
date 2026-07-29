@@ -56,3 +56,32 @@ test('renders every visible profile card as one full-width native button', () =>
   assert.match(css, /\.bank-profile-option:focus-visible\s*,/);
   assert.equal((app.match(/bankProfileEls\.list\.addEventListener\('click'/g) || []).length, 1);
 });
+
+test('exposes complete bank CRUD and a restrained destructive restore flow in Spanish', () => {
+  assert.match(html, /id="createCustomBankProfileBtn"[\s\S]*?Añadir banco/);
+  assert.match(html, /id="restoreDefaultBankProfilesBtn"[\s\S]*?Restaurar predeterminados/);
+  assert.match(html, /id="deleteBankProfileBtn"[\s\S]*?Eliminar perfil/);
+  assert.match(app, /function deleteEditingBankProfile/);
+  assert.match(app, /Debe quedar al menos un perfil de banco\./);
+  assert.match(
+    app,
+    /¿Restaurar todos los bancos predeterminados\? Se eliminarán los perfiles añadidos y todos los cambios/
+  );
+  assert.match(app, /Ya existe un perfil con ese nombre\. Usa un nombre diferente\./);
+});
+
+test('shows accessible optional logo controls and requirements near the upload action', () => {
+  assert.match(html, /id="chooseBankProfileLogoBtn" type="button">Añadir logo/);
+  assert.match(html, /id="removeBankProfileLogoBtn" type="button" hidden>Quitar logo/);
+  assert.match(html, /accept="image\/png,image\/jpeg,image\/webp"/);
+  assert.match(html, /PNG, JPEG o WebP · máximo 2 MB · recomendado 512 × 512 px\./);
+  assert.match(html, /id="bankProfileLogoStatus" role="status" aria-live="polite"/);
+  assert.match(app, /processBankLogo\(file\)/);
+  assert.match(app, /Logo listo para guardar\./);
+  assert.match(css, /\.bank-profile-logo-control\s*\{/);
+});
+
+test('keeps editor data visible when local persistence fails', () => {
+  assert.match(app, /persistBankProfiles\(nextState, \{ preserveEditor: true \}\)/);
+  assert.match(app, /No hay espacio suficiente para guardar el perfil\. El formulario se conserva\./);
+});
