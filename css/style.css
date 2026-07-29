@@ -201,9 +201,9 @@ textarea,
 .header-update {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  font-size: 0.58rem;
-  font-weight: 500;
+  gap: 3px;
+  font-size: 0.62rem;
+  font-weight: 600;
   color: var(--muted);
 }
 
@@ -223,7 +223,51 @@ textarea,
   font-weight: 600;
   letter-spacing: 0.02em;
   text-transform: none;
-  opacity: 0.8;
+}
+
+.rates-refresh-btn {
+  width: 36px;
+  height: 36px;
+  margin-left: 1px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--muted);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: background-color 150ms ease, color 150ms ease, transform 150ms ease;
+}
+
+.rates-refresh-btn .material-symbols-rounded {
+  font-size: 1rem;
+}
+
+.rates-refresh-btn:hover:not(:disabled) {
+  color: var(--text);
+  background: var(--surface-hover);
+}
+
+.rates-refresh-btn:active:not(:disabled) {
+  transform: scale(0.96);
+}
+
+.rates-refresh-btn:focus {
+  outline: none;
+}
+
+.rates-refresh-btn:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 1px;
+}
+
+.rates-refresh-btn:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+
+.rates-refresh-btn.loading .material-symbols-rounded {
+  animation: spin 0.8s linear infinite;
 }
 
 .icon-actions {
@@ -271,6 +315,15 @@ textarea,
 
 .layout:focus {
   outline: none;
+}
+
+.section-label {
+  margin: 1px 2px -5px;
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 800;
+  line-height: 1.2;
+  letter-spacing: 0.02em;
 }
 
 /* Calculator Card */
@@ -650,7 +703,6 @@ html[data-theme="dark"] .bank-profile-avatar.has-logo img {
   color: var(--muted);
   letter-spacing: 0.05em;
   margin-bottom: 2px;
-  opacity: 0.75;
 }
 
 .rate-val {
@@ -663,10 +715,9 @@ html[data-theme="dark"] .bank-profile-avatar.has-logo img {
 
 /* BCV effective date — subtle tertiary label below the BCV rate value */
 .rate-effective-date {
-  font-size: 0.55rem;
-  font-weight: 500;
+  font-size: 0.58rem;
+  font-weight: 600;
   color: var(--muted);
-  opacity: 0.75;
   white-space: nowrap;
   display: block;
   margin-top: auto;
@@ -683,12 +734,11 @@ html[data-theme="dark"] .bank-profile-avatar.has-logo img {
 }
 
 .brecha-label {
-  font-size: 0.5rem;
+  font-size: 0.53rem;
   font-weight: 700;
   color: var(--muted);
   text-transform: uppercase;
   letter-spacing: 0.02em;
-  opacity: 0.8;
 }
 
 .brecha-val {
@@ -741,7 +791,6 @@ html[data-theme="dark"] .bank-profile-avatar.has-logo img {
   color: var(--muted);
   letter-spacing: 0.05em;
   margin-bottom: 4px;
-  opacity: 0.7;
 }
 
 .kpi-val {
@@ -758,7 +807,6 @@ html[data-theme="dark"] .bank-profile-avatar.has-logo img {
   margin-top: auto;
   font-weight: 500;
   line-height: 1.2;
-  opacity: 0.75;
 }
 
 .kpi-meta {
@@ -1622,6 +1670,15 @@ html[data-theme="light"] .step.step-highlight {
   background: var(--primary-bg);
 }
 
+.kpi-copy-btn:focus {
+  outline: none;
+}
+
+.kpi-copy-btn:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 1px;
+}
+
 .kpi-copy-btn span {
   font-size: 0.95rem !important;
 }
@@ -1650,7 +1707,10 @@ html[data-theme="light"] .step.step-highlight {
 }
 
 .status.show {
-  display: block;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
 }
 
 .status.ok {
@@ -1669,6 +1729,36 @@ html[data-theme="light"] .step.step-highlight {
   background: var(--red-bg);
   color: var(--red);
   border-color: rgba(239, 68, 68, 0.2);
+}
+
+.status-action {
+  flex: 0 0 auto;
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid currentColor;
+  border-radius: 9px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.status-action:hover:not(:disabled) {
+  background: color-mix(in srgb, currentColor 10%, transparent);
+}
+
+.status-action:focus {
+  outline: none;
+}
+
+.status-action:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.status-action:disabled {
+  cursor: wait;
+  opacity: 0.65;
 }
 
 .settings-content {
@@ -1861,7 +1951,7 @@ html[data-theme="light"] .step.step-highlight {
 .card-icon {
   font-size: 0.8rem;
   color: var(--muted);
-  opacity: 0.5;
+  opacity: 0.72;
 }
 
 .switch-row {

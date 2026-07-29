@@ -21,9 +21,10 @@ import { renderBankLogo } from './bank-logo.js';
 import { initChangelog } from './changelog.js';
 import { loadState as readState, saveState as writeState } from './storage.js';
 import { money, n, triggerHaptic } from './utils.js';
-import { els, setStatus, clearStatus, setLoadingRates, showToast, renderEmpty, renderRates, renderResult, renderBcvDate, renderUsdAmountValidation, openSettings, closeSettings, openBreakdown, closeBreakdown, openSupport, closeSupport, lockBodyScroll, unlockBodyScroll } from './ui.js';
+import { els, setStatus, clearStatus, showRateError, clearRateError, setLoadingRates, showToast, renderEmpty, renderRates, renderResult, renderBcvDate, renderUsdAmountValidation, openSettings, closeSettings, openBreakdown, closeBreakdown, openSupport, closeSupport, lockBodyScroll, unlockBodyScroll } from './ui.js';
 
 let ratesLastUpdated = null;
+let ratesRequestInFlight = false;
 let bankProfileState = null;
 let manualCardFee = '1.5';
 let temporaryCardFee = null;
@@ -826,6 +827,8 @@ function resetDefaults() {
 }
 
 async function loadRates(showSuccessToast = false) {
+  if (ratesRequestInFlight) return;
+  ratesRequestInFlight = true;
   triggerHaptic();
   setLoadingRates(true);
   try {
@@ -837,6 +840,7 @@ async function loadRates(showSuccessToast = false) {
     els.lastUpdate.dataset.absolute = `${timeStr} · TasaVE`;
     updateRelativeTime();
     renderBcvDate(bcvEffectiveDate);
+    clearRateError();
     if (showSuccessToast === true) {
       showToast('Tasas actualizadas desde TasaVE.');
     }
@@ -844,7 +848,9 @@ async function loadRates(showSuccessToast = false) {
     saveState(false);
   } catch (err) {
     showToast('No se pudo cargar TasaVE. Conservando tasas manuales.', 'err');
+    showRateError(() => loadRates(true));
   } finally {
+    ratesRequestInFlight = false;
     setLoadingRates(false);
     updateRelativeTime();
     calculate();
@@ -1662,7 +1668,9 @@ function updateThemeUI(theme) {
   const container = document.getElementById('themeSelector');
   if (!container) return;
   container.querySelectorAll('.segment-btn').forEach(btn => {
-    if (btn.dataset.themeVal === theme) {
+    const isActive = btn.dataset.themeVal === theme;
+    btn.setAttribute('aria-pressed', String(isActive));
+    if (isActive) {
       btn.classList.add('active');
     } else {
       btn.classList.remove('active');
