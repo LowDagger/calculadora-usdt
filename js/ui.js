@@ -30,7 +30,9 @@ export const els = {
 export function updateUsdToBuyDisplay(value) {
   // Highlight active chips
   document.querySelectorAll('[data-quick]').forEach(btn => {
-    if (btn.dataset.quick === value) {
+    const isActive = btn.dataset.quick === value;
+    btn.setAttribute('aria-pressed', String(isActive));
+    if (isActive) {
       btn.classList.add('active');
     } else {
       btn.classList.remove('active');
@@ -41,11 +43,38 @@ export function updateUsdToBuyDisplay(value) {
 export function setStatus(text, type = 'ok') {
   els.statusBox.textContent = text;
   els.statusBox.className = 'status show ' + type;
+  els.statusBox.dataset.source = 'general';
+  els.statusBox.setAttribute('role', type === 'err' ? 'alert' : 'status');
 }
 
 export function clearStatus() {
   els.statusBox.className = 'status';
   els.statusBox.textContent = '';
+  delete els.statusBox.dataset.source;
+  els.statusBox.removeAttribute('role');
+}
+
+export function showRateError(onRetry) {
+  const message = document.createElement('span');
+  message.textContent = 'No se pudo cargar TasaVE. Conservando tasas manuales.';
+
+  const retryButton = document.createElement('button');
+  retryButton.id = 'retryRatesBtn';
+  retryButton.className = 'status-action';
+  retryButton.type = 'button';
+  retryButton.textContent = 'Reintentar';
+  retryButton.addEventListener('click', onRetry);
+
+  els.statusBox.replaceChildren(message, retryButton);
+  els.statusBox.className = 'status show err rate-error';
+  els.statusBox.dataset.source = 'rates';
+  els.statusBox.setAttribute('role', 'alert');
+}
+
+export function clearRateError() {
+  if (els.statusBox.dataset.source === 'rates') {
+    clearStatus();
+  }
 }
 
 export function renderUsdAmountValidation(error = '') {
@@ -59,6 +88,7 @@ export function renderUsdAmountValidation(error = '') {
 
 export function setLoadingRates(isLoading) {
   els.loadRatesBtn.disabled = isLoading;
+  els.loadRatesBtn.setAttribute('aria-busy', String(isLoading));
   // Toggle .loading class to drive the CSS spin animation; preserve icon markup
   els.loadRatesBtn.classList.toggle('loading', isLoading);
   if (els.loadRatesBtnMobile) {
@@ -68,6 +98,12 @@ export function setLoadingRates(isLoading) {
   if (els.loadRatesBtnSettings) {
     els.loadRatesBtnSettings.disabled = isLoading;
     els.loadRatesBtnSettings.classList.toggle('loading', isLoading);
+  }
+  const retryButton = document.getElementById('retryRatesBtn');
+  if (retryButton) {
+    retryButton.disabled = isLoading;
+    retryButton.setAttribute('aria-busy', String(isLoading));
+    retryButton.textContent = isLoading ? 'Reintentando…' : 'Reintentar';
   }
 
   if (isLoading) {

@@ -95,17 +95,21 @@
           <span class="subtitle brand-subtitle">Banco → USDT</span>
           <span class="subtitle-divider">·</span>
           <span class="header-update">
-            <span class="pulse-dot"></span>
+            <span class="pulse-dot" aria-hidden="true"></span>
             <span id="lastUpdate" class="updated-time">Sin actualizar</span>
+            <button class="rates-refresh-btn" id="loadRatesBtn" type="button" title="Actualizar tasas"
+              aria-label="Actualizar tasas">
+              <span class="material-symbols-rounded" aria-hidden="true">refresh</span>
+            </button>
           </span>
         </div>
       </div>
       <div class="icon-actions">
-        <button class="icon-btn" id="shareBtn" title="Compartir cálculo" aria-label="Compartir cálculo"><span
-            class="material-symbols-rounded">share</span></button>
-        <button class="icon-btn" id="openSettingsBtn" title="Configuración" aria-label="Configuración"
+        <button class="icon-btn" id="shareBtn" type="button" title="Compartir cálculo"
+          aria-label="Compartir cálculo"><span class="material-symbols-rounded" aria-hidden="true">share</span></button>
+        <button class="icon-btn" id="openSettingsBtn" type="button" title="Configuración" aria-label="Configuración"
           aria-controls="settingsPanel" aria-expanded="false"><span
-            class="material-symbols-rounded">tune</span></button>
+            class="material-symbols-rounded" aria-hidden="true">tune</span></button>
       </div>
     </header>
 
@@ -118,7 +122,7 @@
       </span>
       <span class="changelog-announcement-action" aria-hidden="true">
         <span>Ver</span>
-        <span class="material-symbols-rounded">chevron_right</span>
+        <span class="material-symbols-rounded" aria-hidden="true">chevron_right</span>
       </span>
     </button>
 
@@ -134,9 +138,9 @@
         <p class="amount-input-error" id="usdAmountError" role="alert" hidden></p>
 
         <div class="quick-row">
-          <button class="chip-btn" data-quick="100">100</button>
-          <button class="chip-btn" data-quick="500">500</button>
-          <button class="chip-btn" data-quick="1000">1000</button>
+          <button class="chip-btn" type="button" data-quick="100">100</button>
+          <button class="chip-btn" type="button" data-quick="500">500</button>
+          <button class="chip-btn" type="button" data-quick="1000">1000</button>
         </div>
 
         <div class="bank-profile-field">
@@ -162,11 +166,12 @@
       </section>
 
       <!-- Card 2: Rates grid (3 columns) -->
+      <h2 class="section-label">Tasas de hoy</h2>
       <div class="rates-grid">
         <div class="rate-card">
           <div class="card-header">
             <span class="rate-label">BCV</span>
-            <span class="material-symbols-rounded card-icon">account_balance</span>
+            <span class="material-symbols-rounded card-icon" aria-hidden="true">account_balance</span>
           </div>
           <strong class="rate-val" id="bcvView">--</strong>
           <span class="rate-effective-date" id="bcvEffectiveDate"></span>
@@ -174,14 +179,14 @@
         <div class="rate-card">
           <div class="card-header">
             <span class="rate-label">BANCO</span>
-            <span class="material-symbols-rounded card-icon">payments</span>
+            <span class="material-symbols-rounded card-icon" aria-hidden="true">payments</span>
           </div>
           <strong class="rate-val" id="bankView">--</strong>
         </div>
         <div class="rate-card">
           <div class="card-header">
             <span class="rate-label">P2P</span>
-            <span class="material-symbols-rounded card-icon">currency_exchange</span>
+            <span class="material-symbols-rounded card-icon" aria-hidden="true">currency_exchange</span>
           </div>
           <div class="rate-body">
             <strong class="rate-val" id="p2pView">--</strong>
@@ -193,12 +198,16 @@
         </div>
       </div>
 
+      <!-- General Status Info (used for rate errors and retry actions) -->
+      <div class="status" id="statusBox" aria-live="polite"></div>
+
       <!-- Card 3: Results KPI grid (2x2) -->
+      <h2 class="section-label">Tu operación</h2>
       <div class="kpi-grid">
         <div class="kpi-card kpi-operational" id="vesNeededCard">
           <div class="card-header">
             <span class="kpi-label">BS NECESARIOS</span>
-            <span class="material-symbols-rounded card-icon">receipt_long</span>
+            <span class="material-symbols-rounded card-icon" aria-hidden="true">receipt_long</span>
           </div>
           <strong class="kpi-val" id="vesNeeded">--</strong>
           <span class="kpi-desc" id="vesSub">Para comprar USD al banco</span>
@@ -207,7 +216,7 @@
         <div class="kpi-card kpi-operational" id="bpayCard">
           <div class="card-header">
             <span class="kpi-label">MONTO EN BPAY</span>
-            <span class="material-symbols-rounded card-icon">credit_card</span>
+            <span class="material-symbols-rounded card-icon" aria-hidden="true">credit_card</span>
           </div>
           <strong class="kpi-val" id="bpayRecommended">--</strong>
           <span class="kpi-desc">Máximo recomendado</span>
@@ -216,7 +225,7 @@
         <div class="kpi-card kpi-operational" id="usdtFinalCard">
           <div class="card-header">
             <span class="kpi-label">USDT FINALES</span>
-            <span class="material-symbols-rounded card-icon">token</span>
+            <span class="material-symbols-rounded card-icon" aria-hidden="true">token</span>
           </div>
           <strong class="kpi-val" id="usdtFinal">--</strong>
           <span class="kpi-desc" id="feesSub">Tarjeta + BPay</span>
@@ -225,7 +234,7 @@
         <div class="kpi-card kpi-highlight" id="profitCard">
           <div class="card-header">
             <span class="kpi-label">GANANCIA ESTIMADA</span>
-            <span class="material-symbols-rounded card-icon">trending_up</span>
+            <span class="material-symbols-rounded card-icon" aria-hidden="true">trending_up</span>
           </div>
           <strong class="kpi-val" id="profitUsdtBig">--</strong>
           <span class="kpi-desc" id="profitVes">-- Bs</span>
@@ -234,19 +243,16 @@
       </div>
 
       <!-- Trigger button for Breakdown Modal -->
-      <button class="breakdown-trigger-btn" id="openBreakdownBtn" title="Ver desglose del cálculo"
+      <button class="breakdown-trigger-btn" id="openBreakdownBtn" type="button" title="Ver desglose del cálculo"
         aria-label="Ver desglose del cálculo" aria-controls="breakdownPanel" aria-expanded="false">
         <span class="summary-left">
-          <span class="material-symbols-rounded">bar_chart</span>
+          <span class="material-symbols-rounded" aria-hidden="true">bar_chart</span>
           <span>Ver desglose</span>
-          <span class="material-symbols-rounded chevron-icon">expand_more</span>
+          <span class="material-symbols-rounded chevron-icon" aria-hidden="true">expand_more</span>
         </span>
         <span class="summary-amount" id="breakdownAmount">-- USD</span>
       </button>
     </main>
-
-    <!-- General Status Info (used for auto-save notifications, limits, errors) -->
-    <div class="status" id="statusBox"></div>
 
     <!-- Section: Support the Project -->
     <div class="support-section">
@@ -271,7 +277,7 @@
           </svg>
           <span>Unirme al grupo</span>
         </a>
-        <button class="btn-support-trigger" id="openSupportBtn" aria-controls="supportPanel"
+        <button class="btn-support-trigger" id="openSupportBtn" type="button" aria-controls="supportPanel"
           aria-expanded="false">Apoyar el proyecto</button>
       </div>
     </div>
@@ -282,7 +288,6 @@
       <button id="clearBtnTop"></button>
       <button id="clearBtnMobile"></button>
       <button id="shareBtnMobile"></button>
-      <button id="loadRatesBtn"></button>
       <button id="loadRatesBtnMobile"></button>
       <span id="opStatus"></span>
       <!-- Extra buttons moved for compatibility -->
@@ -307,7 +312,8 @@
           <p class="modal-description subtitle">Usa los bolívares que tienes como punto de partida.</p>
         </div>
         <button class="modal-close icon-btn" id="closeBsHelperBtn" type="button" title="Cerrar"
-          aria-label="Cerrar cálculo desde bolívares"><span class="material-symbols-rounded">close</span></button>
+          aria-label="Cerrar cálculo desde bolívares"><span class="material-symbols-rounded"
+            aria-hidden="true">close</span></button>
       </div>
 
       <form class="modal-content breakdown-content bs-helper-content" id="bsHelperForm">
@@ -346,8 +352,8 @@
           <h2 class="modal-title" id="breakdownTitle">Desglose del cálculo</h2>
           <p class="modal-description subtitle">Explicación paso a paso de la operación.</p>
         </div>
-        <button class="modal-close icon-btn" id="closeBreakdownBtn" title="Cerrar desglose" aria-label="Cerrar desglose"><span
-            class="material-symbols-rounded">close</span></button>
+        <button class="modal-close icon-btn" id="closeBreakdownBtn" type="button" title="Cerrar desglose"
+          aria-label="Cerrar desglose"><span class="material-symbols-rounded" aria-hidden="true">close</span></button>
       </div>
 
       <div class="modal-content breakdown-content">
@@ -397,9 +403,11 @@
                     <span
                       style="font-size: 0.68rem; font-weight: 700; color: var(--primary); display: inline-flex; align-items: center; gap: 4px;">
                       <span>Monto máximo para BPay:</span>
-                      <button class="kpi-copy-btn" data-copy="flowAfterCard" title="Copiar monto a ingresar en BPay"
+                      <button class="kpi-copy-btn" type="button" data-copy="flowAfterCard"
+                        title="Copiar monto a ingresar en BPay"
                         aria-label="Copiar monto a ingresar en BPay" style="padding: 2px; color: var(--primary);">
-                        <span class="material-symbols-rounded" style="font-size: 0.8rem !important;">content_copy</span>
+                        <span class="material-symbols-rounded" aria-hidden="true"
+                          style="font-size: 0.8rem !important;">content_copy</span>
                       </button>
                     </span>
                     <strong class="amount highlight" id="flowAfterCard" style="font-size: 0.75rem;">--</strong>
@@ -451,7 +459,7 @@
         <details class="formula-details" style="margin-top: 8px;">
           <summary
             style="font-size: 0.72rem; font-weight: 700; color: var(--primary); cursor: pointer; user-select: none; outline: none; display: inline-flex; align-items: center; gap: 6px;">
-            <span class="material-symbols-rounded formula-chevron">expand_more</span>
+            <span class="material-symbols-rounded formula-chevron" aria-hidden="true">expand_more</span>
             <span>Ver fórmulas</span>
           </summary>
           <div id="formulaText" class="formula-box" style="margin-top: 6px;">Completa USD, BCV y P2P para ver fórmula.
@@ -459,7 +467,7 @@
         </details>
 
         <div class="breakdown-note">
-          <span class="material-symbols-rounded">info</span>
+          <span class="material-symbols-rounded" aria-hidden="true">info</span>
           <span>Las comisiones se aplican de forma secuencial: Tarjeta → luego BPay.</span>
         </div>
       </div>
@@ -476,8 +484,8 @@
           <h2 class="modal-title" id="supportTitle">Apoya CalcuFlow</h2>
           <p class="modal-description subtitle">Voluntario y libre de publicidad.</p>
         </div>
-        <button class="modal-close icon-btn" id="closeSupportBtn" title="Cerrar" aria-label="Cerrar"><span
-            class="material-symbols-rounded">close</span></button>
+        <button class="modal-close icon-btn" id="closeSupportBtn" type="button" title="Cerrar"
+          aria-label="Cerrar"><span class="material-symbols-rounded" aria-hidden="true">close</span></button>
       </div>
 
       <div class="modal-content breakdown-content">
@@ -498,9 +506,10 @@
           <div style="background: var(--bg-soft); padding: 12px; border-radius: 12px; border: 1px solid var(--border);">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
               <span style="font-size: 0.7rem; font-weight: 800; color: var(--muted);">USDT (TRC20)</span>
-              <button class="kpi-copy-btn" data-copy="supportUsdtTrc20" title="Copiar dirección"
-                style="color: var(--primary);">
-                <span class="material-symbols-rounded" style="font-size: 0.95rem !important;">content_copy</span>
+              <button class="kpi-copy-btn" type="button" data-copy="supportUsdtTrc20" title="Copiar dirección"
+                aria-label="Copiar dirección USDT TRC20" style="color: var(--primary);">
+                <span class="material-symbols-rounded" aria-hidden="true"
+                  style="font-size: 0.95rem !important;">content_copy</span>
               </button>
             </div>
             <strong id="supportUsdtTrc20"
@@ -511,9 +520,10 @@
           <div style="background: var(--bg-soft); padding: 12px; border-radius: 12px; border: 1px solid var(--border);">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
               <span style="font-size: 0.7rem; font-weight: 800; color: var(--muted);">USDT (BEP20)</span>
-              <button class="kpi-copy-btn" data-copy="supportUsdtBep20" title="Copiar dirección"
-                style="color: var(--primary);">
-                <span class="material-symbols-rounded" style="font-size: 0.95rem !important;">content_copy</span>
+              <button class="kpi-copy-btn" type="button" data-copy="supportUsdtBep20" title="Copiar dirección"
+                aria-label="Copiar dirección USDT BEP20" style="color: var(--primary);">
+                <span class="material-symbols-rounded" aria-hidden="true"
+                  style="font-size: 0.95rem !important;">content_copy</span>
               </button>
             </div>
             <strong id="supportUsdtBep20"
@@ -524,9 +534,10 @@
           <div style="background: var(--bg-soft); padding: 12px; border-radius: 12px; border: 1px solid var(--border);">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
               <span style="font-size: 0.7rem; font-weight: 800; color: var(--muted);">Solana (SOL)</span>
-              <button class="kpi-copy-btn" data-copy="supportSolana" title="Copiar dirección"
-                style="color: var(--primary);">
-                <span class="material-symbols-rounded" style="font-size: 0.95rem !important;">content_copy</span>
+              <button class="kpi-copy-btn" type="button" data-copy="supportSolana" title="Copiar dirección"
+                aria-label="Copiar dirección Solana" style="color: var(--primary);">
+                <span class="material-symbols-rounded" aria-hidden="true"
+                  style="font-size: 0.95rem !important;">content_copy</span>
               </button>
             </div>
             <strong id="supportSolana"
@@ -552,7 +563,7 @@
           <p class="modal-description subtitle" id="changelogReleaseMeta"></p>
         </div>
         <button class="modal-close icon-btn" id="closeChangelogBtn" type="button" title="Cerrar"
-          aria-label="Cerrar novedades"><span class="material-symbols-rounded">close</span></button>
+          aria-label="Cerrar novedades"><span class="material-symbols-rounded" aria-hidden="true">close</span></button>
       </div>
 
       <div class="modal-content changelog-content">
@@ -577,7 +588,8 @@
           <p class="modal-description subtitle">Elige la comisión que aplicará la tarjeta.</p>
         </div>
         <button class="modal-close icon-btn" id="closeBankProfilesBtn" type="button" title="Cerrar"
-          aria-label="Cerrar selector de banco"><span class="material-symbols-rounded">close</span></button>
+          aria-label="Cerrar selector de banco"><span class="material-symbols-rounded"
+            aria-hidden="true">close</span></button>
       </div>
 
       <div class="modal-content bank-profiles-content">
@@ -674,29 +686,33 @@
           <h2 class="modal-title" id="settingsTitle">Configuración</h2>
           <p class="modal-description subtitle">Estos valores se guardan en este dispositivo.</p>
         </div>
-        <button class="modal-close icon-btn" id="closeSettingsBtn" title="Cerrar" aria-label="Cerrar configuración"><span
-            class="material-symbols-rounded">close</span></button>
+        <button class="modal-close icon-btn" id="closeSettingsBtn" type="button" title="Cerrar"
+          aria-label="Cerrar configuración"><span class="material-symbols-rounded"
+            aria-hidden="true">close</span></button>
       </div>
 
       <div class="modal-content settings-content">
         <!-- 🎨 Apariencia -->
         <div class="settings-section">
           <div class="section-title">
-            <span class="material-symbols-rounded">palette</span>
+            <span class="material-symbols-rounded" aria-hidden="true">palette</span>
             <span>Apariencia</span>
           </div>
           <div class="field">
             <div class="segmented-control" id="themeSelector">
-              <button class="segment-btn active" data-theme-val="system" aria-label="Usar apariencia del sistema">
-                <span class="material-symbols-rounded">devices</span>
+              <button class="segment-btn active" type="button" data-theme-val="system" aria-pressed="true"
+                aria-label="Usar apariencia del sistema">
+                <span class="material-symbols-rounded" aria-hidden="true">devices</span>
                 <span>Sistema</span>
               </button>
-              <button class="segment-btn" data-theme-val="dark" aria-label="Forzar apariencia oscura">
-                <span class="material-symbols-rounded">dark_mode</span>
+              <button class="segment-btn" type="button" data-theme-val="dark" aria-pressed="false"
+                aria-label="Forzar apariencia oscura">
+                <span class="material-symbols-rounded" aria-hidden="true">dark_mode</span>
                 <span>Oscuro</span>
               </button>
-              <button class="segment-btn" data-theme-val="light" aria-label="Forzar apariencia clara">
-                <span class="material-symbols-rounded">light_mode</span>
+              <button class="segment-btn" type="button" data-theme-val="light" aria-pressed="false"
+                aria-label="Forzar apariencia clara">
+                <span class="material-symbols-rounded" aria-hidden="true">light_mode</span>
                 <span>Claro</span>
               </button>
             </div>
@@ -707,7 +723,7 @@
         <!-- 💳 Comisiones -->
         <div class="settings-section">
           <div class="section-title">
-            <span class="material-symbols-rounded">credit_card</span>
+            <span class="material-symbols-rounded" aria-hidden="true">credit_card</span>
             <span>Comisiones</span>
           </div>
           <div class="field">
@@ -730,7 +746,7 @@
 
         <div class="settings-section">
           <div class="section-title">
-            <span class="material-symbols-rounded">account_balance_wallet</span>
+            <span class="material-symbols-rounded" aria-hidden="true">account_balance_wallet</span>
             <span>Perfiles de banco</span>
           </div>
           <div class="bank-profile-settings-summary">
@@ -752,7 +768,7 @@
         <!-- 📈 Tasas -->
         <div class="settings-section">
           <div class="section-title">
-            <span class="material-symbols-rounded">monitoring</span>
+            <span class="material-symbols-rounded" aria-hidden="true">monitoring</span>
             <span>Tasas</span>
           </div>
           <div class="field">
@@ -770,7 +786,7 @@
         <!-- ⚙ Actualización -->
         <div class="settings-section">
           <div class="section-title">
-            <span class="material-symbols-rounded">sync</span>
+            <span class="material-symbols-rounded" aria-hidden="true">sync</span>
             <span>Actualización</span>
           </div>
           <div class="switch-row">
@@ -791,8 +807,8 @@
       <p id="installPromptDesc">Agrega CalcuFlow a tu pantalla de inicio para un acceso más rápido.</p>
     </div>
     <div class="install-prompt-actions">
-      <button class="btn-secondary" id="installDismissBtn">Ahora no</button>
-      <button class="btn-primary" id="installConfirmBtn">Instalar</button>
+      <button class="btn-secondary" id="installDismissBtn" type="button">Ahora no</button>
+      <button class="btn-primary" id="installConfirmBtn" type="button">Instalar</button>
     </div>
   </div>
 
