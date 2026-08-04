@@ -56,7 +56,7 @@ export function clearStatus() {
 
 export function showRateError(onRetry) {
   const message = document.createElement('span');
-  message.textContent = 'No se pudo cargar TasaVE. Conservando tasas manuales.';
+  message.textContent = 'No se pudieron actualizar las tasas. Conservando valores guardados.';
 
   const retryButton = document.createElement('button');
   retryButton.id = 'retryRatesBtn';
@@ -175,7 +175,7 @@ function formatBcvDate(isoStr) {
 /**
  * Render (or clear) the BCV effective date inside the BCV rate card.
  *
- * @param {string|null} isoStr  The `valid_from` string from TasaVE, or null.
+ * @param {string|null} isoStr  Provider effective-date string, or null.
  */
 export function renderBcvDate(isoStr) {
   if (!els.bcvEffectiveDate) return;

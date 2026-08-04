@@ -1,69 +1,67 @@
-/**
- * js/api.js — Rate source: TasaVE only
- *
- * Fetches from the public endpoint — no API key required:
- *   GET https://tasave.sudelca.com/v1/rates
- *
- * Response fields used:
- *   bcv_usd        → BCV (official USD rate)
- *   parallel_usdt  → P2P/parallel (USDT mid-market, preferred)
- *   parallel_buy   → fallback if parallel_usdt is absent
- *   parallel_sell  → fallback if parallel_usdt is absent
- *   valid_from     → BCV rate effective date (ISO 8601, Venezuela -04:00 offset)
- */
+/** DolarAPI Venezuela combined rates endpoint (no authentication required). */
+export const DOLARAPI_RATES = 'https://ve.dolarapi.com/v1/dolares';
 
-export const TASAVE_RATES = 'https://tasave.sudelca.com/v1/rates';
+const REQUEST_TIMEOUT_MS = 9000;
+
+function providerError(message) {
+  return new Error(`Proveedor de tasas: ${message}`);
+}
+
+function findUsdRate(data, source) {
+  return data.find(entry =>
+    entry &&
+    String(entry.moneda || '').trim().toLowerCase() === 'usd' &&
+    String(entry.fuente || '').trim().toLowerCase() === source
+  );
+}
+
+function positiveRate(entry, label) {
+  const rate = Number(entry.promedio);
+  if (!Number.isFinite(rate) || rate <= 0) {
+    throw providerError(`tasa ${label} no válida.`);
+  }
+  return rate;
+}
+
+function validDate(entry, label) {
+  const value = entry.fechaActualizacion;
+  if (typeof value !== 'string' || !value.trim() || !Number.isFinite(Date.parse(value))) {
+    throw providerError(`fecha de actualización ${label} no válida.`);
+  }
+  return value;
+}
 
 /**
- * Fetch BCV, P2P rates and BCV effective date from TasaVE public endpoint.
- *
- * Returns { bcv, p2p, bcvEffectiveDate } or throws on network / parse error.
- *
- * bcvEffectiveDate — ISO 8601 string from `valid_from`, e.g. "2026-07-11T00:00:00-04:00".
- *   The timezone offset is embedded in the string (Venezuela time, -04:00).
- *   Returns null if the field is absent or not a parseable date — callers must
- *   handle null gracefully and never calculate from it.
+ * Fetch and atomically normalize the official and parallel USD rates.
+ * Returns { bcv, p2p, bcvEffectiveDate, p2pUpdatedAt } or throws without
+ * exposing a partial result.
  */
 export async function fetchRates() {
-  const res = await fetch(TASAVE_RATES, { cache: 'no-store' });
-  if (!res.ok) throw new Error(`TasaVE: HTTP ${res.status}`);
-  const data = await res.json();
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
-  // BCV — official USD rate published by Banco Central de Venezuela
-  const bcv = Number(data.bcv_usd);
-  if (!Number.isFinite(bcv) || bcv <= 0) {
-    throw new Error('TasaVE: tasa BCV no válida.');
-  }
+  try {
+    const response = await fetch(DOLARAPI_RATES, {
+      cache: 'no-store',
+      signal: controller.signal
+    });
+    if (!response.ok) throw providerError(`respuesta HTTP ${response.status}.`);
 
-  // P2P / parallel — prefer the USDT mid-market rate
-  // If absent, derive mid from buy+sell; last resort: use whichever side exists
-  let p2p = Number(data.parallel_usdt);
-  if (!Number.isFinite(p2p) || p2p <= 0) {
-    const buy  = Number(data.parallel_buy);
-    const sell = Number(data.parallel_sell);
-    if (Number.isFinite(buy) && buy > 0 && Number.isFinite(sell) && sell > 0) {
-      p2p = (buy + sell) / 2;          // derive mid from both sides
-    } else if (Number.isFinite(sell) && sell > 0) {
-      p2p = sell;                       // sell only
-    } else if (Number.isFinite(buy) && buy > 0) {
-      p2p = buy;                        // buy only
-    }
-  }
-  if (!Number.isFinite(p2p) || p2p <= 0) {
-    throw new Error('TasaVE: tasa paralela no válida.');
-  }
+    const data = await response.json();
+    if (!Array.isArray(data)) throw providerError('la respuesta no es una lista válida.');
 
-  // BCV effective date — valid_from encodes the official validity start in
-  // Venezuela time (-04:00 offset embedded in the ISO string).
-  // We validate it is parseable; null is returned if it is absent or invalid.
-  let bcvEffectiveDate = null;
-  const rawDate = data.valid_from;
-  if (typeof rawDate === 'string' && rawDate.length >= 10) {
-    const parsed = new Date(rawDate);
-    if (!isNaN(parsed.getTime())) {
-      bcvEffectiveDate = rawDate; // keep the original string; timezone is already embedded
-    }
-  }
+    const official = findUsdRate(data, 'oficial');
+    if (!official) throw providerError('no se encontró la tasa oficial USD.');
+    const parallel = findUsdRate(data, 'paralelo');
+    if (!parallel) throw providerError('no se encontró la tasa paralela USD.');
 
-  return { bcv, p2p, bcvEffectiveDate };
+    const bcv = positiveRate(official, 'oficial');
+    const p2p = positiveRate(parallel, 'paralela');
+    const bcvEffectiveDate = validDate(official, 'oficial');
+    const p2pUpdatedAt = validDate(parallel, 'paralela');
+
+    return { bcv, p2p, bcvEffectiveDate, p2pUpdatedAt };
+  } finally {
+    clearTimeout(timeout);
+  }
 }

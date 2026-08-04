@@ -13,9 +13,10 @@ Banco → USDT operations using BCV, bank, and P2P rates.
 ## Non-negotiable behavior
 
 - Do not change financial formulas unless the user explicitly requests it.
-- Do not change TasaVE API behavior unless the user explicitly requests it.
+- Do not change DolarAPI Venezuela rate behavior unless the user explicitly
+  requests it.
 - Preserve sequential commission logic.
-- Do not add DolarApi or bank limits back to the application.
+- Do not add bank limits back to the application.
 - Do not add login, accounts, a backend, a database, or user tracking.
 - Avoid new frameworks and unnecessary dependencies.
 - Do not overbuild the requested change.
@@ -24,7 +25,7 @@ Banco → USDT operations using BCV, bank, and P2P rates.
 
 - `index.html`: application markup.
 - `css/style.css`: all application styling.
-- `js/api.js`: TasaVE rate retrieval and fallback handling.
+- `js/api.js`: DolarAPI Venezuela rate retrieval and validation.
 - `js/app.js`: application orchestration.
 - `js/calculator.js`: financial calculations.
 - `js/storage.js`: localStorage persistence.
@@ -53,19 +54,25 @@ python -m http.server 5500
 For every behavior or UI change, perform the relevant checks below:
 
 - Load the app without console errors.
-- Confirm rates load from TasaVE when the endpoint is available.
-- Confirm the saved localStorage rates remain the offline fallback.
-- Confirm BCV uses `bcv_usd`.
-- Confirm P2P uses `parallel_usdt`, with the existing buy/sell fallback.
+- Confirm both rates load from `https://ve.dolarapi.com/v1/dolares` when the
+  endpoint is available.
+- Confirm BCV uses `promedio` from the USD entry whose normalized `fuente` is
+  exactly `oficial`.
+- Confirm P2P / paralelo uses `promedio` from the USD entry whose normalized
+  `fuente` is exactly `paralelo`.
+- Confirm malformed, incomplete, or failed responses preserve the currently
+  displayed and saved `localStorage` rates and do not update the timestamp.
+- Confirm BCV and P2P remain manually editable.
+- Confirm automatic refresh replaces both rates only after the complete
+  response passes validation.
 - Exercise the 100, 500, and 1000 quick-amount controls.
 - Confirm calculations update when the amount changes.
 - Check the mobile layout at a narrow viewport.
-- Confirm there are no DolarApi references.
 - When service-worker assets change, verify its cache list/version remains
   consistent so users receive the updated files.
 
-There is currently no automated test suite. State which manual checks were
-performed and which could not be performed.
+Run the automated tests and state which additional manual checks were performed
+and which could not be performed.
 
 ## Git workflow
 

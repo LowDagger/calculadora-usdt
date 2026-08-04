@@ -4,21 +4,25 @@ PWA estática para calcular compra de USD en banco venezolano, comisiones y reto
 
 ## Fuente de tasas
 
-Las tasas se obtienen del endpoint público de **TasaVE** — sin API key, sin autenticación:
+Las tasas se obtienen del endpoint combinado público de **DolarAPI Venezuela** — sin API key ni autenticación:
 
 ```
-GET https://tasave.sudelca.com/v1/rates
+GET https://ve.dolarapi.com/v1/dolares
 ```
 
-Campos usados:
+La aplicación busca por `fuente` (sin depender del orden del arreglo) y exige
+entradas en USD completas antes de reemplazar las tasas mostradas:
 
-| Campo | Uso |
+| Entrada / campo | Uso |
 |---|---|
-| `bcv_usd` | Tasa BCV (oficial) |
-| `parallel_usdt` | Tasa paralela / P2P (mid USDT) |
-| `parallel_buy` / `parallel_sell` | Respaldo si `parallel_usdt` no está presente |
+| `fuente: "oficial"` → `promedio` | Tasa BCV |
+| `fuente: "paralelo"` → `promedio` | Tasa P2P / paralelo (referencia paralela; fuente documentada por DolarAPI: Yadio) |
+| Oficial → `fechaActualizacion` | Fecha efectiva mostrada como “Vigente…” |
+| Paralelo → `fechaActualizacion` | Frescura mostrada como “Actualizado hace…” |
 
-Si TasaVE no está disponible, el app conserva las tasas guardadas en localStorage.
+Si DolarAPI falla, tarda demasiado o devuelve datos incompletos/no válidos, la
+actualización se descarta por completo. La app conserva las tasas manuales o las
+guardadas en `localStorage`, sin alterar su marca de tiempo visible.
 
 ---
 
@@ -59,7 +63,7 @@ calculadora-usdt/
 ├── css/
 │   └── style.css
 ├── js/
-│   ├── api.js          # fetchRates() → TasaVE público
+│   ├── api.js          # fetchRates() → DolarAPI Venezuela
 │   ├── app.js          # Lógica principal
 │   ├── calculator.js   # Fórmulas financieras
 │   ├── storage.js      # localStorage
@@ -75,10 +79,10 @@ calculadora-usdt/
 ## Checklist de prueba manual
 
 - [ ] App carga sin errores de consola
-- [ ] Tasas cargan automáticamente desde TasaVE
-- [ ] Estado muestra "Tasas actualizadas desde TasaVE."
-- [ ] BCV mostrado coincide con `bcv_usd` de la respuesta
-- [ ] P2P mostrado coincide con `parallel_usdt`
+- [ ] Tasas cargan automáticamente desde DolarAPI
+- [ ] Estado muestra "Tasas actualizadas desde DolarAPI."
+- [ ] BCV coincide con `promedio` de la entrada USD `oficial`
+- [ ] P2P coincide con `promedio` de la entrada USD `paralelo`
 - [ ] Chips rápidos: 100 / 500 / 1000
 - [ ] Cálculos actualizan al cambiar el monto
-- [ ] Sin referencias a DolarApi en código fuente ni en consola
+- [ ] Sin referencias al proveedor anterior en código fuente ni en consola

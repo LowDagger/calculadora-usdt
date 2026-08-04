@@ -27,7 +27,7 @@ test('deduplicates rate requests and keeps initial success quiet', () => {
   assert.match(app, /ratesRequestInFlight = true;/);
   assert.match(app, /ratesRequestInFlight = false;[\s\S]*?setLoadingRates\(false\)/);
   assert.match(app, /window\.addEventListener\('load', \(\) => \{[\s\S]*?loadRates\(false\)/);
-  assert.match(app, /if \(showSuccessToast === true\) \{[\s\S]*?Tasas actualizadas desde TasaVE\./);
+  assert.match(app, /if \(showSuccessToast === true\) \{[\s\S]*?Tasas actualizadas desde DolarAPI\./);
 });
 
 test('renders a persistent accessible retry action through the same rate loader', () => {
@@ -47,5 +47,5 @@ test('marks result-card symbols as decorative and bumps the PWA cache', () => {
   assert.match(ui, /btn\.setAttribute\('aria-pressed', String\(isActive\)\)/);
   assert.match(app, /btn\.setAttribute\('aria-pressed', String\(isActive\)\)/);
   assert.match(html, /data-theme-val="system" aria-pressed="true"/);
-  assert.match(serviceWorker, /const APP_VERSION\s+= '30';/);
+  assert.match(serviceWorker, /const APP_VERSION\s+= '31';/);
 });

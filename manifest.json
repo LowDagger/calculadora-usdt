@@ -1,7 +1,7 @@
 {
   "name": "CalcuFlow",
   "short_name": "CalcuFlow",
-  "description": "Calcula operaciones Banco → USDT con tasas TasaVE en tiempo real.",
+  "description": "Calcula operaciones Banco → USDT con tasas DolarAPI en tiempo real.",
   "id": "/",
   "start_url": "/",
   "scope": "/",

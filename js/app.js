@@ -949,22 +949,26 @@ async function loadRates(showSuccessToast = false) {
   triggerHaptic();
   setLoadingRates(true);
   try {
-    const { bcv, p2p, bcvEffectiveDate } = await fetchRates();
+    const { bcv, p2p, bcvEffectiveDate, p2pUpdatedAt } = await fetchRates();
     els.bcvRate.value = bcv.toFixed(4);
     els.p2pRate.value = p2p.toFixed(4);
-    ratesLastUpdated = new Date();
-    const timeStr = ratesLastUpdated.toLocaleString('es-VE', { dateStyle: 'short', timeStyle: 'short' });
-    els.lastUpdate.dataset.absolute = `${timeStr} · TasaVE`;
+    ratesLastUpdated = new Date(p2pUpdatedAt);
+    const timeStr = ratesLastUpdated.toLocaleString('es-VE', {
+      dateStyle: 'short',
+      timeStyle: 'short',
+      timeZone: 'America/Caracas'
+    });
+    els.lastUpdate.dataset.absolute = `${timeStr} · DolarAPI`;
     updateRelativeTime();
     renderBcvDate(bcvEffectiveDate);
     clearRateError();
     if (showSuccessToast === true) {
-      showToast('Tasas actualizadas desde TasaVE.');
+      showToast('Tasas actualizadas desde DolarAPI.');
     }
     calculate();
     saveState(false);
   } catch (err) {
-    showToast('No se pudo cargar TasaVE. Conservando tasas manuales.', 'err');
+    showToast('No se pudieron actualizar las tasas. Conservando valores guardados.', 'err');
     showRateError(() => loadRates(true));
   } finally {
     ratesRequestInFlight = false;
