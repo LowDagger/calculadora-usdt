@@ -1,0 +1,7 @@
+{
+  "name": "calcuflow",
+  "private": true,
+  "type": "module",
+  "scripts": { "test": "node --test" },
+  "dependencies": { "web-push": "^3.6.7" }
+}

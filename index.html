@@ -166,7 +166,7 @@
       </section>
 
       <!-- Card 2: Rates grid (3 columns) -->
-      <h2 class="section-label">Tasas de hoy</h2>
+      <div class="rates-heading"><h2 class="section-label">Tasas de hoy</h2><button class="rate-alert-bell" id="openRateAlertsBtn" type="button" aria-label="Configurar alertas de tasas" aria-controls="rateAlertsPanel" aria-expanded="false"><span class="material-symbols-rounded" aria-hidden="true">notifications</span></button></div>
       <div class="rates-grid">
         <div class="rate-card">
           <div class="card-header">
@@ -340,6 +340,28 @@
           <button class="bs-helper-confirm" id="confirmBsHelperBtn" type="submit" disabled>Usar este monto</button>
         </div>
       </form>
+    </div>
+  </section>
+
+  <section class="modal-shell rate-alerts-panel" id="rateAlertsPanel" role="dialog" aria-modal="true" aria-labelledby="rateAlertsTitle" aria-hidden="true">
+    <div class="modal-panel modal-panel--medium rate-alerts-card">
+      <div class="modal-handle sheet-grab-handle" aria-hidden="true"></div>
+      <div class="modal-header"><div><h2 class="modal-title" id="rateAlertsTitle">Alertas de tasas</h2><p class="modal-description">Te avisamos aunque CalcuFlow esté cerrada.</p></div><button class="modal-close icon-btn" id="closeRateAlertsBtn" type="button" aria-label="Cerrar alertas"><span class="material-symbols-rounded" aria-hidden="true">close</span></button></div>
+      <div class="modal-content rate-alerts-content">
+        <p class="alert-permission" id="rateAlertPermission" role="status"></p>
+        <button class="alert-secondary" id="enableRateAlertsBtn" type="button">Activar notificaciones</button>
+        <form id="rateAlertForm" class="alert-form">
+          <div class="alert-field"><label for="alertRateType">Tasa</label><select id="alertRateType"><option value="p2p">USDT P2P</option><option value="bcv">BCV</option></select></div>
+          <div class="alert-field"><label for="alertDirection">Dirección</label><select id="alertDirection"><option value="up">Sube</option><option value="down">Baja</option><option value="any">Cualquier cambio</option></select></div>
+          <div class="alert-field"><label for="alertMeasurement">Medición</label><select id="alertMeasurement"><option value="ves">Bolívares</option><option value="percent">Porcentaje</option></select></div>
+          <div class="alert-field"><label for="alertThreshold">Cambio mínimo</label><div class="alert-input"><input id="alertThreshold" type="number" inputmode="decimal" min="1" step="1" required><span id="alertThresholdUnit">Bs</span></div><div class="alert-quick-values" id="alertQuickValues"></div></div>
+          <p class="alert-reference" id="alertReference"></p><p class="alert-explanation" id="alertExplanation"></p>
+          <label class="alert-recurring"><input id="alertRecurring" type="checkbox"> <span>Repetir después de alertar</span></label>
+          <button class="alert-primary" type="submit">Crear alerta</button>
+        </form>
+        <button class="alert-secondary" id="testRateAlertBtn" type="button" hidden>Enviar notificación de prueba</button>
+        <div><h3 class="alert-list-title">Tus alertas</h3><div id="rateAlertsList" class="alert-list"><p class="alert-empty">Todavía no tienes alertas.</p></div></div>
+      </div>
     </div>
   </section>
 
@@ -841,6 +863,7 @@
 
 
   <script type="module" src="/js/app.js"></script>
+  <script type="module" src="/js/rate-alerts.js"></script>
 
   <script defer src="/_vercel/insights/script.js"></script>
   <script defer src="/_vercel/speed-insights/script.js"></script>

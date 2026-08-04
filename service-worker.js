@@ -1,6 +1,6 @@
 // ─── Version ──────────────────────────────────────────────────────────────────
 // Bump APP_VERSION on every new deployment to bust the old cache automatically.
-const APP_VERSION  = '31';
+const APP_VERSION  = '32';
 const CACHE_NAME   = `calcuflow-v${APP_VERSION}`;
 
 // ─── Pre-cache manifest ───────────────────────────────────────────────────────
@@ -19,6 +19,7 @@ const PRECACHE_ASSETS = [
   '/js/storage.js',
   '/js/ui.js',
   '/js/utils.js',
+  '/js/rate-alerts.js',
   '/assets/icon.svg',
   '/assets/banks/banco-de-venezuela.png',
   '/assets/banks/bbva-provisional.png',
@@ -116,4 +117,17 @@ self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SKIP_WAITING') {
     self.skipWaiting();
   }
+});
+
+self.addEventListener('push', (event) => {
+  let payload = {};
+  try { payload = event.data ? event.data.json() : {}; } catch (_) { payload = {}; }
+  const title = typeof payload.title === 'string' ? payload.title.slice(0, 80) : 'Alerta de tasa · CalcuFlow';
+  const options = { body: typeof payload.body === 'string' ? payload.body.slice(0, 180) : 'Una tasa alcanzó el cambio configurado.', icon: '/assets/icon.svg', badge: '/assets/icon.svg', tag: typeof payload.tag === 'string' ? payload.tag : 'rate-alert', data: { url: typeof payload.url === 'string' && payload.url.startsWith('/') ? payload.url : '/?alerts=open' } };
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close(); const url = new URL(event.notification.data?.url || '/?alerts=open', self.location.origin).href;
+  event.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(async clients => { for (const client of clients) { if (new URL(client.url).origin === self.location.origin) { await client.focus(); if ('navigate' in client) await client.navigate(url); return; } } return self.clients.openWindow(url); }));
 });

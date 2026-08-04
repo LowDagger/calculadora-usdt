@@ -1,0 +1,11 @@
+import { fetchRates } from '../../js/api.js'; import { evaluateAlert, observationUpdate, successfulDeliveryUpdate } from '../../lib/rate-alerts.js'; import { cors, db, safeEqual, send } from '../_lib/http.js'; import { deliver } from '../_lib/push.js';
+const MAX_PROVIDER_AGE_MS = 36 * 60 * 60 * 1000;
+export default async function handler(req, res) { if (!cors(req, res, 'GET, POST, OPTIONS')) return; if (!['GET', 'POST'].includes(req.method)) return send(res, 405, { error: 'Método no permitido' });
+  const supplied = String(req.headers.authorization || '').replace(/^Bearer\s+/i, '') || req.query.secret; if (!safeEqual(supplied, process.env.CRON_SECRET)) return send(res, 401, { error: 'No autorizado' });
+  try { const rates = await fetchRates(); const timestamps = { bcv: rates.bcvEffectiveDate, p2p: rates.p2pUpdatedAt }; const now = new Date(); if (Object.values(timestamps).some(value => !Number.isFinite(Date.parse(value)) || now - new Date(value) > MAX_PROVIDER_AGE_MS || new Date(value) - now > 5 * 60 * 1000)) throw new Error('Provider response is stale');
+    const alerts = await db('rate_alerts?active=eq.true&select=*'); let triggered = 0;
+    for (const alert of alerts) { const rate = rates[alert.rate_type]; const timestamp = timestamps[alert.rate_type]; const result = evaluateAlert(alert, rate, timestamp, now); if (result.reason === 'duplicate' || result.reason === 'cooldown') continue;
+      if (result.triggered) { const count = await deliver(alert.device_id, { title: `Tasa ${alert.rate_type === 'bcv' ? 'BCV' : 'USDT P2P'}`, body: `Ahora está en ${Number(rate).toLocaleString('es-VE', { maximumFractionDigits: 2 })} Bs.`, url: '/?alerts=open', tag: `rate-alert-${alert.id}` }); if (count) { await db(`rate_alerts?id=eq.${alert.id}`, { method: 'PATCH', body: JSON.stringify(successfulDeliveryUpdate(alert, rate, timestamp, now)) }); triggered++; } }
+      else await db(`rate_alerts?id=eq.${alert.id}`, { method: 'PATCH', body: JSON.stringify(observationUpdate(rate, timestamp)) });
+    } send(res, 200, { checked: alerts.length, triggered });
+  } catch (error) { console.error('Rate alert check failed:', error.message); send(res, 503, { error: 'No se pudieron validar tasas frescas' }); } }
