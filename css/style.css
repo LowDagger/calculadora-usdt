@@ -399,7 +399,7 @@ textarea,
 /* Quick Chips */
 .quick-row {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(68px, 1fr));
   gap: 8px;
 }
 
@@ -1263,6 +1263,18 @@ html[data-theme="light"] .kpi-loss {
   display: inline;
 }
 
+.bank-profile-edit-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: var(--bg-soft);
+  color: var(--muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.15rem;
+}
+
 .bank-profile-manage-label {
   color: var(--muted);
   font-size: 0.62rem;
@@ -1454,6 +1466,164 @@ html[data-theme="light"] .kpi-loss {
 .bank-profile-logo-status:not(:empty) {
   color: var(--primary);
   font-weight: 700;
+}
+
+.bank-profile-quick-field {
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  background: var(--bg-soft);
+  overflow: hidden;
+}
+
+.bank-profile-quick-summary {
+  width: 100%;
+  min-height: 54px;
+  padding: 10px;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.bank-profile-quick-summary:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: -2px;
+}
+
+.bank-profile-quick-summary-copy {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.bank-profile-quick-summary-mode,
+.bank-profile-quick-summary-values {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 0.64rem;
+  font-weight: 700;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bank-profile-quick-summary-values {
+  font-weight: 600;
+}
+
+.bank-profile-quick-chevron {
+  color: var(--muted);
+  font-size: 1.1rem;
+  transition: transform 0.18s ease;
+}
+
+.bank-profile-quick-field.is-open .bank-profile-quick-chevron {
+  transform: rotate(180deg);
+}
+
+.bank-profile-quick-details {
+  display: grid;
+  gap: 9px;
+  padding: 0 10px 10px;
+}
+
+.bank-profile-quick-help {
+  margin: -2px 0 0;
+  color: var(--muted);
+  font-size: 0.68rem;
+  line-height: 1.35;
+}
+
+.bank-profile-quick-mode,
+.bank-profile-quick-actions,
+.bank-profile-quick-editor,
+.bank-profile-quick-list {
+  display: grid;
+  gap: 8px;
+}
+
+.bank-profile-quick-editor {
+  margin-top: 8px;
+}
+
+.bank-profile-quick-mode label {
+  min-height: 36px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.bank-profile-quick-item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) 38px;
+  gap: 6px;
+  align-items: center;
+}
+
+.bank-profile-quick-item input {
+  min-height: 38px;
+}
+
+.bank-profile-quick-prefix {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.bank-profile-quick-icon {
+  min-height: 38px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--surface);
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.bank-profile-quick-icon .material-symbols-rounded {
+  font-size: 1rem;
+}
+
+.bank-profile-quick-preview,
+.general-quick-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(68px, 1fr));
+  gap: 7px;
+}
+
+.bank-profile-quick-preview-chip {
+  min-height: 34px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.bank-profile-quick-general-note,
+.bank-profile-quick-limit {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.64rem;
+  line-height: 1.35;
+}
+
+.general-quick-actions {
+  display: grid;
+  gap: 8px;
+  margin-top: 8px;
 }
 
 .field-label {
@@ -2531,7 +2701,7 @@ html[data-theme="light"] .skeleton-shimmer::after {
   background: var(--surface);
   color: var(--text);
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 10px;
   font: inherit;
@@ -2543,7 +2713,7 @@ html[data-theme="light"] .skeleton-shimmer::after {
 .changelog-announcement-status {
   min-width: 0;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 8px;
 }
 
@@ -2557,25 +2727,64 @@ html[data-theme="light"] .skeleton-shimmer::after {
 }
 
 .changelog-announcement-copy {
-  overflow: hidden;
+  min-width: 0;
   font-size: 0.68rem;
   font-weight: 700;
   line-height: 1.25;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  display: grid;
+  gap: 2px;
+}
+
+.changelog-announcement-label {
+  color: var(--primary);
+  font-size: 0.56rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.changelog-announcement-copy > span:last-child {
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.changelog-announcement-actions {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.changelog-announcement-action,
+.changelog-announcement-dismiss {
+  min-height: 34px;
+  border: 1px solid color-mix(in srgb, var(--primary) 42%, var(--border));
+  border-radius: 9px;
+  background: var(--primary);
+  color: #ffffff;
+  font: inherit;
+  font-size: 0.65rem;
+  font-weight: 800;
+  cursor: pointer;
 }
 
 .changelog-announcement-action {
-  flex: 0 0 auto;
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
-  color: var(--primary);
-  font-size: 0.65rem;
-  font-weight: 800;
+  padding: 6px 9px;
 }
 
-.changelog-announcement-action .material-symbols-rounded {
+.changelog-announcement-action--secondary,
+.changelog-announcement-dismiss {
+  background: var(--bg-soft);
+  color: var(--primary);
+}
+
+.changelog-announcement-dismiss {
+  width: 34px;
+  padding: 0;
+}
+
+.changelog-announcement-dismiss .material-symbols-rounded {
   font-size: 1rem;
 }
 
@@ -2591,7 +2800,8 @@ html[data-theme="light"] .skeleton-shimmer::after {
   background: color-mix(in srgb, var(--primary-bg) 48%, var(--surface));
 }
 
-.changelog-announcement:focus-visible {
+.changelog-announcement-action:focus-visible,
+.changelog-announcement-dismiss:focus-visible {
   outline: 2px solid var(--primary);
   outline-offset: 2px;
 }

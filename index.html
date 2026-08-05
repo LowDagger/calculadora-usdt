@@ -119,18 +119,29 @@
       </div>
     </header>
 
-    <button class="changelog-announcement" id="openTopChangelogBtn" type="button"
-      aria-controls="changelogPanel" aria-expanded="false" hidden>
-      <span class="changelog-announcement-status">
+    <section class="changelog-announcement" id="openTopChangelogBtn" aria-labelledby="topChangelogSummary" hidden>
+      <div class="changelog-announcement-status">
         <span class="changelog-announcement-dot" aria-hidden="true"></span>
-        <span class="changelog-announcement-copy" id="topChangelogSummary">Nuevo: perfiles bancarios y mejoras
-          recientes</span>
-      </span>
-      <span class="changelog-announcement-action" aria-hidden="true">
-        <span>Ver</span>
-        <span class="material-symbols-rounded" aria-hidden="true">chevron_right</span>
-      </span>
-    </button>
+        <span class="changelog-announcement-copy">
+          <span class="changelog-announcement-label">Nuevo</span>
+          <strong id="topChangelogSummary">Montos rápidos para cada banco</strong>
+          <span>Ahora puedes elegir los montos que quieres tener a mano en cada perfil bancario.</span>
+        </span>
+      </div>
+      <div class="changelog-announcement-actions">
+        <button class="changelog-announcement-action" id="configureQuickAmountsAnnouncementBtn" type="button">
+          Configurar ahora
+        </button>
+        <button class="changelog-announcement-action changelog-announcement-action--secondary"
+          id="learnQuickAmountsAnnouncementBtn" type="button" aria-controls="changelogPanel" aria-expanded="false">
+          Cómo funciona
+        </button>
+        <button class="changelog-announcement-dismiss" id="dismissQuickAmountsAnnouncementBtn" type="button"
+          aria-label="Ocultar novedad de montos rápidos">
+          <span class="material-symbols-rounded" aria-hidden="true">close</span>
+        </button>
+      </div>
+    </section>
 
     <main class="layout" id="mainCalculator" tabindex="-1">
       <!-- Card 1: Calculator input card -->
@@ -143,7 +154,7 @@
         </div>
         <p class="amount-input-error" id="usdAmountError" role="alert" hidden></p>
 
-        <div class="quick-row">
+        <div class="quick-row" id="quickAmountRow" aria-label="Montos rápidos">
           <button class="chip-btn" type="button" data-quick="100">100</button>
           <button class="chip-btn" type="button" data-quick="500">500</button>
           <button class="chip-btn" type="button" data-quick="1000">1000</button>
@@ -689,6 +700,46 @@
               accept="image/png,image/jpeg,image/webp" aria-describedby="bankProfileLogoHelp bankProfileLogoStatus">
           </div>
 
+          <div class="field bank-profile-quick-field" id="bankProfileQuickAmountsField">
+            <button class="bank-profile-quick-summary" id="bankProfileQuickSummaryBtn" type="button"
+              aria-expanded="false" aria-controls="bankProfileQuickDetails">
+              <span class="bank-profile-quick-summary-copy">
+                <span class="field-label" id="bankProfileQuickHeading">Montos rápidos</span>
+                <span class="bank-profile-quick-summary-mode" id="bankProfileQuickSummaryMode">Usando montos generales</span>
+                <span class="bank-profile-quick-summary-values" id="bankProfileQuickSummaryValues">$100 · $500 · $1.000</span>
+              </span>
+              <span class="material-symbols-rounded bank-profile-quick-chevron" aria-hidden="true">expand_more</span>
+            </button>
+            <div class="bank-profile-quick-details" id="bankProfileQuickDetails" hidden>
+            <p class="bank-profile-quick-help" id="bankProfileQuickAmountsHelp">
+              Elige hasta 4 montos que quieras tener a mano cuando uses este banco.
+            </p>
+            <div class="bank-profile-quick-mode" role="group" aria-describedby="bankProfileQuickAmountsHelp">
+              <label>
+                <input id="quickAmountsUseGeneral" type="radio" name="bankProfileQuickMode" value="general">
+                <span>Usar montos generales</span>
+              </label>
+              <label>
+                <input id="quickAmountsUseCustom" type="radio" name="bankProfileQuickMode" value="custom">
+                <span>Personalizar para este banco</span>
+              </label>
+            </div>
+            <div class="bank-profile-quick-editor" id="quickAmountsEditor">
+              <p class="bank-profile-quick-general-note" id="quickAmountsGeneralNote">
+                Este banco utilizará los montos generales configurados en la aplicación.
+              </p>
+              <div class="bank-profile-quick-preview" id="quickAmountsPreview"></div>
+              <div class="bank-profile-quick-list" id="quickAmountsList"></div>
+              <div class="bank-profile-quick-actions">
+                <button class="bank-profile-action bank-profile-action--secondary" id="addQuickAmountBtn"
+                  type="button">Añadir monto</button>
+                <span class="bank-profile-quick-limit" id="quickAmountsLimitMessage" role="status"
+                  aria-live="polite" hidden>Máximo 4 montos.</span>
+              </div>
+            </div>
+            </div>
+          </div>
+
           <p class="bank-profile-form-error" id="bankProfileFormError" role="alert" hidden></p>
 
           <div class="bank-profile-editor-actions">
@@ -795,6 +846,25 @@
               <span>Administrar perfiles</span>
               <span class="material-symbols-rounded" aria-hidden="true">chevron_right</span>
             </button>
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <div class="section-title">
+            <span class="material-symbols-rounded" aria-hidden="true">payments</span>
+            <span>Montos generales</span>
+          </div>
+          <div class="field">
+            <p class="field-desc">Montos de referencia usados por los bancos sin personalización.</p>
+            <div class="general-quick-list" id="generalQuickAmountsList"></div>
+            <div class="general-quick-actions">
+              <button class="bank-profile-action bank-profile-action--secondary" id="addGeneralQuickAmountBtn"
+                type="button">Añadir monto</button>
+              <button class="bank-profile-action bank-profile-action--secondary" id="restoreGeneralQuickAmountsBtn"
+                type="button">Restaurar montos generales</button>
+              <button class="bank-profile-action bank-profile-action--primary" id="saveGeneralQuickAmountsBtn"
+                type="button">Guardar montos</button>
+            </div>
           </div>
         </div>
 
