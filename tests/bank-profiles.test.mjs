@@ -7,24 +7,32 @@ import {
   BANK_PROFILE_STATE_VERSION,
   BANK_PROFILE_STORAGE_KEY,
   DEFAULT_BANK_PROFILES,
+  DEFAULT_QUICK_AMOUNTS,
   DEFAULT_PROFILE_ID,
   MANUAL_PROFILE_ID,
+  getGeneralQuickAmounts,
   getEffectiveSelectedBankProfile,
   getBankProfile,
   getBankProfiles,
+  getProfileQuickAmounts,
   getSelectedBankProfile,
   groupBankProfiles,
   hasDuplicateProfileName,
   loadBankProfileState,
   readBankProfileState,
   removeBankProfile,
+  restoreGeneralQuickAmounts,
   restoreBankProfile,
   restoreDefaultBankProfiles,
   saveBankProfileState,
   sanitizeBankProfileState,
+  sanitizeQuickAmounts,
   sanitizeProfileLogo,
   selectBankProfile,
   updateBankProfile,
+  updateGeneralQuickAmounts,
+  updateProfileQuickAmounts,
+  useGeneralQuickAmountsForProfile,
   upsertCustomProfile
 } from '../js/bank-profiles.js';
 import { calculateValues } from '../js/calculator.js';
@@ -61,7 +69,7 @@ function memoryStorage(initial = {}, { quotaError = false } = {}) {
 }
 
 test('includes every immutable initial bank profile and reported percentage', () => {
-  assert.equal(BANK_PROFILE_STATE_VERSION, 2);
+  assert.equal(BANK_PROFILE_STATE_VERSION, 3);
   assert.equal(DEFAULT_BANK_PROFILES.length, 8);
   assert.deepEqual(
     Object.fromEntries(DEFAULT_BANK_PROFILES.map(profile => [profile.id, profile.defaultFee])),
@@ -170,6 +178,52 @@ test('allows deleting defaults but never the final remaining profile', () => {
   assert.equal(unchanged.profiles[0].id, finalId);
 });
 
+test('manages general and bank-specific quick amounts without cross-profile leakage', () => {
+  let state = sanitizeBankProfileState({});
+  assert.equal(state.version, BANK_PROFILE_STATE_VERSION);
+  assert.deepEqual(getGeneralQuickAmounts(state), [...DEFAULT_QUICK_AMOUNTS]);
+  assert.deepEqual(getProfileQuickAmounts(state, 'bdv-fisica'), [...DEFAULT_QUICK_AMOUNTS]);
+
+  state = updateGeneralQuickAmounts(state, [100, '250', 500, 2000]);
+  assert.deepEqual(getProfileQuickAmounts(state, 'bdv-fisica'), [100, 250, 500, 2000]);
+  assert.deepEqual(getProfileQuickAmounts(state, 'banesco-fisica'), [100, 250, 500, 2000]);
+
+  state = updateProfileQuickAmounts(state, 'bdv-fisica', [200, 750]);
+  assert.deepEqual(getProfileQuickAmounts(state, 'bdv-fisica'), [200, 750]);
+  assert.deepEqual(getProfileQuickAmounts(state, 'banesco-fisica'), [100, 250, 500, 2000]);
+
+  state = updateGeneralQuickAmounts(state, [300, 600]);
+  assert.deepEqual(getProfileQuickAmounts(state, 'bdv-fisica'), [200, 750]);
+  assert.deepEqual(getProfileQuickAmounts(state, 'banesco-fisica'), [300, 600]);
+
+  state = useGeneralQuickAmountsForProfile(state, 'bdv-fisica');
+  assert.deepEqual(getProfileQuickAmounts(state, 'bdv-fisica'), [300, 600]);
+
+  state = restoreGeneralQuickAmounts(state);
+  assert.deepEqual(getGeneralQuickAmounts(state), [...DEFAULT_QUICK_AMOUNTS]);
+});
+
+test('validates quick amounts and supports add, edit, delete, and reorder representations', () => {
+  assert.deepEqual(sanitizeQuickAmounts([100]), [100]);
+  assert.deepEqual(sanitizeQuickAmounts(['200', 250, 500, 10000]), [200, 250, 500, 10000]);
+  assert.equal(sanitizeQuickAmounts([]), null);
+  assert.equal(sanitizeQuickAmounts([100, 100]), null);
+  assert.equal(sanitizeQuickAmounts([0]), null);
+  assert.equal(sanitizeQuickAmounts([-100]), null);
+  assert.equal(sanitizeQuickAmounts(['abc']), null);
+  assert.equal(sanitizeQuickAmounts([Infinity]), null);
+  assert.equal(sanitizeQuickAmounts([NaN]), null);
+  assert.equal(sanitizeQuickAmounts([10001]), null);
+  assert.equal(sanitizeQuickAmounts([1, 2, 3, 4, 5]), null);
+
+  let state = sanitizeBankProfileState({});
+  state = updateProfileQuickAmounts(state, 'bnc', [100, 200, 500]);
+  state = updateProfileQuickAmounts(state, 'bnc', [200, 100, 500]);
+  assert.deepEqual(getProfileQuickAmounts(state, 'bnc'), [200, 100, 500]);
+  state = updateProfileQuickAmounts(state, 'bnc', [200, 500]);
+  assert.deepEqual(getProfileQuickAmounts(state, 'bnc'), [200, 500]);
+});
+
 test('detects duplicate names case-insensitively while supporting stable-id edits', () => {
   const state = sanitizeBankProfileState({});
   assert.equal(hasDuplicateProfileName(state, '  bAnCaMiGa  '), true);
@@ -179,7 +233,7 @@ test('detects duplicate names case-insensitively while supporting stable-id edit
 
 test('sanitizes invalid V2 records, duplicate ids, unknown ids, fees, and logos', () => {
   const state = sanitizeBankProfileState({
-    version: 2,
+    version: BANK_PROFILE_STATE_VERSION,
     selectedId: 'unknown',
     profiles: [
       {
@@ -221,11 +275,30 @@ test('migrates valid V1 data idempotently and preserves selection, edits, and cu
   const migrated = sanitizeBankProfileState(oldState);
   const repeated = sanitizeBankProfileState(migrated);
 
-  assert.equal(migrated.version, 2);
+  assert.equal(migrated.version, BANK_PROFILE_STATE_VERSION);
   assert.equal(migrated.selectedId, 'custom-familiar');
   assert.equal(getBankProfile(migrated, 'bancamiga').fee, 4.5);
   assert.equal(getSelectedBankProfile(migrated).name, 'Banco Familiar');
   assert.deepEqual(repeated, migrated);
+});
+
+test('migrates existing V2 users to general quick amounts without data loss', () => {
+  const oldState = {
+    version: 2,
+    selectedId: 'custom-familiar',
+    profiles: [
+      { id: 'bdv-fisica', name: 'Banco Principal', cardType: 'Física', fee: 2.75, icon: null },
+      { id: 'custom-familiar', name: 'Banco Familiar', cardType: 'Débito', fee: 1.25, icon: null }
+    ]
+  };
+  const migrated = sanitizeBankProfileState(oldState);
+
+  assert.equal(migrated.version, BANK_PROFILE_STATE_VERSION);
+  assert.equal(migrated.selectedId, 'custom-familiar');
+  assert.equal(getBankProfile(migrated, 'bdv-fisica').name, 'Banco Principal');
+  assert.equal(getBankProfile(migrated, 'custom-familiar').fee, 1.25);
+  assert.deepEqual(getGeneralQuickAmounts(migrated), [...DEFAULT_QUICK_AMOUNTS]);
+  assert.deepEqual(getProfileQuickAmounts(migrated, 'custom-familiar'), [...DEFAULT_QUICK_AMOUNTS]);
 });
 
 test('handles missing, unknown, and corrupt storage without silently overwriting it', () => {
@@ -240,7 +313,7 @@ test('handles missing, unknown, and corrupt storage without silently overwriting
   assert.equal(read.warning, 'corrupt');
   assert.equal(corrupt.value(BANK_PROFILE_STORAGE_KEY), corruptRaw);
 
-  const unusableRaw = JSON.stringify({ version: 2, selectedId: 'gone', profiles: [] });
+  const unusableRaw = JSON.stringify({ version: BANK_PROFILE_STATE_VERSION, selectedId: 'gone', profiles: [] });
   const unusable = memoryStorage({ [BANK_PROFILE_STORAGE_KEY]: unusableRaw });
   const unusableRead = readBankProfileState(unusable);
   assert.equal(unusableRead.warning, 'profiles-invalid');
@@ -255,7 +328,7 @@ test('handles missing, unknown, and corrupt storage without silently overwriting
   assert.equal(future.value(BANK_PROFILE_STORAGE_KEY), futureRaw);
 
   const unknownSelection = sanitizeBankProfileState({
-    version: 2,
+    version: BANK_PROFILE_STATE_VERSION,
     selectedId: 'missing-profile',
     profiles: sanitizeBankProfileState({}).profiles
   });
@@ -305,7 +378,7 @@ test('restores the exact immutable defaults and removes every custom or modified
   assert.ok(getBankProfiles(restored).every(profile => profile.isModified === false));
 });
 
-test('persists the V2 profile collection across reloads', () => {
+test('persists the current profile collection across reloads', () => {
   const storage = memoryStorage();
   let state = sanitizeBankProfileState({});
   state = updateBankProfile(state, { ...getBankProfile(state, 'bancamiga'), fee: 4.5 });
@@ -319,7 +392,7 @@ test('persists the V2 profile collection across reloads', () => {
   saveBankProfileState(storage, state);
   const reloaded = loadBankProfileState(storage);
 
-  assert.equal(reloaded.version, 2);
+  assert.equal(reloaded.version, BANK_PROFILE_STATE_VERSION);
   assert.equal(reloaded.selectedId, 'custom-banco-familiar');
   assert.equal(getBankProfile(reloaded, 'bancamiga').fee, 4.5);
   assert.equal(getSelectedBankProfile(reloaded).name, 'Banco Familiar');

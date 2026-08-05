@@ -81,6 +81,12 @@
       }
     }
   </style>
+  <!-- Cloudflare Web Analytics — replace the placeholder with the token from the Cloudflare dashboard -->
+  <script
+    defer
+    src="https://static.cloudflareinsights.com/beacon.min.js"
+    data-cf-beacon='{"token":"PASTE_CLOUDFLARE_BEACON_TOKEN_HERE"}'>
+  </script>
 </head>
 
 <body>
@@ -137,7 +143,7 @@
         </div>
         <p class="amount-input-error" id="usdAmountError" role="alert" hidden></p>
 
-        <div class="quick-row">
+        <div class="quick-row" id="quickAmountRow" aria-label="Montos rápidos">
           <button class="chip-btn" type="button" data-quick="100">100</button>
           <button class="chip-btn" type="button" data-quick="500">500</button>
           <button class="chip-btn" type="button" data-quick="1000">1000</button>
@@ -681,6 +687,32 @@
             </div>
             <input id="bankProfileLogoInput" class="visually-hidden" type="file"
               accept="image/png,image/jpeg,image/webp" aria-describedby="bankProfileLogoHelp bankProfileLogoStatus">
+          </div>
+
+          <div class="field bank-profile-quick-field" id="bankProfileQuickAmountsField">
+            <div class="label-row"><span class="field-label">Montos rápidos</span></div>
+            <p class="bank-profile-quick-help" id="bankProfileQuickAmountsHelp">
+              Configura hasta 4 montos de referencia. Pueden variar según la disponibilidad de cada intervención.
+            </p>
+            <div class="bank-profile-quick-mode" role="group" aria-describedby="bankProfileQuickAmountsHelp">
+              <label>
+                <input id="quickAmountsUseGeneral" type="radio" name="bankProfileQuickMode" value="general">
+                <span>Usar montos generales</span>
+              </label>
+              <label>
+                <input id="quickAmountsUseCustom" type="radio" name="bankProfileQuickMode" value="custom">
+                <span>Personalizar para este banco</span>
+              </label>
+            </div>
+            <div class="bank-profile-quick-editor" id="quickAmountsEditor">
+              <div class="bank-profile-quick-list" id="quickAmountsList"></div>
+              <div class="bank-profile-quick-actions">
+                <button class="bank-profile-action bank-profile-action--secondary" id="addQuickAmountBtn"
+                  type="button">Añadir monto</button>
+                <button class="bank-profile-action bank-profile-action--secondary" id="restoreGeneralQuickAmountsBtn"
+                  type="button">Restaurar montos generales</button>
+              </div>
+            </div>
           </div>
 
           <p class="bank-profile-form-error" id="bankProfileFormError" role="alert" hidden></p>

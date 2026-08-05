@@ -3,11 +3,14 @@ import { markBcvRecordCached } from './bcv-rates.js';
 import { MAX_REQUESTED_USD, calculateValues, currentBankRate, sanitizeRequestedUsdInput, validateRequestedUsd } from './calculator.js';
 import {
   DEFAULT_PROFILE_ID,
+  DEFAULT_QUICK_AMOUNTS,
   MANUAL_PROFILE_ID,
   createProfileInitials,
   getEffectiveSelectedBankProfile,
   getBankProfile,
   getBankProfiles,
+  getGeneralQuickAmounts,
+  getProfileQuickAmounts,
   getSelectedBankProfile,
   groupBankProfiles,
   hasDuplicateProfileName,
@@ -16,9 +19,13 @@ import {
   restoreBankProfile,
   restoreDefaultBankProfiles,
   sanitizeCardFee,
+  sanitizeQuickAmounts,
   saveBankProfileState,
   selectBankProfile,
   updateBankProfile,
+  updateGeneralQuickAmounts,
+  updateProfileQuickAmounts,
+  useGeneralQuickAmountsForProfile,
   upsertCustomProfile
 } from './bank-profiles.js';
 import { renderBankLogo } from './bank-logo.js';
@@ -26,7 +33,7 @@ import { processBankLogo } from './bank-logo-processing.js';
 import { initChangelog } from './changelog.js';
 import { loadState as readState, saveState as writeState } from './storage.js';
 import { money, n, triggerHaptic } from './utils.js';
-import { els, setStatus, clearStatus, showRateError, clearRateError, setLoadingRates, showToast, renderEmpty, renderRates, renderResult, renderBcvDate, renderUsdAmountValidation, openSettings, closeSettings, openBreakdown, closeBreakdown, openSupport, closeSupport, lockBodyScroll, unlockBodyScroll } from './ui.js';
+import { els, updateUsdToBuyDisplay, setStatus, clearStatus, showRateError, clearRateError, setLoadingRates, showToast, renderEmpty, renderRates, renderResult, renderBcvDate, renderUsdAmountValidation, openSettings, closeSettings, openBreakdown, closeBreakdown, openSupport, closeSupport, lockBodyScroll, unlockBodyScroll } from './ui.js';
 
 let ratesLastUpdated = null;
 let ratesRequestInFlight = false;
@@ -82,6 +89,13 @@ const bankProfileEls = {
   chooseLogo: document.getElementById('chooseBankProfileLogoBtn'),
   removeLogo: document.getElementById('removeBankProfileLogoBtn'),
   logoStatus: document.getElementById('bankProfileLogoStatus'),
+  quickField: document.getElementById('bankProfileQuickAmountsField'),
+  quickUseGeneral: document.getElementById('quickAmountsUseGeneral'),
+  quickUseCustom: document.getElementById('quickAmountsUseCustom'),
+  quickEditor: document.getElementById('quickAmountsEditor'),
+  quickList: document.getElementById('quickAmountsList'),
+  quickAdd: document.getElementById('addQuickAmountBtn'),
+  quickRestoreGeneral: document.getElementById('restoreGeneralQuickAmountsBtn'),
   error: document.getElementById('bankProfileFormError'),
   restore: document.getElementById('restoreBankProfileBtn'),
   remove: document.getElementById('deleteBankProfileBtn'),
@@ -207,6 +221,27 @@ function persistBankProfiles(nextState = bankProfileState, { preserveEditor = fa
     else setStatus(message, 'warn');
     return false;
   }
+}
+
+function getVisibleQuickAmounts() {
+  if (!bankProfileState) return [...DEFAULT_QUICK_AMOUNTS];
+  return getProfileQuickAmounts(bankProfileState, bankProfileState.selectedId);
+}
+
+function renderQuickAmountChips() {
+  const row = document.getElementById('quickAmountRow');
+  if (!row) return;
+  const buttons = getVisibleQuickAmounts().map(amount => {
+    const button = document.createElement('button');
+    button.className = 'chip-btn';
+    button.type = 'button';
+    button.dataset.quick = String(amount);
+    button.setAttribute('aria-pressed', 'false');
+    button.textContent = String(amount);
+    return button;
+  });
+  row.replaceChildren(...buttons);
+  updateUsdToBuyDisplay(els.usdToBuy.value);
 }
 
 function renderActiveBankProfile() {
@@ -388,6 +423,7 @@ function renderBankProfileList(mode = bankProfileListMode) {
 function renderBankProfiles() {
   renderActiveBankProfile();
   renderBankProfileList();
+  renderQuickAmountChips();
 }
 
 function initBankProfiles(legacyState) {
@@ -467,6 +503,111 @@ function setBankProfileFormError(message = '', invalidField = null) {
   bankProfileEls.name.setAttribute('aria-invalid', String(Boolean(message) && invalidField === bankProfileEls.name));
   bankProfileEls.cardType.setAttribute('aria-invalid', String(Boolean(message) && invalidField === bankProfileEls.cardType));
   bankProfileEls.fee.setAttribute('aria-invalid', String(Boolean(message) && invalidField === bankProfileEls.fee));
+  bankProfileEls.quickList?.querySelectorAll('input').forEach(input => {
+    input.setAttribute('aria-invalid', String(Boolean(message) && invalidField === input));
+  });
+}
+
+function formatQuickAmountInput(amount) {
+  return Number.isFinite(amount) && amount > 0 ? String(amount) : '';
+}
+
+function getEditingProfileQuickSource(profile) {
+  if (!profile || profile.kind === 'manual') return 'general';
+  return Array.isArray(profile.quickAmounts) ? 'custom' : 'general';
+}
+
+function collectQuickAmountInputs() {
+  const inputs = [...bankProfileEls.quickList.querySelectorAll('input')];
+  const values = inputs.map(input => input.value.trim());
+  const amounts = values.map(value => Number(value));
+  const duplicateValue = amounts.find((amount, index) => Number.isFinite(amount) && amounts.indexOf(amount) !== index);
+  const invalidInput = inputs.find((input, index) => {
+    const raw = values[index];
+    const amount = amounts[index];
+    return raw === ''
+      || !/^\d+$/.test(raw)
+      || !Number.isInteger(amount)
+      || amount <= 0
+      || amount > 10000
+      || amount === duplicateValue;
+  });
+  const sanitized = sanitizeQuickAmounts(values);
+  if (!sanitized || invalidInput) {
+    setBankProfileFormError('Usa entre 1 y 4 montos enteros, positivos, sin duplicados y hasta $10.000.', invalidInput || bankProfileEls.quickList);
+    invalidInput?.focus();
+    return null;
+  }
+  return sanitized;
+}
+
+function renderQuickAmountEditor(amounts, { editable = true } = {}) {
+  bankProfileEls.quickList.replaceChildren(...amounts.map((amount, index) => {
+    const item = document.createElement('div');
+    item.className = 'bank-profile-quick-item';
+    const input = document.createElement('input');
+    input.type = 'number';
+    input.inputMode = 'numeric';
+    input.min = '1';
+    input.max = '10000';
+    input.step = '1';
+    input.value = formatQuickAmountInput(amount);
+    input.disabled = !editable;
+    input.setAttribute('aria-label', `Monto rápido ${index + 1}`);
+    input.setAttribute('aria-describedby', 'bankProfileFormError bankProfileQuickAmountsHelp');
+
+    const moveUp = document.createElement('button');
+    moveUp.className = 'bank-profile-quick-icon';
+    moveUp.type = 'button';
+    moveUp.dataset.quickMove = 'up';
+    moveUp.disabled = !editable || index === 0;
+    moveUp.setAttribute('aria-label', `Subir monto ${formatQuickAmountInput(amount)}`);
+    moveUp.innerHTML = '<span class="material-symbols-rounded" aria-hidden="true">arrow_upward</span>';
+
+    const moveDown = document.createElement('button');
+    moveDown.className = 'bank-profile-quick-icon';
+    moveDown.type = 'button';
+    moveDown.dataset.quickMove = 'down';
+    moveDown.disabled = !editable || index === amounts.length - 1;
+    moveDown.setAttribute('aria-label', `Bajar monto ${formatQuickAmountInput(amount)}`);
+    moveDown.innerHTML = '<span class="material-symbols-rounded" aria-hidden="true">arrow_downward</span>';
+
+    const remove = document.createElement('button');
+    remove.className = 'bank-profile-quick-icon';
+    remove.type = 'button';
+    remove.dataset.quickRemove = String(index);
+    remove.disabled = !editable || amounts.length <= 1;
+    remove.setAttribute('aria-label', `Eliminar monto ${formatQuickAmountInput(amount)}`);
+    remove.innerHTML = '<span class="material-symbols-rounded" aria-hidden="true">delete</span>';
+
+    item.append(input, moveUp, moveDown, remove);
+    return item;
+  }));
+  bankProfileEls.quickAdd.disabled = !editable || amounts.length >= 4;
+  bankProfileEls.quickEditor.hidden = false;
+}
+
+function syncQuickAmountEditor() {
+  const profile = getBankProfile(bankProfileState, editingBankProfileId, manualCardFee);
+  if (!profile) return;
+  const isGeneralMode = bankProfileEls.quickUseGeneral.checked;
+  const amounts = isGeneralMode
+    ? getGeneralQuickAmounts(bankProfileState)
+    : (profile.quickAmounts || getGeneralQuickAmounts(bankProfileState));
+  renderQuickAmountEditor(amounts, { editable: true });
+  bankProfileEls.quickRestoreGeneral.hidden = !isGeneralMode;
+  bankProfileEls.quickAdd.hidden = false;
+}
+
+function applyQuickAmountEditorChanges(nextState, profileId) {
+  const amounts = collectQuickAmountInputs();
+  if (!amounts) return null;
+  if (bankProfileEls.quickUseGeneral.checked || profileId === MANUAL_PROFILE_ID) {
+    return profileId === MANUAL_PROFILE_ID
+      ? updateGeneralQuickAmounts(nextState, amounts)
+      : useGeneralQuickAmountsForProfile(updateGeneralQuickAmounts(nextState, amounts), profileId);
+  }
+  return updateProfileQuickAmounts(nextState, profileId, amounts);
 }
 
 function showBankProfileList({ focusBack = false, mode = bankProfileListMode } = {}) {
@@ -565,6 +706,7 @@ function showBankProfileEditor(profileId, { manualMode = 'manual' } = {}) {
   bankProfileEls.nameField.hidden = isTemporary || (isManual && !isCustomOnly);
   bankProfileEls.cardTypeField.hidden = isTemporary || (isManual && !isCustomOnly);
   bankProfileEls.logoField.hidden = isTemporary || (isManual && !isCustomOnly);
+  bankProfileEls.quickField.hidden = isTemporary;
   bankProfileEls.restore.hidden = !isPreset || isTemporary || !profile.isModified;
   bankProfileEls.remove.hidden = isManual || isTemporary || bankProfileState.profiles.length <= 1;
   bankProfileEls.save.hidden = isManual || isTemporary;
@@ -581,6 +723,12 @@ function showBankProfileEditor(profileId, { manualMode = 'manual' } = {}) {
   bankProfileEls.logoStatus.textContent = '';
   bankProfileEls.chooseLogo.disabled = false;
   renderBankProfileLogoEditor();
+  const quickSource = getEditingProfileQuickSource(profile);
+  bankProfileEls.quickUseGeneral.checked = quickSource === 'general';
+  bankProfileEls.quickUseCustom.checked = quickSource === 'custom';
+  bankProfileEls.quickUseCustom.disabled = isManual;
+  bankProfileEls.quickUseGeneral.nextElementSibling.textContent = isManual ? 'Montos generales' : 'Usar montos generales';
+  syncQuickAmountEditor();
   setBankProfileFormError();
 
   if (isTemporary) {
@@ -635,13 +783,16 @@ function saveEditedBankProfile() {
     return;
   }
 
-  const nextState = updateBankProfile(bankProfileState, {
+  let nextState = updateBankProfile(bankProfileState, {
     id: profile.id,
     name,
     cardType: bankProfileEls.cardType.value,
     fee,
-    icon: editingBankProfileLogo
+    icon: editingBankProfileLogo,
+    quickAmounts: profile.quickAmounts
   });
+  nextState = applyQuickAmountEditorChanges(nextState, profile.id);
+  if (!nextState) return;
   if (!persistBankProfiles(nextState, { preserveEditor: true })) return;
 
   if (bankProfileState.selectedId === profile.id && temporaryCardFee === null) {
@@ -702,12 +853,14 @@ function saveManualProfile() {
 
   const previousIds = new Set(bankProfileState.profiles.map(profile => profile.id));
   const requestedId = `custom-${Date.now().toString(36)}`;
-  const nextState = upsertCustomProfile(bankProfileState, {
+  let nextState = upsertCustomProfile(bankProfileState, {
     name,
     cardType: bankProfileEls.cardType.value,
     fee,
     icon: editingBankProfileLogo
   }, requestedId);
+  nextState = applyQuickAmountEditorChanges(nextState, MANUAL_PROFILE_ID);
+  if (!nextState) return;
   const createdProfile = nextState.profiles.find(profile => !previousIds.has(profile.id));
   if (!createdProfile) {
     setBankProfileFormError('No se pudo guardar el perfil. Revisa los datos.');
@@ -874,6 +1027,35 @@ function bindBankProfileEvents() {
   bankProfileEls.chooseLogo.addEventListener('click', chooseBankProfileLogo);
   bankProfileEls.logoInput.addEventListener('change', handleBankProfileLogoSelection);
   bankProfileEls.removeLogo.addEventListener('click', removeEditingBankProfileLogo);
+  bankProfileEls.quickUseGeneral.addEventListener('change', syncQuickAmountEditor);
+  bankProfileEls.quickUseCustom.addEventListener('change', syncQuickAmountEditor);
+  bankProfileEls.quickAdd.addEventListener('click', () => {
+    const amounts = [...bankProfileEls.quickList.querySelectorAll('input')].map(input => input.value || '100');
+    if (amounts.length >= 4) return;
+    amounts.push('');
+    renderQuickAmountEditor(amounts.map(amount => Number(amount) || 0));
+    bankProfileEls.quickList.querySelector('.bank-profile-quick-item:last-child input')?.focus();
+  });
+  bankProfileEls.quickRestoreGeneral.addEventListener('click', () => {
+    renderQuickAmountEditor(DEFAULT_QUICK_AMOUNTS);
+  });
+  bankProfileEls.quickList.addEventListener('click', event => {
+    const item = event.target.closest('.bank-profile-quick-item');
+    if (!item) return;
+    const items = [...bankProfileEls.quickList.children];
+    const index = items.indexOf(item);
+    const amounts = [...bankProfileEls.quickList.querySelectorAll('input')].map(input => Number(input.value) || 0);
+    if (event.target.closest('[data-quick-remove]') && amounts.length > 1) {
+      amounts.splice(index, 1);
+    } else if (event.target.closest('[data-quick-move="up"]') && index > 0) {
+      [amounts[index - 1], amounts[index]] = [amounts[index], amounts[index - 1]];
+    } else if (event.target.closest('[data-quick-move="down"]') && index < amounts.length - 1) {
+      [amounts[index + 1], amounts[index]] = [amounts[index], amounts[index + 1]];
+    } else {
+      return;
+    }
+    renderQuickAmountEditor(amounts);
+  });
   bankProfileEls.applyManual.addEventListener('click', applyManualFee);
   bankProfileEls.saveManual.addEventListener('click', saveManualProfile);
   bankProfileEls.clearTemporary.addEventListener('click', clearTemporaryBankFee);
@@ -1317,12 +1499,14 @@ function bindEvents() {
 
   bindBankProfileEvents();
 
-  document.querySelectorAll('[data-quick]').forEach(btn => btn.addEventListener('click', () => {
+  document.getElementById('quickAmountRow')?.addEventListener('click', event => {
+    const btn = event.target.closest('[data-quick]');
+    if (!btn) return;
     triggerHaptic('light');
     els.usdToBuy.value = btn.dataset.quick;
     calculate();
     saveState(false);
-  }));
+  });
 
   // maxBtn was removed from the UI; its hidden compat element is also gone
   els.loadRatesBtn.addEventListener('click', () => loadRates(true));

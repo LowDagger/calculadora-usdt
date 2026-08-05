@@ -1,9 +1,11 @@
 export const BANK_PROFILE_STORAGE_KEY = 'calcuflowBankProfilesV1';
-export const BANK_PROFILE_STATE_VERSION = 2;
+export const BANK_PROFILE_STATE_VERSION = 3;
 export const MANUAL_PROFILE_ID = 'manual';
 export const DEFAULT_PROFILE_ID = 'bdv-fisica';
 export const MAX_CARD_FEE = 100;
 export const MAX_PERSISTED_LOGO_BYTES = 100 * 1024;
+export const DEFAULT_QUICK_AMOUNTS = Object.freeze([100, 500, 1000]);
+export const MAX_QUICK_AMOUNT = 10000;
 
 export const BANK_ICONS = Object.freeze({
   bdv: Object.freeze({
@@ -152,11 +154,14 @@ function getFreshDefaultProfiles() {
 }
 
 function isSameStoredProfile(first, second) {
+  const firstQuickAmounts = sanitizeQuickAmounts(first.quickAmounts);
+  const secondQuickAmounts = sanitizeQuickAmounts(second.quickAmounts);
   return first.id === second.id
     && first.name === second.name
     && first.cardType === second.cardType
     && first.fee === second.fee
-    && first.icon === second.icon;
+    && first.icon === second.icon
+    && JSON.stringify(firstQuickAmounts) === JSON.stringify(secondQuickAmounts);
 }
 
 export function sanitizeCardFee(value) {
@@ -189,6 +194,26 @@ export function sanitizeProfileLogo(icon) {
 
 export const sanitizeIconPath = sanitizeProfileLogo;
 
+export function sanitizeQuickAmounts(amounts) {
+  if (!Array.isArray(amounts)) return null;
+  const used = new Set();
+  const sanitized = [];
+  for (const amount of amounts) {
+    if (sanitized.length >= 4) return null;
+    const normalized = typeof amount === 'string' ? amount.trim() : amount;
+    if (normalized === '') return null;
+    const value = Number(normalized);
+    if (!Number.isInteger(value) || value <= 0 || value > MAX_QUICK_AMOUNT || used.has(value)) return null;
+    used.add(value);
+    sanitized.push(value);
+  }
+  return sanitized.length ? sanitized : null;
+}
+
+function getSafeQuickAmounts(amounts) {
+  return sanitizeQuickAmounts(amounts) || [...DEFAULT_QUICK_AMOUNTS];
+}
+
 function sanitizeStoredProfile(profile, usedIds) {
   if (!isRecord(profile)) return null;
   const id = cleanText(profile.id, 87).toLowerCase();
@@ -202,13 +227,16 @@ function sanitizeStoredProfile(profile, usedIds) {
   }
   usedIds.add(id);
 
-  return {
+  const sanitized = {
     id,
     name,
     cardType,
     fee,
     icon: sanitizeProfileLogo(profile.icon)
   };
+  const quickAmounts = sanitizeQuickAmounts(profile.quickAmounts);
+  if (quickAmounts) sanitized.quickAmounts = quickAmounts;
+  return sanitized;
 }
 
 function migrateVersionOneState(source, fallbackSelectedId) {
@@ -235,7 +263,32 @@ function migrateVersionOneState(source, fallbackSelectedId) {
   return {
     version: BANK_PROFILE_STATE_VERSION,
     selectedId: validIds.has(requestedSelectedId) ? requestedSelectedId : safeFallback,
+    quickAmounts: [...DEFAULT_QUICK_AMOUNTS],
     profiles
+  };
+}
+
+function migrateVersionTwoState(source, fallbackSelectedId) {
+  const usedIds = new Set();
+  const profiles = Array.isArray(source.profiles)
+    ? source.profiles
+      .slice(0, 58)
+      .map(profile => sanitizeStoredProfile(profile, usedIds))
+      .filter(Boolean)
+    : [];
+  const safeProfiles = profiles.length ? profiles : getFreshDefaultProfiles();
+  const validIds = new Set(safeProfiles.map(profile => profile.id));
+  validIds.add(MANUAL_PROFILE_ID);
+  const requestedSelectedId = cleanText(source.selectedId, 87).toLowerCase();
+  const safeFallback = validIds.has(fallbackSelectedId)
+    ? fallbackSelectedId
+    : safeProfiles[0]?.id || DEFAULT_PROFILE_ID;
+
+  return {
+    version: BANK_PROFILE_STATE_VERSION,
+    selectedId: validIds.has(requestedSelectedId) ? requestedSelectedId : safeFallback,
+    quickAmounts: [...DEFAULT_QUICK_AMOUNTS],
+    profiles: safeProfiles
   };
 }
 
@@ -247,12 +300,16 @@ export function createEmptyBankProfileState(selectedId = DEFAULT_PROFILE_ID) {
   return {
     version: BANK_PROFILE_STATE_VERSION,
     selectedId: validSelectedId,
+    quickAmounts: [...DEFAULT_QUICK_AMOUNTS],
     profiles
   };
 }
 
 export function sanitizeBankProfileState(value, fallbackSelectedId = DEFAULT_PROFILE_ID) {
   const source = isRecord(value) ? value : {};
+  if (source.version === 2 && Array.isArray(source.profiles)) {
+    return migrateVersionTwoState(source, fallbackSelectedId);
+  }
   if (source.version !== BANK_PROFILE_STATE_VERSION || !Array.isArray(source.profiles)) {
     return migrateVersionOneState(source, fallbackSelectedId);
   }
@@ -273,6 +330,7 @@ export function sanitizeBankProfileState(value, fallbackSelectedId = DEFAULT_PRO
   return {
     version: BANK_PROFILE_STATE_VERSION,
     selectedId: validIds.has(requestedSelectedId) ? requestedSelectedId : safeFallback,
+    quickAmounts: getSafeQuickAmounts(source.quickAmounts),
     profiles: safeProfiles
   };
 }
@@ -330,6 +388,43 @@ export function groupBankProfiles(profiles) {
   }
 
   return groups;
+}
+
+export function getGeneralQuickAmounts(state) {
+  return getSafeQuickAmounts(sanitizeBankProfileState(state).quickAmounts);
+}
+
+export function getProfileQuickAmounts(state, profileId) {
+  const safeState = sanitizeBankProfileState(state);
+  const profile = safeState.profiles.find(item => item.id === profileId);
+  return profile?.quickAmounts ? [...profile.quickAmounts] : getGeneralQuickAmounts(safeState);
+}
+
+export function updateGeneralQuickAmounts(state, amounts) {
+  const quickAmounts = sanitizeQuickAmounts(amounts);
+  if (!quickAmounts) return sanitizeBankProfileState(state);
+  return { ...sanitizeBankProfileState(state), quickAmounts };
+}
+
+export function restoreGeneralQuickAmounts(state) {
+  return { ...sanitizeBankProfileState(state), quickAmounts: [...DEFAULT_QUICK_AMOUNTS] };
+}
+
+export function updateProfileQuickAmounts(state, profileId, amounts) {
+  const safeState = sanitizeBankProfileState(state);
+  const quickAmounts = sanitizeQuickAmounts(amounts);
+  if (!quickAmounts) return safeState;
+  const profile = safeState.profiles.find(item => item.id === profileId);
+  if (!profile) return safeState;
+  return updateBankProfile(safeState, { ...profile, quickAmounts });
+}
+
+export function useGeneralQuickAmountsForProfile(state, profileId) {
+  const safeState = sanitizeBankProfileState(state);
+  const profile = safeState.profiles.find(item => item.id === profileId);
+  if (!profile) return safeState;
+  const { quickAmounts, ...withoutOverride } = profile;
+  return updateBankProfile(safeState, withoutOverride);
 }
 
 export function getBankProfile(state, profileId, manualFee = 0) {
@@ -484,6 +579,7 @@ export function readBankProfileState(storage, { hasLegacyCardFee = false } = {})
     const isUnsupportedVersion = isRecord(parsed)
       && Object.prototype.hasOwnProperty.call(parsed, 'version')
       && parsed.version !== 1
+      && parsed.version !== 2
       && parsed.version !== BANK_PROFILE_STATE_VERSION;
     const hasUnusableProfileCollection = parsed?.version === BANK_PROFILE_STATE_VERSION
       && Array.isArray(parsed.profiles)

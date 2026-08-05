@@ -399,7 +399,7 @@ textarea,
 /* Quick Chips */
 .quick-row {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(68px, 1fr));
   gap: 8px;
 }
 
@@ -1454,6 +1454,66 @@ html[data-theme="light"] .kpi-loss {
 .bank-profile-logo-status:not(:empty) {
   color: var(--primary);
   font-weight: 700;
+}
+
+.bank-profile-quick-field {
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  background: var(--bg-soft);
+}
+
+.bank-profile-quick-help {
+  margin: -2px 0 0;
+  color: var(--muted);
+  font-size: 0.68rem;
+  line-height: 1.35;
+}
+
+.bank-profile-quick-mode,
+.bank-profile-quick-actions,
+.bank-profile-quick-editor,
+.bank-profile-quick-list {
+  display: grid;
+  gap: 8px;
+}
+
+.bank-profile-quick-editor {
+  margin-top: 8px;
+}
+
+.bank-profile-quick-mode label {
+  min-height: 36px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.bank-profile-quick-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) repeat(3, 34px);
+  gap: 6px;
+  align-items: center;
+}
+
+.bank-profile-quick-item input {
+  min-height: 38px;
+}
+
+.bank-profile-quick-icon {
+  min-height: 34px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--surface);
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.bank-profile-quick-icon .material-symbols-rounded {
+  font-size: 1rem;
 }
 
 .field-label {
