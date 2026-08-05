@@ -4,25 +4,34 @@ PWA estática para calcular compra de USD en banco venezolano, comisiones y reto
 
 ## Fuente de tasas
 
-Las tasas se obtienen del endpoint combinado público de **DolarAPI Venezuela** — sin API key ni autenticación:
+La tasa BCV se selecciona desde el historial público de **BCV Today** y la tasa
+P2P / paralelo se obtiene de **DolarAPI Venezuela**. Ninguna requiere API key:
 
 ```
+GET https://bcv.today/api/v1/history.json
+GET https://bcv.today/api/v1/rate.json
 GET https://ve.dolarapi.com/v1/dolares
 ```
 
-La aplicación busca por `fuente` (sin depender del orden del arreglo) y exige
-entradas en USD completas antes de reemplazar las tasas mostradas:
+BCV Today permite distinguir la fecha de publicación de la fecha efectiva. La
+aplicación elige el mayor `effective_date` válido cuyo `updated_at` ya ocurrió,
+aunque la vigencia sea el próximo día hábil. Los registros de fin de semana se
+deduplican por `effective_date`. El registro seleccionado se conserva durante
+cinco minutos para no descargar el historial en cada recarga móvil.
 
 | Entrada / campo | Uso |
 |---|---|
-| `fuente: "oficial"` → `promedio` | Tasa BCV |
+| BCV Today → `USD` | Tasa BCV con precisión completa |
+| BCV Today → `effective_date` | Vigencia oficial mostrada en la tarjeta BCV |
+| BCV Today → `updated_at` | Momento de publicación del registro |
 | `fuente: "paralelo"` → `promedio` | Tasa P2P / paralelo (referencia paralela; fuente documentada por DolarAPI: Yadio) |
-| Oficial → `fechaActualizacion` | Fecha efectiva mostrada como “Vigente…” |
 | Paralelo → `fechaActualizacion` | Frescura mostrada como “Actualizado hace…” |
 
-Si DolarAPI falla, tarda demasiado o devuelve datos incompletos/no válidos, la
-actualización se descarta por completo. La app conserva las tasas manuales o las
-guardadas en `localStorage`, sin alterar su marca de tiempo visible.
+Para BCV, el orden de fallback es historial de BCV Today, `rate.json`, registro
+BCV guardado y finalmente la entrada oficial de DolarAPI. Un fallback anterior
+nunca reemplaza un registro guardado con una fecha efectiva posterior. Si la
+tasa P2P falla, la actualización completa se descarta y se conservan los valores
+mostrados, respetando el comportamiento atómico existente.
 
 ---
 
@@ -63,7 +72,8 @@ calculadora-usdt/
 ├── css/
 │   └── style.css
 ├── js/
-│   ├── api.js          # fetchRates() → DolarAPI Venezuela
+│   ├── api.js          # Orquestación atómica BCV + P2P
+│   ├── bcv-rates.js    # Selección y fallbacks de BCV Today
 │   ├── app.js          # Lógica principal
 │   ├── calculator.js   # Fórmulas financieras
 │   ├── storage.js      # localStorage
@@ -79,9 +89,9 @@ calculadora-usdt/
 ## Checklist de prueba manual
 
 - [ ] App carga sin errores de consola
-- [ ] Tasas cargan automáticamente desde DolarAPI
-- [ ] Estado muestra "Tasas actualizadas desde DolarAPI."
-- [ ] BCV coincide con `promedio` de la entrada USD `oficial`
+- [ ] BCV usa el último anuncio válido de `history.json`
+- [ ] Una tasa anunciada para el próximo día hábil se aplica inmediatamente
+- [ ] La tarjeta distingue “BCV vigente hoy” de “Tasa anunciada”
 - [ ] P2P coincide con `promedio` de la entrada USD `paralelo`
 - [ ] Chips rápidos: 100 / 500 / 1000
 - [ ] Cálculos actualizan al cambiar el monto

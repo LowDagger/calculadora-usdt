@@ -9,7 +9,7 @@ const ui = readFileSync(new URL('../js/ui.js', import.meta.url), 'utf8');
 const serviceWorker = readFileSync(new URL('../service-worker.js', import.meta.url), 'utf8');
 
 test('adds compact hierarchy labels without changing calculation terminology', () => {
-  assert.match(html, /<h2 class="section-label">Tasas de hoy<\/h2>[\s\S]*?class="rates-grid"/);
+  assert.match(html, /<h2 class="section-label">Tasas de referencia<\/h2>[\s\S]*?class="rates-grid"/);
   assert.match(html, /<h2 class="section-label">Tu operación<\/h2>[\s\S]*?class="kpi-grid"/);
   assert.match(css, /\.section-label\s*\{/);
 });
@@ -27,7 +27,7 @@ test('deduplicates rate requests and keeps initial success quiet', () => {
   assert.match(app, /ratesRequestInFlight = true;/);
   assert.match(app, /ratesRequestInFlight = false;[\s\S]*?setLoadingRates\(false\)/);
   assert.match(app, /window\.addEventListener\('load', \(\) => \{[\s\S]*?loadRates\(false\)/);
-  assert.match(app, /if \(showSuccessToast === true\) \{[\s\S]*?Tasas actualizadas desde DolarAPI\./);
+  assert.match(app, /if \(showSuccessToast === true\) \{[\s\S]*?Tasas consultadas: BCV Today y DolarAPI\./);
 });
 
 test('renders a persistent accessible retry action through the same rate loader', () => {
@@ -47,5 +47,11 @@ test('marks result-card symbols as decorative and bumps the PWA cache', () => {
   assert.match(ui, /btn\.setAttribute\('aria-pressed', String\(isActive\)\)/);
   assert.match(app, /btn\.setAttribute\('aria-pressed', String\(isActive\)\)/);
   assert.match(html, /data-theme-val="system" aria-pressed="true"/);
-  assert.match(serviceWorker, /const APP_VERSION\s+= '31';/);
+  assert.match(serviceWorker, /const APP_VERSION\s+= '32';/);
+  assert.match(serviceWorker, /'\/js\/bcv-rates\.js'/);
+});
+
+test('rounds BCV only in the visible rate card', () => {
+  assert.match(app, /els\.bcvRate\.value = String\(bcv\)/);
+  assert.match(ui, /els\.bcvView\.innerHTML\s+= bcv\s+\? money\(bcv, 2\)/);
 });
