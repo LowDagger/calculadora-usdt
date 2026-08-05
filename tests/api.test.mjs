@@ -1,10 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { fetchRates, DOLARAPI_RATES } from '../js/api.js';
 import { readFileSync } from 'node:fs';
+import { fetchRates, DOLARAPI_RATES } from '../js/api.js';
+import { BCV_CURRENT_URL, BCV_HISTORY_URL } from '../js/bcv-rates.js';
 
 const appSource = readFileSync(new URL('../js/app.js', import.meta.url), 'utf8');
-
+const announced = JSON.parse(readFileSync(new URL('./fixtures/bcv-2026-08-05.json', import.meta.url), 'utf8'));
+const now = () => new Date('2026-08-05T03:15:22.230Z');
 const official = {
   moneda: 'USD', fuente: 'oficial', promedio: 752.0943,
   fechaActualizacion: '2026-08-04T00:00:00-04:00'
@@ -14,86 +16,101 @@ const parallel = {
   fechaActualizacion: '2026-08-04T16:01:44.835Z'
 };
 
-function response(body, { ok = true, status = 200, invalidJson = false } = {}) {
-  return { ok, status, json: async () => invalidJson ? Promise.reject(new SyntaxError('JSON')) : body };
+function response(body, init = {}) {
+  return new Response(typeof body === 'string' ? body : JSON.stringify(body), init);
 }
 
-async function withFetch(mock, fn) {
-  const previous = globalThis.fetch;
-  globalThis.fetch = mock;
-  try { return await fn(); } finally { globalThis.fetch = previous; }
+function successfulFetch({ history = [announced], current = official } = {}) {
+  return async url => {
+    if (url === DOLARAPI_RATES) return response([official, parallel]);
+    if (url === BCV_HISTORY_URL) return response(history);
+    if (url === BCV_CURRENT_URL) return response(current);
+    throw new Error(`Unexpected URL: ${url}`);
+  };
 }
 
-test('maps a successful combined response and passes required fetch options', async () => {
-  await withFetch(async (url, options) => {
-    assert.equal(url, DOLARAPI_RATES);
-    assert.equal(options.cache, 'no-store');
-    assert.ok(options.signal instanceof AbortSignal);
-    return response([official, parallel]);
-  }, async () => {
-    assert.deepEqual(await fetchRates(), {
-      bcv: 752.0943, p2p: 832.179421,
-      bcvEffectiveDate: official.fechaActualizacion,
-      p2pUpdatedAt: parallel.fechaActualizacion
-    });
-  });
+test('combines the latest announced BCV rate with DolarAPI P2P atomically', async () => {
+  const result = await fetchRates({ fetchImpl: successfulFetch(), now });
+  assert.equal(result.bcv, 755.1552);
+  assert.equal(result.p2p, 832.179421);
+  assert.equal(result.bcvEffectiveDate, '2026-08-05');
+  assert.equal(result.bcvPublishedAt, announced.updated_at);
+  assert.equal(result.bcvSource, 'bcv.today');
+  assert.equal(result.bcvStatus, 'announced');
+  assert.equal(result.p2pUpdatedAt, parallel.fechaActualizacion);
 });
 
-test('maps by normalized fuente rather than array position', async () => {
-  await withFetch(async () => response([
-    { ...parallel, fuente: ' PARALELO ', moneda: ' usd ' },
-    { ...official, fuente: 'OFICIAL', moneda: 'USD' }
-  ]), async () => assert.deepEqual((await fetchRates()).bcv, official.promedio));
+test('maps DolarAPI P2P by normalized fuente rather than array position', async () => {
+  const fetchImpl = async url => {
+    if (url === DOLARAPI_RATES) return response([
+      { ...parallel, fuente: ' PARALELO ', moneda: ' usd ' },
+      { ...official, fuente: 'OFICIAL' }
+    ]);
+    return response([announced]);
+  };
+  assert.equal((await fetchRates({ fetchImpl, now })).p2p, parallel.promedio);
 });
 
-test('accepts finite positive numeric strings', async () => {
-  await withFetch(async () => response([
-    { ...official, promedio: '752.0943' }, { ...parallel, promedio: '832.179421' }
-  ]), async () => assert.deepEqual(await fetchRates(), {
-    bcv: 752.0943, p2p: 832.179421,
-    bcvEffectiveDate: official.fechaActualizacion,
-    p2pUpdatedAt: parallel.fechaActualizacion
-  }));
+test('accepts a missing DolarAPI official entry when BCV Today succeeds', async () => {
+  const fetchImpl = async url => url === DOLARAPI_RATES
+    ? response([parallel])
+    : response([announced]);
+  assert.equal((await fetchRates({ fetchImpl, now })).bcv, 755.1552);
 });
 
-const failures = [
-  ['missing official entry', [parallel], /oficial USD/],
+test('falls back to DolarAPI official only after both BCV Today endpoints fail', async () => {
+  const fetchImpl = async url => url === DOLARAPI_RATES
+    ? response([official, parallel])
+    : response({}, { status: 503 });
+  const result = await fetchRates({ fetchImpl, now });
+  assert.equal(result.bcv, 752.0943);
+  assert.equal(result.bcvSource, 'dolarapi.com.ve');
+  assert.equal(result.bcvStatus, 'cached');
+});
+
+test('uses rate.json after an empty history response', async () => {
+  const current = {
+    USD: 752.0943,
+    updated_at: '2026-08-03T18:03:53.463227-04:00',
+    effective_date: '2026-08-04',
+    date: '2026-08-04'
+  };
+  const result = await fetchRates({ fetchImpl: successfulFetch({ history: [], current }), now });
+  assert.equal(result.bcv, 752.0943);
+  assert.equal(result.bcvSource, 'bcv.today');
+});
+
+for (const [name, data, pattern] of [
   ['missing parallel entry', [official], /paralela USD/],
-  ['invalid official promedio', [{ ...official, promedio: 'x' }, parallel], /oficial no válida/],
-  ['invalid parallel promedio', [official, { ...parallel, promedio: 'x' }], /paralela no válida/],
-  ['missing official date', [{ ...official, fechaActualizacion: undefined }, parallel], /fecha.*oficial/],
+  ['invalid parallel promedio', [official, { ...parallel, promedio: -1 }], /paralela no válida/],
   ['invalid parallel date', [official, { ...parallel, fechaActualizacion: 'not-a-date' }], /fecha.*paralela/]
-];
-for (const [name, body, pattern] of failures) {
-  test(name, async () => withFetch(async () => response(body),
-    async () => assert.rejects(fetchRates(), pattern)));
+]) {
+  test(name, async () => {
+    const fetchImpl = async url => url === DOLARAPI_RATES ? response(data) : response([announced]);
+    await assert.rejects(fetchRates({ fetchImpl, now }), pattern);
+  });
 }
 
-for (const invalid of [0, -1, NaN, Infinity, -Infinity]) {
-  test(`rejects invalid rate value ${String(invalid)}`, async () =>
-    withFetch(async () => response([{ ...official, promedio: invalid }, parallel]),
-      async () => assert.rejects(fetchRates(), /oficial no válida/)));
-}
+test('rejects malformed DolarAPI JSON and HTTP errors', async () => {
+  await assert.rejects(fetchRates({ fetchImpl: async () => response('{'), now }), SyntaxError);
+  await assert.rejects(fetchRates({ fetchImpl: async () => response({}, { status: 503 }), now }), /HTTP 503/);
+});
 
-test('rejects invalid JSON', async () => withFetch(async () => response(null, { invalidJson: true }),
-  async () => assert.rejects(fetchRates(), SyntaxError)));
-test('rejects a non-array response', async () => withFetch(async () => response({}),
-  async () => assert.rejects(fetchRates(), /no es una lista/)));
-test('rejects an HTTP error', async () => withFetch(async () => response(null, { ok: false, status: 503 }),
-  async () => assert.rejects(fetchRates(), /HTTP 503/)));
-test('preserves a network error', async () => withFetch(async () => { throw new TypeError('offline'); },
-  async () => assert.rejects(fetchRates(), /offline/)));
+test('preserves a DolarAPI network error because P2P is required', async () => {
+  await assert.rejects(fetchRates({ fetchImpl: async () => { throw new TypeError('offline'); }, now }), /offline/);
+});
 
-test('aborts after the timeout and clears the timer', async () => {
+test('aborts a timed-out DolarAPI request and clears the timer', async () => {
   const realSetTimeout = globalThis.setTimeout;
   const realClearTimeout = globalThis.clearTimeout;
   let cleared = false;
   globalThis.setTimeout = fn => { queueMicrotask(fn); return 99; };
   globalThis.clearTimeout = id => { assert.equal(id, 99); cleared = true; };
   try {
-    await withFetch((_url, { signal }) => new Promise((_resolve, reject) => {
+    const fetchImpl = (_url, { signal }) => new Promise((_resolve, reject) => {
       signal.addEventListener('abort', () => reject(new DOMException('aborted', 'AbortError')));
-    }), async () => assert.rejects(fetchRates(), { name: 'AbortError' }));
+    });
+    await assert.rejects(fetchRates({ fetchImpl, now }), { name: 'AbortError' });
     assert.equal(cleared, true);
   } finally {
     globalThis.setTimeout = realSetTimeout;
@@ -101,10 +118,13 @@ test('aborts after the timeout and clears the timer', async () => {
   }
 });
 
-test('the UI only overwrites both rates after the complete request succeeds', () => {
+test('the UI preserves full BCV precision and applies both rates atomically', () => {
   const tryBlock = appSource.match(/try \{([\s\S]*?)\} catch \(err\) \{([\s\S]*?)\} finally/);
   assert.ok(tryBlock);
-  assert.match(tryBlock[1], /await fetchRates\(\)[\s\S]*els\.bcvRate\.value[\s\S]*els\.p2pRate\.value/);
+  assert.match(tryBlock[1], /await fetchRates\(\{ cachedBcv: activeBcvRecord \}\)/);
+  assert.match(tryBlock[1], /els\.bcvRate\.value = String\(bcv\)/);
+  assert.match(tryBlock[1], /els\.p2pRate\.value = p2p\.toFixed\(4\)/);
   assert.doesNotMatch(tryBlock[2], /\.value\s*=/);
+  assert.match(tryBlock[2], /markBcvRecordCached\(activeBcvRecord\)[\s\S]*renderBcvDate\(activeBcvRecord\)/);
   assert.match(tryBlock[2], /Conservando valores guardados/);
 });

@@ -1,4 +1,5 @@
 import { fetchRates } from './api.js';
+import { markBcvRecordCached } from './bcv-rates.js';
 import { MAX_REQUESTED_USD, calculateValues, currentBankRate, sanitizeRequestedUsdInput, validateRequestedUsd } from './calculator.js';
 import {
   DEFAULT_PROFILE_ID,
@@ -29,6 +30,7 @@ import { els, setStatus, clearStatus, showRateError, clearRateError, setLoadingR
 
 let ratesLastUpdated = null;
 let ratesRequestInFlight = false;
+let activeBcvRecord = null;
 let bankProfileState = null;
 let manualCardFee = '1.5';
 let temporaryCardFee = null;
@@ -888,6 +890,7 @@ function getState() {
     cardFee: els.cardFee.value,
     bpayFee: els.bpayFee.value,
     autoRates: els.autoRates.checked,
+    bcvRecord: activeBcvRecord,
     lastUpdate: els.lastUpdate.dataset.absolute || els.lastUpdate.textContent
   };
 }
@@ -909,6 +912,10 @@ function loadState() {
   if (Object.prototype.hasOwnProperty.call(data, 'cardFee')) els.cardFee.value = data.cardFee;
   if (Object.prototype.hasOwnProperty.call(data, 'bpayFee')) els.bpayFee.value = data.bpayFee;
   if (typeof data.autoRates === 'boolean') els.autoRates.checked = data.autoRates;
+  if (data.bcvRecord && typeof data.bcvRecord === 'object') {
+    activeBcvRecord = data.bcvRecord;
+    renderBcvDate(activeBcvRecord);
+  }
   if (data.lastUpdate) {
     els.lastUpdate.textContent = data.lastUpdate;
     els.lastUpdate.dataset.absolute = data.lastUpdate;
@@ -949,8 +956,9 @@ async function loadRates(showSuccessToast = false) {
   triggerHaptic();
   setLoadingRates(true);
   try {
-    const { bcv, p2p, bcvEffectiveDate, p2pUpdatedAt } = await fetchRates();
-    els.bcvRate.value = bcv.toFixed(4);
+    const { bcv, p2p, bcvRecord, p2pUpdatedAt } = await fetchRates({ cachedBcv: activeBcvRecord });
+    activeBcvRecord = bcvRecord;
+    els.bcvRate.value = String(bcv);
     els.p2pRate.value = p2p.toFixed(4);
     ratesLastUpdated = new Date(p2pUpdatedAt);
     const timeStr = ratesLastUpdated.toLocaleString('es-VE', {
@@ -960,14 +968,16 @@ async function loadRates(showSuccessToast = false) {
     });
     els.lastUpdate.dataset.absolute = `${timeStr} · DolarAPI`;
     updateRelativeTime();
-    renderBcvDate(bcvEffectiveDate);
+    renderBcvDate(activeBcvRecord);
     clearRateError();
     if (showSuccessToast === true) {
-      showToast('Tasas actualizadas desde DolarAPI.');
+      showToast('Tasas consultadas: BCV Today y DolarAPI.');
     }
     calculate();
     saveState(false);
   } catch (err) {
+    activeBcvRecord = markBcvRecordCached(activeBcvRecord);
+    renderBcvDate(activeBcvRecord);
     showToast('No se pudieron actualizar las tasas. Conservando valores guardados.', 'err');
     showRateError(() => loadRates(true));
   } finally {
@@ -1289,6 +1299,10 @@ function bindEvents() {
     els[key].addEventListener('input', () => {
       if (key === 'usdToBuy') {
         els[key].value = sanitizeRequestedUsdInput(els[key].value);
+      }
+      if (key === 'bcvRate') {
+        activeBcvRecord = null;
+        renderBcvDate(null);
       }
       if (key === 'cardFee') syncActiveProfileFromCardFee();
       calculate();
