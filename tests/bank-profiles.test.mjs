@@ -203,7 +203,7 @@ test('manages general and bank-specific quick amounts without cross-profile leak
   assert.deepEqual(getGeneralQuickAmounts(state), [...DEFAULT_QUICK_AMOUNTS]);
 });
 
-test('validates quick amounts and supports add, edit, delete, and reorder representations', () => {
+test('validates quick amounts and supports add, edit, delete, and numeric sorting', () => {
   assert.deepEqual(sanitizeQuickAmounts([100]), [100]);
   assert.deepEqual(sanitizeQuickAmounts(['200', 250, 500, 10000]), [200, 250, 500, 10000]);
   assert.equal(sanitizeQuickAmounts([]), null);
@@ -219,7 +219,7 @@ test('validates quick amounts and supports add, edit, delete, and reorder repres
   let state = sanitizeBankProfileState({});
   state = updateProfileQuickAmounts(state, 'bnc', [100, 200, 500]);
   state = updateProfileQuickAmounts(state, 'bnc', [200, 100, 500]);
-  assert.deepEqual(getProfileQuickAmounts(state, 'bnc'), [200, 100, 500]);
+  assert.deepEqual(getProfileQuickAmounts(state, 'bnc'), [100, 200, 500]);
   state = updateProfileQuickAmounts(state, 'bnc', [200, 500]);
   assert.deepEqual(getProfileQuickAmounts(state, 'bnc'), [200, 500]);
 });

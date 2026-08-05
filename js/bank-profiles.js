@@ -207,7 +207,7 @@ export function sanitizeQuickAmounts(amounts) {
     used.add(value);
     sanitized.push(value);
   }
-  return sanitized.length ? sanitized : null;
+  return sanitized.length ? sanitized.sort((a, b) => a - b) : null;
 }
 
 function getSafeQuickAmounts(amounts) {

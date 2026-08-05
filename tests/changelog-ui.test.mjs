@@ -22,11 +22,13 @@ test('keeps the community actions and reuses its Telegram URL', () => {
   assert.match(changelog, /querySelector\('\.support-actions a\[href\*="telegram"\]'\)/);
 });
 
-test('uses a full-width accessible announcement button without reserved hidden space', () => {
+test('uses a full-width accessible announcement card without reserved hidden space', () => {
   assert.match(css, /\.changelog-announcement\s*\{[\s\S]*?width:\s*100%;[\s\S]*?min-height:\s*44px;/);
   assert.match(css, /\.changelog-announcement:hover\s*\{/);
   assert.match(css, /\.changelog-announcement:active\s*\{/);
-  assert.match(css, /\.changelog-announcement:focus-visible\s*\{/);
+  assert.match(css, /\.changelog-announcement-action:focus-visible\s*,\s*\.changelog-announcement-dismiss:focus-visible\s*\{/);
+  assert.match(html, /id="configureQuickAmountsAnnouncementBtn"[\s\S]*?Configurar ahora/);
+  assert.match(html, /id="learnQuickAmountsAnnouncementBtn"[\s\S]*?Cómo funciona/);
   assert.match(css, /@media \(prefers-reduced-motion: reduce\)[\s\S]*?\.changelog-announcement/);
   assert.match(css, /\[hidden\]\s*\{\s*display:\s*none !important;/);
 });

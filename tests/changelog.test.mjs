@@ -105,6 +105,9 @@ function changelogDocument() {
     'closeChangelogBtn',
     'changelogBadge',
     'topChangelogSummary',
+    'configureQuickAmountsAnnouncementBtn',
+    'learnQuickAmountsAnnouncementBtn',
+    'dismissQuickAmountsAnnouncementBtn',
     'communityChangelogSummary',
     'mainCalculator',
     'changelogReleaseMeta',
@@ -157,10 +160,11 @@ test('keeps the release content in one updateable data object', () => {
   assert.equal(CURRENT_CHANGELOG_RELEASE.title, 'Perfiles bancarios');
   assert.equal(CURRENT_CHANGELOG_RELEASE.summary, 'Perfiles bancarios y mejoras recientes');
   assert.deepEqual(CURRENT_CHANGELOG_RELEASE.changes, [
+    'Montos rápidos por banco: elige los botones que quieres tener a mano para cada perfil.',
     'Selecciona tu banco y tipo de tarjeta.',
     'Edita o restaura las comisiones cuando lo necesites.',
     'Crea perfiles personalizados.',
-    'Mejoras de usabilidad y compatibilidad.'
+    'Cómo funciona: abre Configuración, entra en Perfiles bancarios, toca el lápiz del banco, abre Montos rápidos, selecciona “Personalizar para este banco”, escribe hasta cuatro montos y guarda. Cuando cambies de banco, la calculadora mostrará automáticamente los montos guardados para ese perfil. Los cambios se guardan únicamente en este dispositivo y puedes modificarlos cuando quieras.'
   ]);
 });
 
@@ -190,6 +194,7 @@ test('shares unread state and one dialog between both changelog triggers', () =>
     });
 
     const topTrigger = documentRef.getElementById('openTopChangelogBtn');
+    const learnButton = documentRef.getElementById('learnQuickAmountsAnnouncementBtn');
     const communityTrigger = documentRef.getElementById('openChangelogBtn');
     const badge = documentRef.getElementById('changelogBadge');
     const panel = documentRef.getElementById('changelogPanel');
@@ -198,7 +203,7 @@ test('shares unread state and one dialog between both changelog triggers', () =>
 
     assert.equal(topTrigger.hidden, false);
     assert.equal(badge.hidden, false);
-    topTrigger.click();
+    learnButton.click();
     assert.equal(panel.classList.contains('open'), true);
     assert.equal(topTrigger.hidden, true);
     assert.equal(badge.hidden, true);
@@ -208,7 +213,7 @@ test('shares unread state and one dialog between both changelog triggers', () =>
 
     closeButton.click();
     assert.equal(panel.classList.contains('open'), false);
-    assert.equal(documentRef.activeElement, calculator);
+    assert.equal(documentRef.activeElement, learnButton);
     assert.equal(unlockCount, 1);
 
     communityTrigger.click();
@@ -243,11 +248,12 @@ test('hides the top row for the session even when localStorage writes fail', () 
     };
     initChangelog({ documentRef, storage: unavailableStorage });
     const topTrigger = documentRef.getElementById('openTopChangelogBtn');
+    const dismissButton = documentRef.getElementById('dismissQuickAmountsAnnouncementBtn');
 
     assert.equal(topTrigger.hidden, false);
-    topTrigger.click();
+    dismissButton.click();
     assert.equal(topTrigger.hidden, true);
-    assert.equal(documentRef.getElementById('changelogPanel').classList.contains('open'), true);
+    assert.equal(documentRef.getElementById('changelogPanel').classList.contains('open'), false);
   } finally {
     globalThis.window = originalWindow;
   }
