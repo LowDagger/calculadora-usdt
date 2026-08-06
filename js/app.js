@@ -1,4 +1,4 @@
-import { fetchRates } from './api.js';
+import { fetchRates, markP2pRecordCached } from './api.js';
 import { markBcvRecordCached } from './bcv-rates.js';
 import { MAX_REQUESTED_USD, calculateValues, currentBankRate, sanitizeRequestedUsdInput, validateRequestedUsd } from './calculator.js';
 import {
@@ -39,6 +39,7 @@ import { els, updateUsdToBuyDisplay, setStatus, clearStatus, showRateError, clea
 let ratesLastUpdated = null;
 let ratesRequestInFlight = false;
 let activeBcvRecord = null;
+let activeP2pRecord = null;
 let bankProfileState = null;
 let manualCardFee = '1.5';
 let temporaryCardFee = null;
@@ -1181,6 +1182,7 @@ function getState() {
     bpayFee: els.bpayFee.value,
     autoRates: els.autoRates.checked,
     bcvRecord: activeBcvRecord,
+    p2pRecord: activeP2pRecord,
     lastUpdate: els.lastUpdate.dataset.absolute || els.lastUpdate.textContent
   };
 }
@@ -1205,6 +1207,9 @@ function loadState() {
   if (data.bcvRecord && typeof data.bcvRecord === 'object') {
     activeBcvRecord = data.bcvRecord;
     renderBcvDate(activeBcvRecord);
+  }
+  if (data.p2pRecord && typeof data.p2pRecord === 'object') {
+    activeP2pRecord = data.p2pRecord;
   }
   if (data.lastUpdate) {
     els.lastUpdate.textContent = data.lastUpdate;
@@ -1246,27 +1251,47 @@ async function loadRates(showSuccessToast = false) {
   triggerHaptic();
   setLoadingRates(true);
   try {
-    const { bcv, p2p, bcvRecord, p2pUpdatedAt } = await fetchRates({ cachedBcv: activeBcvRecord });
-    activeBcvRecord = bcvRecord;
-    els.bcvRate.value = String(bcv);
-    els.p2pRate.value = p2p.toFixed(4);
-    ratesLastUpdated = new Date(p2pUpdatedAt);
+    const result = await fetchRates({ cachedBcv: activeBcvRecord, cachedP2p: activeP2pRecord });
+    const bcvUpdated = result.bcv.ok && result.bcv.updated;
+    const p2pUpdated = result.p2p.ok && result.p2p.updated;
+
+    if (result.bcv.ok) activeBcvRecord = result.bcv.record;
+    else activeBcvRecord = markBcvRecordCached(activeBcvRecord);
+    if (bcvUpdated) els.bcvRate.value = String(activeBcvRecord.rate);
+
+    if (result.p2p.ok) activeP2pRecord = result.p2p.record;
+    else activeP2pRecord = markP2pRecordCached(activeP2pRecord);
+    if (p2pUpdated) els.p2pRate.value = activeP2pRecord.rate.toFixed(4);
+
+    if (!bcvUpdated && !p2pUpdated) throw new Error('No rate was refreshed');
+    const updatedRecords = [bcvUpdated ? activeBcvRecord : null, p2pUpdated ? activeP2pRecord : null]
+      .filter(Boolean);
+    ratesLastUpdated = new Date(Math.max(...updatedRecords.map(record => Date.parse(record.fetchedAt))));
     const timeStr = ratesLastUpdated.toLocaleString('es-VE', {
       dateStyle: 'short',
       timeStyle: 'short',
       timeZone: 'America/Caracas'
     });
-    els.lastUpdate.dataset.absolute = `${timeStr} · DolarAPI`;
+    const refreshLabel = bcvUpdated && p2pUpdated
+      ? `${activeBcvRecord.source === 'bcv.today' ? 'BCV Today' : 'BCV respaldo'} + ${activeP2pRecord.source === 'binance-p2p' ? 'Binance P2P' : 'P2P respaldo'}`
+      : (bcvUpdated ? 'BCV actualizada · P2P conservada' : 'P2P actualizada · BCV conservada');
+    els.lastUpdate.dataset.absolute = `${timeStr} · ${refreshLabel}`;
     updateRelativeTime();
     renderBcvDate(activeBcvRecord);
     clearRateError();
-    if (showSuccessToast === true) {
-      showToast('Tasas consultadas: BCV Today y DolarAPI.');
+    const usedFallback = activeBcvRecord?.status === 'fallback' || activeP2pRecord?.status === 'fallback';
+    if (showSuccessToast === true || !bcvUpdated || !p2pUpdated || usedFallback) {
+      if (bcvUpdated && p2pUpdated) {
+        showToast(usedFallback ? 'Tasas actualizadas con una fuente de respaldo.' : 'Tasas actualizadas: BCV y Binance P2P.');
+      } else {
+        showToast(bcvUpdated ? 'BCV actualizada. P2P conservada.' : 'P2P actualizada. BCV conservada.');
+      }
     }
     calculate();
     saveState(false);
   } catch (err) {
     activeBcvRecord = markBcvRecordCached(activeBcvRecord);
+    activeP2pRecord = markP2pRecordCached(activeP2pRecord);
     renderBcvDate(activeBcvRecord);
     showToast('No se pudieron actualizar las tasas. Conservando valores guardados.', 'err');
     showRateError(() => loadRates(true));
@@ -1594,6 +1619,7 @@ function bindEvents() {
         activeBcvRecord = null;
         renderBcvDate(null);
       }
+      if (key === 'p2pRate') activeP2pRecord = null;
       if (key === 'cardFee') syncActiveProfileFromCardFee();
       calculate();
       saveState(false);

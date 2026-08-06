@@ -1,6 +1,6 @@
 // ─── Version ──────────────────────────────────────────────────────────────────
 // Bump APP_VERSION on every new deployment to bust the old cache automatically.
-const APP_VERSION  = '34';
+const APP_VERSION  = '35';
 const CACHE_NAME   = `calcuflow-v${APP_VERSION}`;
 
 // ─── Pre-cache manifest ───────────────────────────────────────────────────────
@@ -72,6 +72,7 @@ self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
   const requestUrl = new URL(event.request.url);
   if (requestUrl.origin !== self.location.origin) return;
+  if (requestUrl.pathname.startsWith('/api/')) return;
 
   // ── Navigation requests (page loads) ──
   if (event.request.mode === 'navigate') {

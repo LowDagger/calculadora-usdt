@@ -9,6 +9,7 @@ import {
   markBcvRecordCached,
   normalizeHistoryRecord,
   resolveBcvRate,
+  selectNewestBcvRecord,
   selectLatestAnnouncedRate
 } from '../js/bcv-rates.js';
 import { currentBankRate } from '../js/calculator.js';
@@ -29,7 +30,9 @@ function record({
 }
 
 function response(body, init = {}) {
-  return new Response(JSON.stringify(body), init);
+  const headers = new Headers(init.headers);
+  if (!headers.has('content-type')) headers.set('content-type', 'application/json');
+  return new Response(JSON.stringify(body), { ...init, headers });
 }
 
 test('selects a valid current-day rate when it is the only announcement', () => {
@@ -149,6 +152,28 @@ test('never downgrades a newer cached future rate with an older API response', a
   assert.equal(result.rate, 755.1552);
   assert.equal(result.effectiveDate, '2026-08-05');
   assert.equal(result.status, 'cached');
+});
+
+test('client selection preserves a newer fetched copy of the same BCV announcement', () => {
+  const network = {
+    rate: 755.1552,
+    effectiveDate: '2026-08-05',
+    publishedAt: regression.updated_at,
+    source: 'bcv.today',
+    status: 'current',
+    fetchedAt: '2026-08-05T03:13:00Z'
+  };
+  const cached = { ...network, fetchedAt: '2026-08-05T03:14:00Z' };
+  const selected = selectNewestBcvRecord(network, cached, { now: tuesdayNightUtc });
+  assert.equal(selected.updated, false);
+  assert.equal(selected.record.fetchedAt, cached.fetchedAt);
+});
+
+test('rejects a BCV response with the wrong content type', async () => {
+  await assert.rejects(resolveBcvRate({
+    fetchImpl: async () => response({}, { headers: { 'content-type': 'text/html' } }),
+    now: () => tuesdayNightUtc
+  }), /contenido/);
 });
 
 test('uses a fresh five-minute cache without requesting the large history', async () => {

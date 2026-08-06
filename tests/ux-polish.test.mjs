@@ -27,7 +27,8 @@ test('deduplicates rate requests and keeps initial success quiet', () => {
   assert.match(app, /ratesRequestInFlight = true;/);
   assert.match(app, /ratesRequestInFlight = false;[\s\S]*?setLoadingRates\(false\)/);
   assert.match(app, /window\.addEventListener\('load', \(\) => \{[\s\S]*?loadRates\(false\)/);
-  assert.match(app, /if \(showSuccessToast === true\) \{[\s\S]*?Tasas consultadas: BCV Today y DolarAPI\./);
+  assert.match(app, /if \(showSuccessToast === true \|\| !bcvUpdated \|\| !p2pUpdated \|\| usedFallback\)/);
+  assert.match(app, /Tasas actualizadas: BCV y Binance P2P\./);
 });
 
 test('renders a persistent accessible retry action through the same rate loader', () => {
@@ -47,11 +48,12 @@ test('marks result-card symbols as decorative and bumps the PWA cache', () => {
   assert.match(ui, /btn\.setAttribute\('aria-pressed', String\(isActive\)\)/);
   assert.match(app, /btn\.setAttribute\('aria-pressed', String\(isActive\)\)/);
   assert.match(html, /data-theme-val="system" aria-pressed="true"/);
-  assert.match(serviceWorker, /const APP_VERSION\s+= '34';/);
+  assert.match(serviceWorker, /const APP_VERSION\s+= '35';/);
   assert.match(serviceWorker, /'\/js\/bcv-rates\.js'/);
+  assert.match(serviceWorker, /requestUrl\.pathname\.startsWith\('\/api\/'\)/);
 });
 
 test('rounds BCV only in the visible rate card', () => {
-  assert.match(app, /els\.bcvRate\.value = String\(bcv\)/);
+  assert.match(app, /els\.bcvRate\.value = String\(activeBcvRecord\.rate\)/);
   assert.match(ui, /els\.bcvView\.innerHTML\s+= bcv\s+\? money\(bcv, 2\)/);
 });
