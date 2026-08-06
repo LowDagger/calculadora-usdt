@@ -1,103 +1,145 @@
-import { resolveBcvRate } from './bcv-rates.js';
+import { markBcvRecordCached, selectNewestBcvRecord } from './bcv-rates.js';
 
-/** DolarAPI Venezuela combined rates endpoint (no authentication required). */
-export const DOLARAPI_RATES = 'https://ve.dolarapi.com/v1/dolares';
+export const RATES_ENDPOINT = '/api/rates';
 
-const REQUEST_TIMEOUT_MS = 9000;
+const REQUEST_TIMEOUT_MS = 10_000;
+const P2P_STALE_MS = 10 * 60 * 1000;
+const FUTURE_CLOCK_SKEW_MS = 5 * 60 * 1000;
 
 function providerError(message) {
   return new Error(`Proveedor de tasas: ${message}`);
 }
 
-function findUsdRate(data, source) {
-  return data.find(entry =>
-    entry &&
-    String(entry.moneda || '').trim().toLowerCase() === 'usd' &&
-    String(entry.fuente || '').trim().toLowerCase() === source
-  );
+function positiveRate(value) {
+  if (typeof value !== 'number' && typeof value !== 'string') return null;
+  if (typeof value === 'string' && !/^(?:\d+\.?\d*|\.\d+)$/.test(value.trim())) return null;
+  const rate = Number(value);
+  return Number.isFinite(rate) && rate > 0 ? rate : null;
 }
 
-function positiveRate(entry, label) {
-  const rate = Number(entry?.promedio);
-  if (!Number.isFinite(rate) || rate <= 0) throw providerError(`tasa ${label} no válida.`);
-  return rate;
-}
-
-function validDate(entry, label) {
-  const value = entry?.fechaActualizacion;
-  if (typeof value !== 'string' || !value.trim() || !Number.isFinite(Date.parse(value))) {
-    throw providerError(`fecha de actualización ${label} no válida.`);
-  }
+function validTimestamp(value, nowDate) {
+  if (typeof value !== 'string' || !value.trim()) return null;
+  const timestamp = Date.parse(value);
+  if (!Number.isFinite(timestamp) || timestamp > nowDate.getTime() + FUTURE_CLOCK_SKEW_MS) return null;
   return value;
 }
 
-async function fetchDolarRates(fetchImpl) {
+function normalizeP2pRecord(record, nowDate) {
+  if (!record || typeof record !== 'object' || Array.isArray(record)) return null;
+  const rate = positiveRate(record.rate);
+  const fetchedAt = validTimestamp(record.fetchedAt, nowDate);
+  const source = typeof record.source === 'string' && record.source.trim() ? record.source.trim() : null;
+  if (rate === null || !fetchedAt || !source) return null;
+
+  if (source === 'binance-p2p') {
+    if (record.tradeType !== 'SELL' || record.aggregation !== 'median' ||
+        !Number.isInteger(record.sampleSize) || record.sampleSize < 5) return null;
+  } else if (source === 'dolarapi-paralelo') {
+    if (record.status !== 'fallback' || record.aggregation !== 'provider-value' ||
+        !validTimestamp(record.publishedAt, nowDate)) return null;
+  } else {
+    return null;
+  }
+
+  return {
+    rate,
+    tradeType: record.tradeType ?? null,
+    aggregation: record.aggregation,
+    sampleSize: record.sampleSize ?? null,
+    fetchedAt,
+    publishedAt: record.publishedAt ?? null,
+    source,
+    status: record.status
+  };
+}
+
+export function markP2pRecordCached(record, { now = new Date() } = {}) {
+  const nowDate = now instanceof Date ? now : new Date(now);
+  if (!Number.isFinite(nowDate.getTime())) return null;
+  const normalized = normalizeP2pRecord(record, nowDate);
+  if (!normalized) return null;
+  const age = nowDate.getTime() - Date.parse(normalized.fetchedAt);
+  return { ...normalized, status: age > P2P_STALE_MS ? 'stale' : 'cached' };
+}
+
+function selectNewestP2pRecord(networkRecord, cachedRecord, nowDate) {
+  const network = normalizeP2pRecord(networkRecord, nowDate);
+  const cached = normalizeP2pRecord(cachedRecord, nowDate);
+  if (!network) return cached ? { record: markP2pRecordCached(cached, { now: nowDate }), updated: false } : null;
+  if (!cached) return { record: network, updated: true };
+  if (Date.parse(network.fetchedAt) < Date.parse(cached.fetchedAt)) {
+    return { record: markP2pRecordCached(cached, { now: nowDate }), updated: false };
+  }
+  return { record: network, updated: true };
+}
+
+function failedResult(result) {
+  return {
+    ok: false,
+    error: result?.error && typeof result.error === 'object'
+      ? result.error
+      : { code: 'INVALID_PROVIDER_RESPONSE', message: 'Respuesta no válida.' }
+  };
+}
+
+function normalizeBcvResult(result, cachedBcv, nowDate) {
+  if (result?.ok !== true) return failedResult(result);
+  const selected = selectNewestBcvRecord(result, cachedBcv, { now: nowDate });
+  return selected
+    ? { ok: true, ...selected }
+    : failedResult({ error: { code: 'INVALID_BCV_RESPONSE', message: 'BCV no válido.' } });
+}
+
+function normalizeP2pResult(result, cachedP2p, nowDate) {
+  if (result?.ok !== true) return failedResult(result);
+  const selected = selectNewestP2pRecord(result, cachedP2p, nowDate);
+  return selected
+    ? { ok: true, ...selected }
+    : failedResult({ error: { code: 'INVALID_P2P_RESPONSE', message: 'P2P no válido.' } });
+}
+
+export async function fetchRates({
+  cachedBcv = null,
+  cachedP2p = null,
+  fetchImpl = globalThis.fetch,
+  now = () => new Date(),
+  timeoutMs = REQUEST_TIMEOUT_MS
+} = {}) {
+  if (typeof fetchImpl !== 'function') throw new TypeError('fetch implementation is required');
+  const nowDate = typeof now === 'function' ? now() : now;
+  if (!(nowDate instanceof Date) || !Number.isFinite(nowDate.getTime())) {
+    throw new TypeError('now must resolve to a valid date');
+  }
+
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    const response = await fetchImpl(DOLARAPI_RATES, {
+    const response = await fetchImpl(RATES_ENDPOINT, {
       cache: 'no-store',
+      headers: { accept: 'application/json' },
       signal: controller.signal
     });
     if (!response.ok) throw providerError(`respuesta HTTP ${response.status}.`);
+    const contentType = response.headers.get('content-type') || '';
+    if (!/^application\/json(?:\s*;|$)/i.test(contentType)) {
+      throw providerError('tipo de contenido no válido.');
+    }
     const data = await response.json();
-    if (!Array.isArray(data)) throw providerError('la respuesta no es una lista válida.');
-
-    const parallel = findUsdRate(data, 'paralelo');
-    if (!parallel) throw providerError('no se encontró la tasa paralela USD.');
-    const official = findUsdRate(data, 'oficial');
+    if (!data || typeof data !== 'object' || Array.isArray(data)) {
+      throw providerError('respuesta no válida.');
+    }
     return {
-      p2p: positiveRate(parallel, 'paralela'),
-      p2pUpdatedAt: validDate(parallel, 'paralela'),
-      official
+      bcv: normalizeBcvResult(data.bcv, cachedBcv, nowDate),
+      p2p: normalizeP2pResult(data.p2p, cachedP2p, nowDate)
     };
   } finally {
     clearTimeout(timeout);
   }
 }
 
-function createDolarBcvFallback(official, nowDate) {
-  if (!official) return null;
-  try {
-    const publishedAt = validDate(official, 'oficial');
-    return {
-      rate: positiveRate(official, 'oficial'),
-      effectiveDate: publishedAt.slice(0, 10),
-      publishedAt,
-      source: 'dolarapi.com.ve',
-      status: 'cached',
-      fetchedAt: nowDate.toISOString()
-    };
-  } catch {
-    return null;
-  }
-}
-
-/**
- * Fetch P2P from DolarAPI and resolve BCV independently from BCV Today.
- * Both values are returned atomically so the UI never applies a partial refresh.
- */
-export async function fetchRates({
-  cachedBcv = null,
-  fetchImpl = globalThis.fetch,
-  now = () => new Date()
-} = {}) {
-  const nowDate = typeof now === 'function' ? now() : now;
-  const dolarRates = await fetchDolarRates(fetchImpl);
-  const bcvRecord = await resolveBcvRate({
-    cachedRecord: cachedBcv,
-    secondaryRecord: createDolarBcvFallback(dolarRates.official, nowDate),
-    fetchImpl,
-    now: () => nowDate
-  });
+export function preserveFailedRates({ bcvRecord, p2pRecord, now = new Date() }) {
   return {
-    bcv: bcvRecord.rate,
-    p2p: dolarRates.p2p,
-    bcvEffectiveDate: bcvRecord.effectiveDate,
-    bcvPublishedAt: bcvRecord.publishedAt,
-    bcvSource: bcvRecord.source,
-    bcvStatus: bcvRecord.status,
-    bcvRecord,
-    p2pUpdatedAt: dolarRates.p2pUpdatedAt
+    bcvRecord: markBcvRecordCached(bcvRecord, { now }),
+    p2pRecord: markP2pRecordCached(p2pRecord, { now })
   };
 }

@@ -143,10 +143,28 @@ async function fetchJson(url, { fetchImpl, timeoutMs }) {
   try {
     const response = await fetchImpl(url, { cache: 'no-store', signal: controller.signal });
     if (!response.ok) throw providerError(`respuesta HTTP ${response.status}.`);
+    const contentType = response.headers.get('content-type') || '';
+    if (!/^application\/json(?:\s*;|$)/i.test(contentType)) {
+      throw providerError('tipo de contenido no válido.');
+    }
     return await response.json();
   } finally {
     clearTimeout(timeout);
   }
+}
+
+export function selectNewestBcvRecord(networkRecord, cachedRecord = null, { now = new Date() } = {}) {
+  const nowDate = asDate(now);
+  const network = sanitizeStoredRecord(networkRecord, nowDate);
+  const cached = sanitizeStoredRecord(cachedRecord, nowDate);
+  if (!network) return cached ? { record: markCached(cached, nowDate), updated: false } : null;
+  if (!cached) return { record: network, updated: true };
+  const comparison = compareRecords(network, cached);
+  if (comparison < 0 || (comparison === 0 && cached.fetchedAt && network.fetchedAt &&
+      Date.parse(cached.fetchedAt) > Date.parse(network.fetchedAt))) {
+    return { record: markCached(cached, nowDate), updated: false };
+  }
+  return { record: network, updated: true };
 }
 
 function normalizeCurrentResponse(entry, nowDate) {
