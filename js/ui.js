@@ -3,7 +3,7 @@ import { formatBcvRateLabel } from './bcv-rates.js';
 
 export const els = {
   usdToBuy: $('usdToBuy'), bankMargin: $('bankMargin'), bcvRate: $('bcvRate'), p2pRate: $('p2pRate'),
-  cardFee: $('cardFee'), bpayFee: $('bpayFee'), autoRates: $('autoRates'), bcvView: $('bcvView'), bankView: $('bankView'), p2pView: $('p2pView'),
+  cardFee: $('cardFee'), bpayFee: $('bpayFee'), autoRates: $('autoRates'), bcvView: $('bcvView'), bankView: $('bankView'), p2pView: $('p2pView'), bankMarginView: $('bankMarginView'),
   lastUpdate: $('lastUpdate'), statusBox: $('statusBox'), opStatus: $('opStatus'), vesNeeded: $('vesNeeded'), vesSub: $('vesSub'),
   profitCard: $('profitCard'), profitUsdtBig: $('profitUsdtBig'), profitVes: $('profitVes'), roiMeta: $('roiMeta'), bpayRecommended: $('bpayRecommended'), usdtFinal: $('usdtFinal'), feesSub: $('feesSub'),
   flowUsd: $('flowUsd'), flowVes: $('flowVes'), flowCard: $('flowCard'), flowBpay: $('flowBpay'),
@@ -137,6 +137,11 @@ export function renderEmpty() {
 
   // Clear BCV effective date — no valid date available yet
   if (els.bcvEffectiveDate) els.bcvEffectiveDate.textContent = '';
+
+  if (els.bankMarginView) {
+    els.bankMarginView.textContent = '--';
+    els.bankMarginView.hidden = true;
+  }
   
   // Reset bottom status bar
   if (els.statusPill && els.statusPillText) {
@@ -173,12 +178,21 @@ export function renderBcvDate(record) {
 }
 
 export function renderRates({ bcv, bank, p2p }) {
-  const uBsUsd  = '<span class="rate-unit">Bs/USD</span>';
   const uBsUsdt = '<span class="rate-unit">Bs/USDT</span>';
-  els.bcvView.innerHTML  = bcv  ? money(bcv, 2)  + uBsUsd  : '--';
-  els.bankView.innerHTML = bank ? money(bank, 2) + uBsUsd  : '--';
-  els.p2pView.innerHTML  = p2p  ? money(p2p, 2)  + uBsUsdt : '--';
-  
+  els.bcvView.textContent  = bcv  ? money(bcv, 2)  : '--';
+  els.bankView.textContent = bank ? money(bank, 2) : '--';
+  els.p2pView.innerHTML    = p2p  ? money(p2p, 2)  + uBsUsdt : '--';
+
+  if (els.bankMarginView) {
+    const margin = n(els.bankMargin.value);
+    if (bank && margin !== 0) {
+      els.bankMarginView.textContent = (margin > 0 ? '+' : '') + money(margin, 1) + '%';
+      els.bankMarginView.hidden = false;
+    } else {
+      els.bankMarginView.textContent = '--';
+      els.bankMarginView.hidden = true;
+    }
+  }
   if (els.brechaView) {
     if (bcv && p2p) {
       const brecha = ((p2p - bcv) / bcv) * 100;

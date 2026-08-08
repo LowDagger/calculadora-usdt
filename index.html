@@ -188,23 +188,33 @@
         </div>
       </section>
 
-      <!-- Card 2: Rates grid (3 columns) -->
+      <!-- Card 2: Rates grid (BCV + Banco combined, P2P) -->
       <h2 class="section-label">Tasas de referencia</h2>
       <div class="rates-grid">
-        <div class="rate-card">
+        <button class="rate-card rate-card--editable" id="openBcvEditorBtn" type="button"
+          aria-label="Editar tasa BCV" aria-controls="bcvEditorPanel" aria-expanded="false"
+          data-od-id="bcv-rate-card">
           <div class="card-header">
-            <span class="rate-label">BCV</span>
-            <span class="material-symbols-rounded card-icon" aria-hidden="true">account_balance</span>
+            <span class="rate-card-heading">
+              <span class="material-symbols-rounded card-icon rate-exchange-icon" aria-hidden="true">account_balance</span>
+              <span class="rate-label">BCV + Banco</span>
+              <span class="rate-manual-indicator" id="bcvManualIndicator" hidden>Manual</span>
+            </span>
+            <span class="material-symbols-rounded card-icon rate-edit-icon" aria-hidden="true">edit</span>
           </div>
-          <strong class="rate-val" id="bcvView">--</strong>
-        </div>
-        <div class="rate-card">
-          <div class="card-header">
-            <span class="rate-label">BANCO</span>
-            <span class="material-symbols-rounded card-icon" aria-hidden="true">payments</span>
+          <div class="rate-pair">
+            <span class="rate-pair-row">
+              <strong class="rate-val" id="bcvView">--</strong>
+              <span class="rate-unit-label">BCV</span>
+            </span>
+            <span class="rate-pair-row">
+              <strong class="rate-val" id="bankView">--</strong>
+              <span class="rate-unit-label">Banco</span>
+              <span class="rate-margin-chip" id="bankMarginView">--</span>
+            </span>
           </div>
-          <strong class="rate-val" id="bankView">--</strong>
-        </div>
+          <span class="rate-effective-date" id="bcvEffectiveDate"></span>
+        </button>
         <button class="rate-card rate-card--editable" id="openP2pEditorBtn" type="button"
           aria-label="Editar tasa P2P" aria-controls="p2pEditorPanel" aria-expanded="false"
           data-od-id="p2p-rate-card">
@@ -220,11 +230,8 @@
         </button>
       </div>
       <div class="rate-meta-row" aria-live="polite">
-        <span class="rate-meta-item rate-meta-bcv">
-          <span class="rate-meta-label">BCV</span>
-          <span class="rate-effective-date" id="bcvEffectiveDate"></span>
-        </span>
         <span class="rate-meta-item rate-meta-spread">
+          <span class="material-symbols-rounded brecha-icon" aria-hidden="true">swap_horiz</span>
           <span class="brecha-label">Brecha</span>
           <strong class="brecha-val" id="brechaView">--</strong>
         </span>
@@ -404,6 +411,41 @@
               type="button" data-od-id="p2p-editor-restore">Restaurar tasa actual</button>
             <button class="bank-profile-action bank-profile-action--primary" id="applyP2pRateBtn"
               type="submit" data-od-id="p2p-editor-apply">Aplicar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <section class="modal-shell p2p-editor-panel" id="bcvEditorPanel" role="dialog" aria-modal="true"
+    aria-labelledby="bcvEditorTitle" aria-describedby="bcvEditorHelper" aria-hidden="true"
+    data-od-id="bcv-editor-panel">
+    <div class="modal-panel modal-panel--compact p2p-editor-card">
+      <div class="modal-handle sheet-grab-handle" aria-hidden="true"></div>
+      <div class="modal-header">
+        <div>
+          <h2 class="modal-title" id="bcvEditorTitle">Editar tasa BCV</h2>
+          <p class="modal-description subtitle" id="bcvEditorHelper">Usa una tasa personalizada para simular tu operación.</p>
+        </div>
+        <button class="modal-close icon-btn" id="closeBcvEditorBtn" type="button" title="Cerrar"
+          aria-label="Cerrar editor de tasa BCV"><span class="material-symbols-rounded" aria-hidden="true">close</span></button>
+      </div>
+      <div class="modal-content p2p-editor-content">
+        <form class="p2p-editor-form" id="bcvEditorForm" novalidate>
+          <div class="field">
+            <div class="label-row"><label for="bcvQuickRate">Tasa BCV</label></div>
+            <div class="input-wrap p2p-editor-input">
+              <input id="bcvQuickRate" type="text" inputmode="decimal" autocomplete="off"
+                aria-describedby="bcvEditorHelper bcvEditorMessage" data-od-id="bcv-editor-input">
+              <span class="unit">Bs/USD</span>
+            </div>
+          </div>
+          <p class="p2p-editor-message" id="bcvEditorMessage" role="status" hidden></p>
+          <div class="p2p-editor-actions">
+            <button class="bank-profile-action bank-profile-action--secondary" id="restoreBcvRateBtn"
+              type="button" data-od-id="bcv-editor-restore">Restaurar tasa actual</button>
+            <button class="bank-profile-action bank-profile-action--primary" id="applyBcvRateBtn"
+              type="submit" data-od-id="bcv-editor-apply">Aplicar</button>
           </div>
         </form>
       </div>

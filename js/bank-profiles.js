@@ -1,7 +1,7 @@
 export const BANK_PROFILE_STORAGE_KEY = 'calcuflowBankProfilesV1';
 export const BANK_PROFILE_STATE_VERSION = 4;
 export const MANUAL_PROFILE_ID = 'manual';
-export const DEFAULT_PROFILE_ID = 'bdv-fisica';
+export const DEFAULT_PROFILE_ID = 'bdv-virtual';
 export const MAX_CARD_FEE = 100;
 export const MAX_PERSISTED_LOGO_BYTES = 100 * 1024;
 export const DEFAULT_QUICK_AMOUNTS = Object.freeze([100, 200, 500, 1000]);
@@ -572,9 +572,15 @@ export function removeBankProfile(state, profileId) {
     return safeState;
   }
   const profiles = safeState.profiles.filter(profile => profile.id !== profileId);
+  let selectedId = safeState.selectedId;
+  if (selectedId === profileId) {
+    selectedId = profiles.some(profile => profile.id === DEFAULT_PROFILE_ID)
+      ? DEFAULT_PROFILE_ID
+      : profiles[0].id;
+  }
   return {
     ...safeState,
-    selectedId: safeState.selectedId === profileId ? profiles[0].id : safeState.selectedId,
+    selectedId,
     profiles
   };
 }

@@ -56,7 +56,7 @@ test('marks result-card symbols as decorative and bumps the PWA cache', () => {
   assert.match(ui, /btn\.setAttribute\('aria-pressed', String\(isActive\)\)/);
   assert.match(app, /btn\.setAttribute\('aria-pressed', String\(isActive\)\)/);
   assert.match(html, /data-theme-val="system" aria-pressed="true"/);
-  assert.match(serviceWorker, /const APP_VERSION\s+= '44';/);
+  assert.match(serviceWorker, /const APP_VERSION\s+= '45';/);
   assert.match(serviceWorker, /'\/js\/bcv-rates\.js'/);
   assert.match(serviceWorker, /requestUrl\.pathname\.startsWith\('\/api\/'\)/);
 });
@@ -131,21 +131,27 @@ test('keeps Community actions balanced with the unread marker and compact footer
   assert.match(css, /footer\s*\{[\s\S]*?font-size:\s*0\.6rem[\s\S]*?line-height:\s*1\.35/);
 });
 
-test('keeps rate cards equal and places BCV metadata with the spread below them', () => {
+test('keeps rate cards equal and moves BCV metadata into the editable BCV card', () => {
   const ratesHtml = html.match(/<h2 class="section-label">Tasas de referencia<\/h2>[\s\S]*?<div class="status"/)?.[0] || '';
-  assert.match(ratesHtml, /class="rates-grid"[\s\S]*?id="bcvView"[\s\S]*?id="bankView"[\s\S]*?id="p2pView"[\s\S]*?class="rate-meta-row"/);
-  assert.match(ratesHtml, /class="rate-meta-label">BCV<[\s\S]*?id="bcvEffectiveDate"[\s\S]*?>Brecha<[\s\S]*?id="brechaView"/);
-  assert.doesNotMatch(ratesHtml.match(/class="rates-grid"[\s\S]*?<\/div>\s*<div class="rate-meta-row"/)?.[0] || '', /id="bcvEffectiveDate"|id="brechaView"/);
+  assert.match(ratesHtml, /class="rates-grid"[\s\S]*?id="openBcvEditorBtn"[\s\S]*?id="bcvView"[\s\S]*?id="bankView"[\s\S]*?id="openP2pEditorBtn"[\s\S]*?id="p2pView"[\s\S]*?class="rate-meta-row"/);
+  assert.match(ratesHtml, /id="bankMarginView"[\s\S]*?id="bcvEffectiveDate"[\s\S]*?id="brechaView"/);
+  assert.match(ratesHtml, /class="material-symbols-rounded brecha-icon" aria-hidden="true">swap_horiz<\/span>[\s\S]*?class="brecha-label">Brecha<[\s\S]*?id="brechaView"/);
+  assert.match(css, /\.rates-grid\s*\{[\s\S]*?grid-template-columns:\s*repeat\(2, minmax\(0, 1fr\)\)/);
   assert.match(css, /\.rate-card\s*\{[\s\S]*?min-height:\s*72px/);
-  assert.match(css, /\.rate-meta-row\s*\{[\s\S]*?grid-template-columns:\s*minmax\(0,\s*1fr\)\s*minmax\(0,\s*1fr\)/);
-  assert.match(css, /\.rate-meta-spread\s*\{[\s\S]*?justify-self:\s*center/);
+  assert.match(css, /\.rate-meta-row\s*\{[\s\S]*?justify-content:\s*center/);
+  assert.match(css, /\.rate-meta-row::before,[\s\S]*?\.rate-meta-row::after\s*\{[\s\S]*?flex:\s*1/);
+  assert.match(css, /\.brecha-icon\s*\{[\s\S]*?font-size:\s*0\.66rem/);
+  assert.match(css, /\.rate-margin-chip\s*\{[\s\S]*?margin-left:\s*auto/);
   assert.match(css, /\.rate-effective-date\s*\{[\s\S]*?white-space:\s*normal/);
+  assert.match(css, /\.rate-pair-row\s*\{[\s\S]*?align-items:\s*baseline/);
 });
 
-test('offers one accessible P2P quick editor without making BCV directly editable', () => {
+test('offers one accessible quick editor for each editable rate card', () => {
+  assert.match(html, /<button class="rate-card rate-card--editable" id="openBcvEditorBtn"[\s\S]*?aria-label="Editar tasa BCV"[\s\S]*?id="bcvView"[\s\S]*?id="bankView"[\s\S]*?<\/button>/);
   assert.match(html, /<button class="rate-card rate-card--editable" id="openP2pEditorBtn"[\s\S]*?aria-label="Editar tasa P2P"[\s\S]*?id="p2pView"[\s\S]*?<\/button>/);
-  assert.doesNotMatch(html, /<button[^>]*class="[^"]*rate-card[^"]*"[^>]*>[\s\S]*?id="bcvView"[\s\S]*?<\/button>/);
+  assert.match(html, /id="bcvManualIndicator" hidden>Manual</);
   assert.match(html, /id="p2pManualIndicator" hidden>Manual</);
+  assert.match(html, /id="bcvEditorPanel"[\s\S]*?Editar tasa BCV[\s\S]*?Usa una tasa personalizada para simular tu operación\.[\s\S]*?id="bcvQuickRate"[\s\S]*?Bs\/USD[\s\S]*?Restaurar tasa actual[\s\S]*?>Aplicar</);
   assert.match(html, /id="p2pEditorPanel"[\s\S]*?Editar tasa P2P[\s\S]*?Usa una tasa personalizada para simular tu operación\.[\s\S]*?id="p2pQuickRate"[\s\S]*?Bs\/USDT[\s\S]*?Restaurar tasa actual[\s\S]*?>Aplicar</);
   assert.match(css, /\.rate-card--editable\s*\{[\s\S]*?cursor:\s*pointer/);
   assert.match(css, /\.rate-card--editable:focus-visible\s*\{/);
@@ -161,6 +167,17 @@ test('keeps the quick editor synchronized with the existing manual P2P state', (
   assert.match(app, /openManagedModal\(p2pEditorEls\.panel, p2pEditorEls\.trigger[\s\S]*?p2pEditorEls\.input, p2pEditorEls\.trigger/);
   assert.match(app, /closeManagedModal\(p2pEditorEls\.panel, p2pEditorEls\.trigger/);
   assert.match(app, /p2pEditorEls\.panel\.classList\.contains\('open'\)\) dismissP2pEditor\(\)/);
+});
+
+test('keeps the BCV quick editor synchronized with the manual BCV state', () => {
+  assert.match(app, /bcvEditorEls\.input\.value = els\.bcvRate\.value/);
+  assert.match(app, /els\.bcvRate\.value = String\(rate\)[\s\S]*?dispatchEvent\(new Event\('input'/);
+  assert.match(app, /if \(activeBcvRecord\) lastAutomaticBcvRecord = activeBcvRecord;[\s\S]*?activeBcvRecord = null/);
+  assert.match(app, /activeBcvRecord = lastAutomaticBcvRecord[\s\S]*?els\.bcvRate\.value = String\(activeBcvRecord\.rate\)[\s\S]*?renderBcvDate\(activeBcvRecord\)[\s\S]*?calculate\(\)[\s\S]*?saveState\(false\)/);
+  assert.match(app, /bcvEditorEls\.indicator\.hidden = !isManual/);
+  assert.match(app, /openManagedModal\(bcvEditorEls\.panel, bcvEditorEls\.trigger[\s\S]*?bcvEditorEls\.input, bcvEditorEls\.trigger/);
+  assert.match(app, /closeManagedModal\(bcvEditorEls\.panel, bcvEditorEls\.trigger/);
+  assert.match(app, /bcvEditorEls\.panel\.classList\.contains\('open'\)\) dismissBcvEditor\(\)/);
 });
 
 test('uses icon-only profile editing while preserving the row accessibility contract', () => {
@@ -183,5 +200,5 @@ test('shares the current calculation hierarchy with bank context and keeps both 
 
 test('rounds BCV only in the visible rate card', () => {
   assert.match(app, /els\.bcvRate\.value = String\(activeBcvRecord\.rate\)/);
-  assert.match(ui, /els\.bcvView\.innerHTML\s+= bcv\s+\? money\(bcv, 2\)/);
+  assert.match(ui, /els\.bcvView\.textContent\s+= bcv\s+\? money\(bcv, 2\)/);
 });

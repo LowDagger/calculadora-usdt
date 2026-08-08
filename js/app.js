@@ -41,6 +41,7 @@ let ratesRequestInFlight = false;
 let activeBcvRecord = null;
 let activeP2pRecord = null;
 let lastAutomaticP2pRecord = null;
+let lastAutomaticBcvRecord = null;
 let bankProfileState = null;
 let manualCardFee = '1.5';
 let temporaryCardFee = null;
@@ -1256,6 +1257,7 @@ function loadState() {
   if (typeof data.autoRates === 'boolean') els.autoRates.checked = data.autoRates;
   if (data.bcvRecord && typeof data.bcvRecord === 'object') {
     activeBcvRecord = data.bcvRecord;
+    lastAutomaticBcvRecord = data.bcvRecord;
     renderBcvDate(activeBcvRecord);
   }
   if (data.p2pRecord && typeof data.p2pRecord === 'object') {
@@ -1274,7 +1276,6 @@ function resetDefaults() {
   triggerHaptic('warning');
   els.usdToBuy.value = '500';
   els.bankMargin.value = '0.5';
-  els.cardFee.value = '1.5';
   els.bpayFee.value = '4.1';
   els.autoRates.checked = true;
   temporaryCardFee = null;
@@ -1284,6 +1285,8 @@ function resetDefaults() {
     DEFAULT_PROFILE_ID
   );
   persistBankProfiles(nextProfileState);
+  const activeProfile = getSelectedBankProfile(bankProfileState, manualCardFee);
+  els.cardFee.value = feeToInputValue(activeProfile.fee);
   renderBankProfiles();
   
   // Reset theme to system
@@ -1306,7 +1309,10 @@ async function loadRates(showSuccessToast = false) {
     const bcvUpdated = result.bcv.ok && result.bcv.updated;
     const p2pUpdated = result.p2p.ok && result.p2p.updated;
 
-    if (result.bcv.ok) activeBcvRecord = result.bcv.record;
+    if (result.bcv.ok) {
+      activeBcvRecord = result.bcv.record;
+      lastAutomaticBcvRecord = result.bcv.record;
+    }
     else activeBcvRecord = markBcvRecordCached(activeBcvRecord);
     if (bcvUpdated) els.bcvRate.value = String(activeBcvRecord.rate);
 
@@ -1365,6 +1371,7 @@ function calculate() {
   const p2p = n(els.p2pRate.value);
 
   renderRates({ bcv, bank, p2p });
+  renderBcvRateMode();
   renderP2pRateMode();
   renderUsdAmountValidation(amountValidation.error);
 
@@ -1511,6 +1518,18 @@ const p2pEditorEls = {
   restore: document.getElementById('restoreP2pRateBtn'),
   apply: document.getElementById('applyP2pRateBtn'),
   indicator: document.getElementById('p2pManualIndicator')
+};
+
+const bcvEditorEls = {
+  trigger: document.getElementById('openBcvEditorBtn'),
+  panel: document.getElementById('bcvEditorPanel'),
+  close: document.getElementById('closeBcvEditorBtn'),
+  form: document.getElementById('bcvEditorForm'),
+  input: document.getElementById('bcvQuickRate'),
+  message: document.getElementById('bcvEditorMessage'),
+  restore: document.getElementById('restoreBcvRateBtn'),
+  apply: document.getElementById('applyBcvRateBtn'),
+  indicator: document.getElementById('bcvManualIndicator')
 };
 
 function openManagedModal(panel, trigger, openFn, initialFocus, returnFocus = null, focusDelay = 0) {
@@ -1767,6 +1786,95 @@ async function restoreP2pAutomaticRate() {
   dismissP2pEditor();
 }
 
+function setBcvEditorMessage(text = '', type = '') {
+  bcvEditorEls.message.textContent = text;
+  bcvEditorEls.message.hidden = !text;
+  bcvEditorEls.message.classList.toggle('is-error', type === 'error');
+  bcvEditorEls.message.setAttribute('role', type === 'error' ? 'alert' : 'status');
+}
+
+function renderBcvEditorValidation(showError = false) {
+  const rate = parsePositiveRateInput(bcvEditorEls.input.value);
+  const invalid = rate === null;
+  bcvEditorEls.apply.disabled = invalid;
+  bcvEditorEls.input.setAttribute('aria-invalid', String(showError && invalid));
+  if (showError && invalid) setBcvEditorMessage('Ingresa una tasa BCV válida.', 'error');
+  else if (bcvEditorEls.message.classList.contains('is-error')) setBcvEditorMessage();
+  return rate;
+}
+
+function renderBcvRateMode() {
+  const displayedRate = n(els.bcvRate.value);
+  const automaticRate = n(activeBcvRecord?.rate);
+  const isManual = displayedRate > 0 && (!automaticRate || Math.abs(displayedRate - automaticRate) > 0.000001);
+  bcvEditorEls.indicator.hidden = !isManual;
+  bcvEditorEls.trigger.classList.toggle('is-manual', isManual);
+  bcvEditorEls.trigger.setAttribute(
+    'aria-label',
+    isManual ? 'Editar tasa BCV. Ajuste manual activo' : 'Editar tasa BCV'
+  );
+}
+
+function showBcvEditor() {
+  bcvEditorEls.input.value = els.bcvRate.value;
+  setBcvEditorMessage();
+  renderBcvEditorValidation();
+  openManagedModal(bcvEditorEls.panel, bcvEditorEls.trigger, () => {
+    bcvEditorEls.panel.classList.remove('closing');
+    bcvEditorEls.panel.classList.add('open');
+    bcvEditorEls.panel.setAttribute('aria-hidden', 'false');
+    triggerHaptic('light');
+    lockBodyScroll();
+  }, bcvEditorEls.input, bcvEditorEls.trigger,
+    window.matchMedia('(max-width: 860px)').matches ? 220 : 0
+  );
+}
+
+function dismissBcvEditor() {
+  closeManagedModal(bcvEditorEls.panel, bcvEditorEls.trigger, () => {
+    bcvEditorEls.panel.classList.add('closing');
+    triggerHaptic('light');
+    const duration = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 250;
+    setTimeout(() => {
+      bcvEditorEls.panel.classList.remove('open', 'closing');
+      bcvEditorEls.panel.setAttribute('aria-hidden', 'true');
+      unlockBodyScroll();
+    }, duration);
+  });
+}
+
+function applyBcvEditorRate() {
+  const rate = renderBcvEditorValidation(true);
+  if (rate === null) return;
+  els.bcvRate.value = String(rate);
+  els.bcvRate.dispatchEvent(new Event('input', { bubbles: true }));
+  showToast('Tasa BCV ajustada para esta simulación.');
+  dismissBcvEditor();
+}
+
+async function restoreBcvAutomaticRate() {
+  bcvEditorEls.restore.disabled = true;
+  bcvEditorEls.apply.disabled = true;
+  setBcvEditorMessage('Buscando la tasa BCV actual…');
+
+  if (!lastAutomaticBcvRecord) await loadRates(true);
+
+  bcvEditorEls.restore.disabled = false;
+  if (!lastAutomaticBcvRecord) {
+    renderBcvEditorValidation();
+    setBcvEditorMessage('No se pudo recuperar una tasa BCV automática.', 'error');
+    return;
+  }
+
+  activeBcvRecord = lastAutomaticBcvRecord;
+  els.bcvRate.value = String(activeBcvRecord.rate);
+  renderBcvDate(activeBcvRecord);
+  calculate();
+  saveState(false);
+  showToast('Tasa BCV actual restaurada.');
+  dismissBcvEditor();
+}
+
 function bindEvents() {
   ['usdToBuy','bankMargin','bcvRate','p2pRate','cardFee','bpayFee','autoRates'].forEach(key => {
     els[key].addEventListener('input', () => {
@@ -1774,6 +1882,7 @@ function bindEvents() {
         els[key].value = sanitizeRequestedUsdInput(els[key].value);
       }
       if (key === 'bcvRate') {
+        if (activeBcvRecord) lastAutomaticBcvRecord = activeBcvRecord;
         activeBcvRecord = null;
         renderBcvDate(null);
       }
@@ -1871,6 +1980,21 @@ function bindEvents() {
     applyP2pEditorRate();
   });
   p2pEditorEls.restore.addEventListener('click', () => restoreP2pAutomaticRate());
+  bcvEditorEls.trigger.addEventListener('click', showBcvEditor);
+  bcvEditorEls.close.addEventListener('click', dismissBcvEditor);
+  bcvEditorEls.panel.addEventListener('click', e => { if (e.target === bcvEditorEls.panel) dismissBcvEditor(); });
+  bcvEditorEls.input.addEventListener('input', () => {
+    setBcvEditorMessage();
+    renderBcvEditorValidation();
+  });
+  bcvEditorEls.input.addEventListener('beforeinput', e => {
+    if (e.data && /[^\d.,]/.test(e.data)) e.preventDefault();
+  });
+  bcvEditorEls.form.addEventListener('submit', e => {
+    e.preventDefault();
+    applyBcvEditorRate();
+  });
+  bcvEditorEls.restore.addEventListener('click', () => restoreBcvAutomaticRate());
 
   // Prevent scroll leaking through any shared modal backdrop on mobile
   document.querySelectorAll('.modal-shell').forEach(shell => shell.addEventListener('touchmove', e => {
@@ -1896,6 +2020,7 @@ function bindEvents() {
       }
       else if (bsHelperEls.panel.classList.contains('open')) dismissBsHelper();
       else if (p2pEditorEls.panel.classList.contains('open')) dismissP2pEditor();
+      else if (bcvEditorEls.panel.classList.contains('open')) dismissBcvEditor();
       else if (els.settingsPanel.classList.contains('open')) dismissSettings();
       else if (els.breakdownPanel.classList.contains('open')) dismissBreakdown();
       else if (els.supportPanel.classList.contains('open')) dismissSupport();
