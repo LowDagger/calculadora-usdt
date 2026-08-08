@@ -55,7 +55,7 @@ test('marks result-card symbols as decorative and bumps the PWA cache', () => {
   assert.match(ui, /btn\.setAttribute\('aria-pressed', String\(isActive\)\)/);
   assert.match(app, /btn\.setAttribute\('aria-pressed', String\(isActive\)\)/);
   assert.match(html, /data-theme-val="system" aria-pressed="true"/);
-  assert.match(serviceWorker, /const APP_VERSION\s+= '40';/);
+  assert.match(serviceWorker, /const APP_VERSION\s+= '41';/);
   assert.match(serviceWorker, /'\/js\/bcv-rates\.js'/);
   assert.match(serviceWorker, /requestUrl\.pathname\.startsWith\('\/api\/'\)/);
 });
@@ -118,14 +118,43 @@ test('keeps the compact mobile header accessible without duplicate ids', () => {
   assert.equal(new Set(ids).size, ids.length);
 });
 
-test('simplifies Community, the unread marker and the footer', () => {
+test('keeps Community actions balanced with the unread marker and compact footer', () => {
   const communityHtml = html.match(/<div class="support-section">[\s\S]*?<\/div>/)?.[0] || '';
   assert.match(communityHtml, />Novedades</);
+  assert.match(communityHtml, /href="https:\/\/telegram\.me\/CalcuFlow"[\s\S]*?target="_blank"[\s\S]*?rel="noopener noreferrer"[\s\S]*?>[\s\S]*?Unirme al grupo/);
   assert.match(communityHtml, />Apoyar el proyecto</);
-  assert.doesNotMatch(communityHtml, /telegram\.me|Unirme al grupo/);
+  assert.match(css, /\.support-actions\s*\{[\s\S]*?grid-template-columns:\s*repeat\(2, minmax\(0, 1fr\)\)/);
   assert.match(html, /id="changelogBadge" role="status" aria-label="Novedad sin leer"[\s\S]*?class="changelog-badge-dot"/);
   assert.match(css, /\.changelog-badge-dot\s*\{[\s\S]*?width:\s*7px[\s\S]*?height:\s*7px/);
   assert.match(css, /footer\s*\{[\s\S]*?font-size:\s*0\.6rem[\s\S]*?line-height:\s*1\.35/);
+});
+
+test('keeps rate cards equal and places BCV metadata with the spread below them', () => {
+  const ratesHtml = html.match(/<h2 class="section-label">Tasas de referencia<\/h2>[\s\S]*?<div class="status"/)?.[0] || '';
+  assert.match(ratesHtml, /class="rates-grid"[\s\S]*?id="bcvView"[\s\S]*?id="bankView"[\s\S]*?id="p2pView"[\s\S]*?class="rate-meta-row"/);
+  assert.match(ratesHtml, /class="rate-meta-label">Tasa BCV<[\s\S]*?id="bcvEffectiveDate"[\s\S]*?>Brecha<[\s\S]*?id="brechaView"/);
+  assert.doesNotMatch(ratesHtml.match(/class="rates-grid"[\s\S]*?<\/div>\s*<div class="rate-meta-row"/)?.[0] || '', /id="bcvEffectiveDate"|id="brechaView"/);
+  assert.match(css, /\.rate-card\s*\{[\s\S]*?min-height:\s*72px/);
+  assert.match(css, /\.rate-meta-row\s*\{[\s\S]*?flex-wrap:\s*wrap/);
+  assert.match(css, /\.rate-effective-date\s*\{[\s\S]*?white-space:\s*normal/);
+});
+
+test('uses icon-only profile editing while preserving the row accessibility contract', () => {
+  assert.match(app, /option\.title = `Editar perfil \$\{displayProfile\.name\}`/);
+  assert.match(app, /\? `Editar perfil \$\{displayProfile\.name\}/);
+  assert.match(app, /editIcon\.className = 'material-symbols-rounded bank-profile-edit-icon'/);
+  assert.doesNotMatch(app, /bank-profile-manage-label|editLabel\.textContent = 'Editar'/);
+});
+
+test('shares the current calculation hierarchy with bank context and keeps both delivery paths', () => {
+  assert.match(app, /CalcuFlow — Banco → USDT/);
+  assert.match(app, /Compra: \$\{amount\} USD[\s\S]*?Banco: \$\{bankDescription\}/);
+  assert.match(app, /BCV: \$\{bcv\}[\s\S]*?Banco: \$\{bankRate\}[\s\S]*?P2P: \$\{p2p\}/);
+  assert.match(app, /Bs necesarios: \$\{bsNeeded\} Bs[\s\S]*?Monto en BPay: \$\{bpayAmount\} USD[\s\S]*?USDT finales: \$\{finalUsdt\} USDT/);
+  assert.match(app, /Ganancia estimada: \$\{profitUsd\} USD[\s\S]*?Retorno: \$\{roi\}%/);
+  assert.doesNotMatch(app, /💵 Compra Banco|Calculado con CalcuFlow:/);
+  assert.match(app, /if \(navigator\.share\)[\s\S]*?navigator\.share\(/);
+  assert.match(app, /navigator\.clipboard\.writeText\(text\)/);
 });
 
 test('rounds BCV only in the visible rate card', () => {

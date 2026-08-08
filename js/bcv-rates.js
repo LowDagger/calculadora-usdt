@@ -231,11 +231,11 @@ export function formatBcvRateLabel(record, { now = new Date() } = {}) {
   const [, month, day] = effectiveDate.split('-').map(Number);
   const compactDate = `${day} ${MONTH_NAMES[month - 1]}`;
   const today = getCaracasDate(nowDate);
-  if (effectiveDate > today) return `Tasa anunciada · Vigente ${compactDate}`;
+  if (effectiveDate > today) return `Anunciada · Vigente ${compactDate}`;
   if (effectiveDate === today) return record?.status === 'cached' || record?.status === 'stale'
-    ? 'BCV vigente hoy · guardada'
-    : 'BCV vigente hoy';
+    ? 'Vigente hoy · guardada'
+    : 'Vigente hoy';
   return record?.status === 'cached' || record?.status === 'stale'
-    ? `Tasa guardada · Vigente ${compactDate}`
+    ? `Guardada · Vigente ${compactDate}`
     : `Vigente ${compactDate}`;
 }

@@ -197,7 +197,6 @@
             <span class="material-symbols-rounded card-icon" aria-hidden="true">account_balance</span>
           </div>
           <strong class="rate-val" id="bcvView">--</strong>
-          <span class="rate-effective-date" id="bcvEffectiveDate"></span>
         </div>
         <div class="rate-card">
           <div class="card-header">
@@ -211,14 +210,18 @@
             <span class="rate-label">P2P</span>
             <span class="material-symbols-rounded card-icon" aria-hidden="true">currency_exchange</span>
           </div>
-          <div class="rate-body">
-            <strong class="rate-val" id="p2pView">--</strong>
-            <div class="brecha-wrapper">
-              <span class="brecha-label">Brecha BCV ↔ P2P</span>
-              <strong class="brecha-val" id="brechaView">--</strong>
-            </div>
-          </div>
+          <strong class="rate-val" id="p2pView">--</strong>
         </div>
+      </div>
+      <div class="rate-meta-row" aria-live="polite">
+        <span class="rate-meta-item rate-meta-bcv">
+          <span class="rate-meta-label">Tasa BCV</span>
+          <span class="rate-effective-date" id="bcvEffectiveDate"></span>
+        </span>
+        <span class="rate-meta-item rate-meta-spread">
+          <span class="brecha-label">Brecha</span>
+          <strong class="brecha-val" id="brechaView">--</strong>
+        </span>
       </div>
 
       <!-- General Status Info (used for rate errors and retry actions) -->
@@ -293,8 +296,18 @@
           <span class="material-symbols-rounded" aria-hidden="true">chevron_right</span>
         </span>
       </button>
-      <button class="btn-support-trigger" id="openSupportBtn" type="button" aria-controls="supportPanel"
-        aria-expanded="false">Apoyar el proyecto</button>
+      <div class="support-actions">
+        <a class="btn-support-trigger" href="https://telegram.me/CalcuFlow" target="_blank"
+          rel="noopener noreferrer" aria-label="Unirme al grupo de Telegram de CalcuFlow">
+          <svg class="support-telegram-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path
+              d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69.01-.03.01-.14-.07-.2-.08-.06-.19-.04-.27-.02-.12.02-1.96 1.25-5.54 3.69-.52.36-1 .53-1.42.52-.47-.01-1.37-.26-2.03-.48-.82-.27-1.47-.42-1.42-.88.03-.24.35-.49.96-.75 3.78-1.65 6.31-2.74 7.58-3.27 3.61-1.51 4.36-1.77 4.85-1.78.11 0 .35.03.5.16.13.12.17.29.18.41 0 .04 0 .19-.01.25z" />
+          </svg>
+          <span>Unirme al grupo</span>
+        </a>
+        <button class="btn-support-trigger" id="openSupportBtn" type="button" aria-controls="supportPanel"
+          aria-expanded="false">Apoyar el proyecto</button>
+      </div>
     </div>
 
     <!-- Hidden compatibility controls to prevent original JS from throwing errors -->

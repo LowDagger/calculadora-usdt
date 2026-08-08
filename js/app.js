@@ -360,14 +360,11 @@ function buildBankProfileOption(profile, mode = 'select') {
   if (mode === 'select') {
     trailing.append(createSelectionCheck(isSelected));
   } else {
-    const editLabel = document.createElement('span');
-    editLabel.className = 'bank-profile-manage-label';
-    editLabel.textContent = 'Editar';
     const editIcon = document.createElement('span');
     editIcon.className = 'material-symbols-rounded bank-profile-edit-icon';
     editIcon.textContent = 'edit';
     editIcon.setAttribute('aria-hidden', 'true');
-    trailing.append(editLabel, editIcon);
+    trailing.append(editIcon);
   }
 
   option.append(createBankProfileAvatar(displayProfile), copy, trailing);
@@ -1386,38 +1383,33 @@ function calculate() {
 function buildShareText(r) {
   const amount = money(r.usdUsed, 2);
   const bsNeeded = money(r.vesNeeded, 2);
+  const bpayAmount = money(r.safeGateway.bpayInputAmount, 2);
   const finalUsdt = money(r.usdtFinal, 2);
   const profitUsd = (r.profitUsdt >= 0 ? '+' : '') + money(r.profitUsdt, 2);
-  const profitBs = (r.profitVes >= 0 ? '+' : '') + money(r.profitVes, 2);
   const roi = (r.roi >= 0 ? '+' : '') + money(r.roi, 2);
-  const bcv = money(r.bcv, 4);
-  const bankRate = money(r.bank, 4);
-  const p2p = money(r.p2p, 4);
+  const bcv = money(r.bcv, 2);
+  const bankRate = money(r.bank, 2);
+  const p2p = money(r.p2p, 2);
+  const activeProfile = getEffectiveSelectedBankProfile(bankProfileState, manualCardFee, temporaryCardFee);
+  const bankDescription = activeProfile
+    ? [activeProfile.name, activeProfile.cardType, formatProfileFee(activeProfile.fee)].filter(Boolean).join(' · ')
+    : `Comisión ${formatProfileFee(manualCardFee)}`;
 
-  return `💵 Compra Banco → USDT
+  return `CalcuFlow — Banco → USDT
 
-USD:
-${amount} USD
+Compra: ${amount} USD
+Banco: ${bankDescription}
 
-Bs necesarios:
-${bsNeeded} Bs
+BCV: ${bcv}
+Banco: ${bankRate}
+P2P: ${p2p}
 
-USDT finales:
-${finalUsdt} USDT
+Bs necesarios: ${bsNeeded} Bs
+Monto en BPay: ${bpayAmount} USD
+USDT finales: ${finalUsdt} USDT
+Ganancia estimada: ${profitUsd} USD
+Retorno: ${roi}%
 
-Ganancia:
-${profitUsd} USD
-${profitBs} Bs
-
-ROI:
-${roi}%
-
-Tasas:
-BCV ${bcv}
-Banco ${bankRate}
-P2P ${p2p}
-
-Calculado con CalcuFlow:
 https://calcu-flow.vercel.app`;
 }
 

@@ -14,11 +14,11 @@ test('keeps one permanent and one temporary trigger for the same changelog dialo
   assert.equal((changelog.match(/markChangelogSeen\(storage\)/g) || []).length, 1);
 });
 
-test('keeps Community focused and places Telegram in the header', () => {
+test('keeps Telegram discoverable in both the header and Community', () => {
   assert.match(html, /class="support-title">Comunidad</);
   assert.doesNotMatch(html, /💗 Comunidad/);
   assert.match(html, /id="telegramHeaderLink"[\s\S]*?href="https:\/\/telegram\.me\/CalcuFlow"[\s\S]*?target="_blank"[\s\S]*?rel="noopener noreferrer"[\s\S]*?aria-label="Grupo de Telegram de CalcuFlow"/);
-  assert.doesNotMatch(html.match(/<div class="support-section">[\s\S]*?<\/div>/)?.[0] || '', /telegram\.me|Unirme al grupo/);
+  assert.match(html.match(/<div class="support-section">[\s\S]*?<\/div>/)?.[0] || '', /href="https:\/\/telegram\.me\/CalcuFlow"[\s\S]*?Unirme al grupo/);
   assert.match(html, />Apoyar el proyecto</);
   assert.match(changelog, /telegramLink\.href = 'https:\/\/telegram\.me\/CalcuFlow'/);
 });
