@@ -156,15 +156,16 @@ test('continues safely when localStorage throws', () => {
 
 test('keeps the release content in one updateable data object', () => {
   assert.equal(CURRENT_CHANGELOG_RELEASE.version, CURRENT_CHANGELOG_VERSION);
-  assert.equal(CURRENT_CHANGELOG_RELEASE.title, 'CalcuFlow más rápido y cómodo');
-  assert.equal(CURRENT_CHANGELOG_RELEASE.summary, 'Montos rápidos, bancos y cálculo desde Bs mejorados');
+  assert.equal(CURRENT_CHANGELOG_RELEASE.title, 'CalcuFlow más rápido y práctico');
+  assert.equal(CURRENT_CHANGELOG_RELEASE.summary, 'Mejoramos las tasas, bancos, montos rápidos y varias formas de calcular.');
   assert.deepEqual(CURRENT_CHANGELOG_RELEASE.changes, [
-    'Nuevos montos rápidos: 100, 200, 500 y 1.000 USD.',
-    'Personaliza los montos rápidos para cada banco.',
-    'Calcula directamente desde los Bs que tienes disponibles.',
-    'Selecciona y administra tus bancos de forma más sencilla.',
-    'Encuentra las opciones importantes más rápido en Configuración.',
-    'Disfruta una vista más clara y cómoda en teléfonos.'
+    'Las tasas ahora son más compactas y muestran claramente la diferencia entre BCV/Banco y P2P.',
+    'Puedes editar rápidamente las tasas BCV y P2P para hacer simulaciones.',
+    'Al actualizar las tasas puedes volver fácilmente a los valores actuales.',
+    'Mejoramos la selección y administración de perfiles bancarios.',
+    'Ahora puedes personalizar los montos rápidos para cada banco.',
+    'Puedes calcular directamente desde los bolívares que tienes disponibles.',
+    'Reorganizamos la configuración y mejoramos la experiencia general en teléfonos.'
   ]);
 });
 

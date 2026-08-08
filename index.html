@@ -132,8 +132,8 @@
         <span class="changelog-announcement-dot" aria-hidden="true"></span>
         <span class="changelog-announcement-copy">
           <span class="changelog-announcement-label">Nuevo</span>
-          <strong id="topChangelogSummary">CalcuFlow más rápido y cómodo</strong>
-          <span>Mejoramos los montos rápidos, bancos, configuración y cálculo desde Bs.</span>
+          <strong id="topChangelogSummary">CalcuFlow más rápido y práctico</strong>
+          <span>Mejoramos las tasas, bancos, montos rápidos y varias formas de calcular.</span>
         </span>
       </div>
       <div class="changelog-announcement-actions">
@@ -181,7 +181,7 @@
             <span class="bank-profile-avatar" id="activeBankAvatar" aria-hidden="true">BDV</span>
             <span class="bank-profile-summary">
               <strong id="activeBankName">Banco de Venezuela</strong>
-              <span class="bank-profile-summary-detail" id="activeBankDetail">Física · 1,5%</span>
+              <span class="bank-profile-summary-detail" id="activeBankDetail">Virtual / otra modalidad · 2,5%</span>
             </span>
             <span class="material-symbols-rounded bank-profile-chevron" aria-hidden="true">expand_more</span>
           </button>
@@ -215,6 +215,10 @@
           </div>
           <span class="rate-effective-date" id="bcvEffectiveDate"></span>
         </button>
+        <div class="rate-spread" role="status" aria-live="polite">
+          <span class="material-symbols-rounded brecha-icon" aria-hidden="true">swap_horiz</span>
+          <strong class="brecha-val" id="brechaView">--</strong>
+        </div>
         <button class="rate-card rate-card--editable" id="openP2pEditorBtn" type="button"
           aria-label="Editar tasa P2P" aria-controls="p2pEditorPanel" aria-expanded="false"
           data-od-id="p2p-rate-card">
@@ -228,13 +232,6 @@
           </div>
           <strong class="rate-val" id="p2pView">--</strong>
         </button>
-      </div>
-      <div class="rate-meta-row" aria-live="polite">
-        <span class="rate-meta-item rate-meta-spread">
-          <span class="material-symbols-rounded brecha-icon" aria-hidden="true">swap_horiz</span>
-          <span class="brecha-label">Brecha</span>
-          <strong class="brecha-val" id="brechaView">--</strong>
-        </span>
       </div>
 
       <!-- General Status Info (used for rate errors and retry actions) -->
@@ -299,7 +296,7 @@
         aria-expanded="false">
         <span class="changelog-trigger-copy">
           <strong>Novedades</strong>
-          <span id="communityChangelogSummary">CalcuFlow más rápido y cómodo</span>
+          <span id="communityChangelogSummary">CalcuFlow más rápido y práctico</span>
         </span>
         <span class="changelog-trigger-end">
           <span class="changelog-badge" id="changelogBadge" role="status" aria-label="Novedad sin leer">
@@ -888,12 +885,12 @@
             <span class="bank-profile-avatar" id="bankProfileSettingsAvatar" aria-hidden="true">BDV</span>
             <span class="bank-profile-settings-copy">
               <strong id="bankProfileSettingsName">Banco de Venezuela</strong>
-              <span id="bankProfileSettingsMeta">Física · 1,5%</span>
+              <span id="bankProfileSettingsMeta">Virtual / otra modalidad · 2,5%</span>
             </span>
             <span class="material-symbols-rounded" aria-hidden="true">chevron_right</span>
           </button>
-          <input id="cardFee" type="hidden" value="1.5">
-          <span id="cardFeeProfile" hidden>Perfil: Banco de Venezuela · Física</span>
+          <input id="cardFee" type="hidden" value="2.5">
+          <span id="cardFeeProfile" hidden>Perfil: Banco de Venezuela · Virtual / otra modalidad</span>
         </div>
 
         <div class="settings-section">

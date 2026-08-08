@@ -56,7 +56,7 @@ test('marks result-card symbols as decorative and bumps the PWA cache', () => {
   assert.match(ui, /btn\.setAttribute\('aria-pressed', String\(isActive\)\)/);
   assert.match(app, /btn\.setAttribute\('aria-pressed', String\(isActive\)\)/);
   assert.match(html, /data-theme-val="system" aria-pressed="true"/);
-  assert.match(serviceWorker, /const APP_VERSION\s+= '45';/);
+  assert.match(serviceWorker, /const APP_VERSION\s+= '46';/);
   assert.match(serviceWorker, /'\/js\/bcv-rates\.js'/);
   assert.match(serviceWorker, /requestUrl\.pathname\.startsWith\('\/api\/'\)/);
 });
@@ -97,7 +97,7 @@ test('orders normal settings by usage and keeps rare values collapsed', () => {
   assert.doesNotMatch(settingsHtml, /<div class="section-title">[\s\S]*?>Actualización<[\s\S]*?<\/div>/);
   assert.match(settingsHtml, /<details[^>]*id="advancedSettingsDisclosure"(?![^>]*\sopen)[^>]*>/);
   assert.match(settingsHtml, /id="advancedSettingsDisclosure"[\s\S]*?id="autoRates"[\s\S]*?id="bankMargin"[\s\S]*?id="bpayFee"[\s\S]*?id="bcvRate"[\s\S]*?id="p2pRate"[\s\S]*?id="resetDefaultsBtn"/);
-  assert.match(settingsHtml, /id="cardFee" type="hidden" value="1\.5"/);
+  assert.match(settingsHtml, /id="cardFee" type="hidden" value="2\.5"/);
 });
 
 test('keeps Settings and Bs sheets usable in short mobile viewports', () => {
@@ -133,14 +133,15 @@ test('keeps Community actions balanced with the unread marker and compact footer
 
 test('keeps rate cards equal and moves BCV metadata into the editable BCV card', () => {
   const ratesHtml = html.match(/<h2 class="section-label">Tasas de referencia<\/h2>[\s\S]*?<div class="status"/)?.[0] || '';
-  assert.match(ratesHtml, /class="rates-grid"[\s\S]*?id="openBcvEditorBtn"[\s\S]*?id="bcvView"[\s\S]*?id="bankView"[\s\S]*?id="openP2pEditorBtn"[\s\S]*?id="p2pView"[\s\S]*?class="rate-meta-row"/);
+  assert.match(ratesHtml, /class="rates-grid"[\s\S]*?id="openBcvEditorBtn"[\s\S]*?id="bcvView"[\s\S]*?id="bankView"[\s\S]*?id="openP2pEditorBtn"[\s\S]*?id="p2pView"/);
   assert.match(ratesHtml, /id="bankMarginView"[\s\S]*?id="bcvEffectiveDate"[\s\S]*?id="brechaView"/);
-  assert.match(ratesHtml, /class="material-symbols-rounded brecha-icon" aria-hidden="true">swap_horiz<\/span>[\s\S]*?class="brecha-label">Brecha<[\s\S]*?id="brechaView"/);
-  assert.match(css, /\.rates-grid\s*\{[\s\S]*?grid-template-columns:\s*repeat\(2, minmax\(0, 1fr\)\)/);
+  assert.match(ratesHtml, /class="material-symbols-rounded brecha-icon" aria-hidden="true">swap_horiz<\/span>[\s\S]*?class="brecha-val" id="brechaView"/);
+  assert.match(css, /\.rates-grid\s*\{[\s\S]*?grid-template-columns:\s*minmax\(0,\s*1fr\)\s*auto\s*minmax\(0,\s*1fr\)/);
+  assert.match(css, /\.rate-spread\s*\{[\s\S]*?align-self:\s*center[\s\S]*?border-radius:\s*999px/);
   assert.match(css, /\.rate-card\s*\{[\s\S]*?min-height:\s*72px/);
-  assert.match(css, /\.rate-meta-row\s*\{[\s\S]*?justify-content:\s*center/);
-  assert.match(css, /\.rate-meta-row::before,[\s\S]*?\.rate-meta-row::after\s*\{[\s\S]*?flex:\s*1/);
-  assert.match(css, /\.brecha-icon\s*\{[\s\S]*?font-size:\s*0\.66rem/);
+  assert.doesNotMatch(css, /\.rate-meta-row/);
+  assert.doesNotMatch(css, /\.brecha-label/);
+  assert.match(css, /\.brecha-icon\s*\{[\s\S]*?font-size:\s*0\.78rem/);
   assert.match(css, /\.rate-margin-chip\s*\{[\s\S]*?margin-left:\s*auto/);
   assert.match(css, /\.rate-effective-date\s*\{[\s\S]*?white-space:\s*normal/);
   assert.match(css, /\.rate-pair-row\s*\{[\s\S]*?align-items:\s*baseline/);
