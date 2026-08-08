@@ -19,6 +19,13 @@
   --font: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
   --shadow-lg: 0 18px 36px rgba(0, 0, 0, 0.38);
+
+  /* Motion language: subtle, consistent, performance-first */
+  --dur-hover: 140ms;
+  --dur-press: 100ms;
+  --dur-state: 180ms;
+  --dur-sheet: 200ms;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 html[data-theme="light"] {
@@ -441,10 +448,13 @@ textarea,
   color: var(--text);
   font-weight: 700;
   font-size: 0.85rem;
-  transition: all 0.2s ease;
+  transition: background-color var(--dur-state) ease, border-color var(--dur-state) ease, color var(--dur-state) ease, transform var(--dur-press) ease;
   display: flex;
   align-items: center;
   justify-content: center;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .chip-btn:hover:not(.active) {
@@ -488,15 +498,19 @@ textarea,
   cursor: pointer;
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
+  transition: background-color var(--dur-state) ease, border-color var(--dur-state) ease, transform var(--dur-press) ease;
 }
 
-.bank-profile-trigger:hover {
-  border-color: color-mix(in srgb, var(--primary) 55%, var(--border));
-  background: var(--surface-hover);
+@media (hover: hover) and (pointer: fine) {
+  .bank-profile-trigger:hover {
+    border-color: color-mix(in srgb, var(--primary) 55%, var(--border));
+    background: var(--surface-hover);
+    transform: translateY(-1px);
+  }
 }
 
 .bank-profile-trigger:active {
-  transform: translateY(1px);
+  transform: scale(0.98);
 }
 
 .bank-profile-trigger:focus {
@@ -594,9 +608,10 @@ html[data-theme="dark"] .bank-profile-avatar.has-logo img {
   font-size: 0.75rem;
   font-weight: 700;
   text-align: left;
+  cursor: pointer;
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
-  transition: background-color 180ms ease, border-color 180ms ease, transform 100ms ease;
+  transition: background-color var(--dur-state) ease, border-color var(--dur-state) ease, transform var(--dur-press) ease;
 }
 
 .bs-helper-trigger .material-symbols-rounded {
@@ -616,7 +631,7 @@ html[data-theme="dark"] .bank-profile-avatar.has-logo img {
 }
 
 .bs-helper-trigger:active {
-  transform: translateY(1px);
+  transform: scale(0.98);
 }
 
 .bs-helper-trigger:focus {
@@ -708,6 +723,17 @@ html[data-theme="dark"] .bank-profile-avatar.has-logo img {
   font: inherit;
   font-size: 0.82rem;
   font-weight: 800;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: background-color var(--dur-state) ease, filter var(--dur-state) ease, transform var(--dur-press) ease;
+}
+
+.bs-helper-confirm:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+.bs-helper-confirm:active:not(:disabled) {
+  transform: scale(0.98);
 }
 
 .bs-helper-confirm:disabled {
@@ -811,18 +837,20 @@ html[data-theme="dark"] .bank-profile-avatar.has-logo img {
   color: var(--text);
   text-align: left;
   cursor: pointer;
-  transition: background-color 150ms ease, border-color 150ms ease, transform 150ms ease;
+  touch-action: manipulation;
+  transition: background-color var(--dur-state) ease, border-color var(--dur-state) ease, transform var(--dur-press) ease;
 }
 
 @media (hover: hover) and (pointer: fine) {
   .rate-card--editable:hover {
     background: var(--surface-hover);
     border-color: color-mix(in srgb, var(--muted) 48%, var(--border));
+    transform: translateY(-1px);
   }
 }
 
 .rate-card--editable:active {
-  transform: translateY(1px);
+  transform: scale(0.98);
 }
 
 .rate-card--editable:focus-visible {
@@ -838,7 +866,7 @@ html[data-theme="dark"] .bank-profile-avatar.has-logo img {
   min-width: 0;
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 3px;
 }
 
 .rate-manual-indicator {
@@ -852,8 +880,33 @@ html[data-theme="dark"] .bank-profile-avatar.has-logo img {
   letter-spacing: 0.01em;
 }
 
+/* P2P card: semantic exchange icon leads; pencil stays as a secondary edit hint */
+.rate-exchange-icon {
+  font-size: 0.66rem;
+  color: var(--muted);
+  opacity: 0.8;
+  transition: color var(--dur-state) ease, transform var(--dur-state) ease;
+}
+
 .rate-edit-icon {
-  opacity: 0.58;
+  font-size: 0.6rem;
+  opacity: 0.4;
+  transition: opacity var(--dur-state) ease, transform var(--dur-press) ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .rate-card--editable:hover .rate-exchange-icon {
+    color: var(--primary);
+    transform: translateY(-1px);
+  }
+
+  .rate-card--editable:hover .rate-edit-icon {
+    opacity: 0.75;
+  }
+
+  .rate-card--editable:active .rate-edit-icon {
+    transform: scale(0.9);
+  }
 }
 
 .rate-meta-row {
@@ -934,11 +987,11 @@ html[data-theme="dark"] .bank-profile-avatar.has-logo img {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 12px;
+  padding: 10px 12px;
   display: flex;
   flex-direction: column;
-  min-height: 108px;
-  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  min-height: 92px;
+  transition: background-color var(--dur-state) ease, color var(--dur-state) ease, border-color var(--dur-state) ease, box-shadow var(--dur-state) ease;
   cursor: default;
 }
 
@@ -947,7 +1000,7 @@ html[data-theme="dark"] .bank-profile-avatar.has-logo img {
   font-weight: 600;
   color: var(--muted);
   letter-spacing: 0.05em;
-  margin-bottom: 4px;
+  margin-bottom: 3px;
 }
 
 .kpi-val {
@@ -1074,7 +1127,7 @@ html[data-theme="light"] .kpi-loss {
   text-align: left;
   outline: none;
   font-family: var(--font);
-  transition: background-color 0.2s, border-color 0.2s, transform 0.1s ease;
+  transition: background-color var(--dur-state) ease, border-color var(--dur-state) ease, transform var(--dur-press) ease;
 }
 
 .breakdown-trigger-btn:hover {
@@ -1141,7 +1194,7 @@ html[data-theme="light"] .kpi-loss {
   overflow: hidden;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
-  animation: modal-in 200ms cubic-bezier(0.16, 1, 0.3, 1) 50ms backwards;
+  animation: modal-in var(--dur-sheet) var(--ease-out) 50ms backwards;
 }
 
 .modal-panel--compact { max-width: 400px; }
@@ -1149,7 +1202,7 @@ html[data-theme="light"] .kpi-loss {
 .modal-panel--large { max-width: 520px; }
 
 .modal-shell.closing .modal-panel {
-  animation: modal-out 200ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: modal-out var(--dur-sheet) var(--ease-out) forwards;
 }
 
 .modal-header {
@@ -1227,13 +1280,11 @@ html[data-theme="light"] .kpi-loss {
 
 @keyframes sheet-in {
   0% { transform: translateY(100%); }
-  75% { transform: translateY(-6px); }
   100% { transform: translateY(0); }
 }
 
 @keyframes sheet-out {
   0% { transform: translateY(0); }
-  25% { transform: translateY(-6px); }
   100% { transform: translateY(100%); }
 }
 
@@ -1381,6 +1432,7 @@ html[data-theme="light"] .kpi-loss {
   text-align: left;
   cursor: pointer;
   appearance: none;
+  transition: background-color var(--dur-state) ease, border-color var(--dur-state) ease, transform var(--dur-press) ease;
 }
 
 .bank-profile-option.is-selected {
@@ -1454,6 +1506,12 @@ html[data-theme="light"] .kpi-loss {
 .bank-profile-option:hover {
   background: color-mix(in srgb, var(--surface-hover) 72%, transparent);
   color: var(--text);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .bank-profile-option:hover {
+    transform: translateY(-1px);
+  }
 }
 
 .bank-profile-option:active {
@@ -1756,6 +1814,7 @@ html[data-theme="light"] .kpi-loss {
   color: var(--text);
   font-size: 0.72rem;
   font-weight: 700;
+  cursor: pointer;
 }
 
 .bank-profile-quick-item {
@@ -1909,6 +1968,7 @@ html[data-theme="light"] .kpi-loss {
   border-radius: 0;
   background: transparent;
   color: var(--muted);
+  cursor: pointer;
 }
 
 .general-quick-remove:hover:not(:disabled) {
@@ -2037,6 +2097,8 @@ html[data-theme="light"] .kpi-loss {
   font-weight: 800;
   line-height: 1.2;
   cursor: pointer;
+  touch-action: manipulation;
+  transition: background-color var(--dur-state) ease, border-color var(--dur-state) ease, transform var(--dur-press) ease, filter var(--dur-state) ease;
 }
 
 .bank-profile-action--primary {
@@ -2054,7 +2116,25 @@ html[data-theme="light"] .kpi-loss {
   filter: brightness(1.08);
 }
 
+@media (hover: hover) and (pointer: fine) {
+  .bank-profile-action:hover:not(:disabled) {
+    transform: translateY(-1px);
+  }
+
+  .bank-profile-action:active:not(:disabled) {
+    transform: scale(0.98);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
   .changelog-announcement {
     transition: none;
   }
@@ -2097,7 +2177,7 @@ html[data-theme="light"] .kpi-loss {
     width: 100%;
     padding: 16px 16px calc(16px + env(safe-area-inset-bottom));
     gap: 12px;
-    animation: sheet-in 200ms cubic-bezier(0.16, 1, 0.3, 1) 50ms backwards;
+    animation: sheet-in var(--dur-sheet) var(--ease-out) 50ms backwards;
   }
 
   .bank-profiles-card {
@@ -2114,7 +2194,7 @@ html[data-theme="light"] .kpi-loss {
   }
 
   .modal-shell.closing .modal-panel {
-    animation: sheet-out 200ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    animation: sheet-out var(--dur-sheet) var(--ease-out) forwards;
   }
 }
 
@@ -3032,7 +3112,17 @@ footer {
 
 /* Button Microinteractions */
 .icon-btn, .chip-btn, .segment-btn, .tiny-icon, .breakdown-trigger-btn {
-  transition: background-color 150ms ease, border-color 150ms ease, transform 150ms ease, box-shadow 150ms ease, filter 150ms ease;
+  transition: background-color var(--dur-state) ease, border-color var(--dur-state) ease, transform var(--dur-press) ease, box-shadow var(--dur-state) ease, filter var(--dur-state) ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .icon-btn:hover,
+  .tiny-icon:hover,
+  .segment-btn:hover:not(.active),
+  .chip-btn:hover:not(.active),
+  .breakdown-trigger-btn:hover {
+    transform: translateY(-1px);
+  }
 }
 
 .icon-btn:hover, .tiny-icon:hover {
@@ -3061,7 +3151,7 @@ html[data-theme="light"] .segment-btn:hover:not(.active) {
 }
 
 .icon-btn:active, .chip-btn:active, .segment-btn:active, .tiny-icon:active, .breakdown-trigger-btn:active {
-  transform: scale(0.97) !important;
+  transform: scale(0.98) !important;
 }
 
 /* PWA Install Prompt Card styling */
@@ -3081,7 +3171,7 @@ html[data-theme="light"] .segment-btn:hover:not(.active) {
   flex-direction: column;
   gap: 12px;
   z-index: 1000;
-  transition: transform 250ms cubic-bezier(0.16, 1, 0.3, 1), opacity 250ms ease;
+  transition: transform var(--dur-sheet) var(--ease-out), opacity var(--dur-sheet) ease;
   opacity: 0;
   pointer-events: none;
 }
@@ -3274,8 +3364,8 @@ html[data-theme="light"] .skeleton-shimmer::after {
   gap: 10px;
   font: inherit;
   text-align: left;
-  cursor: default;
-  transition: background-color 0.18s ease, border-color 0.18s ease;
+  cursor: pointer;
+  transition: background-color var(--dur-state) ease, border-color var(--dur-state) ease, transform var(--dur-press) ease;
 }
 
 .changelog-announcement-status {
@@ -3361,12 +3451,14 @@ html[data-theme="light"] .skeleton-shimmer::after {
   .changelog-announcement:hover {
     border-color: color-mix(in srgb, var(--primary) 38%, var(--border));
     background: var(--surface-hover);
+    transform: translateY(-1px);
   }
 }
 
 .changelog-announcement:active {
   border-color: color-mix(in srgb, var(--primary) 48%, var(--border));
   background: color-mix(in srgb, var(--primary-bg) 48%, var(--surface));
+  transform: scale(0.98);
 }
 
 .changelog-announcement-action:focus-visible,
@@ -3409,7 +3501,7 @@ html[data-theme="light"] .skeleton-shimmer::after {
   font: inherit;
   text-align: left;
   cursor: pointer;
-  transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.1s ease;
+  transition: background-color var(--dur-state) ease, border-color var(--dur-state) ease, transform var(--dur-press) ease;
 }
 
 .changelog-trigger-copy {
@@ -3467,11 +3559,12 @@ html[data-theme="light"] .skeleton-shimmer::after {
 @media (hover: hover) and (pointer: fine) {
   .changelog-trigger:hover {
     background: var(--surface-hover);
+    transform: translateY(-1px);
   }
 }
 
 .changelog-trigger:active {
-  transform: scale(0.99);
+  transform: scale(0.98);
 }
 
 .changelog-trigger:focus-visible {
@@ -3493,7 +3586,7 @@ html[data-theme="light"] .skeleton-shimmer::after {
   cursor: pointer;
   outline: none;
   font-family: var(--font);
-  transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.1s ease;
+  transition: background-color var(--dur-state) ease, border-color var(--dur-state) ease, transform var(--dur-press) ease;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -3524,6 +3617,7 @@ html[data-theme="light"] .skeleton-shimmer::after {
 @media (hover: hover) and (pointer: fine) {
   .btn-support-trigger:hover {
     background: var(--surface-hover);
+    transform: translateY(-1px);
   }
 }
 

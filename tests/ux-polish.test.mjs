@@ -11,7 +11,8 @@ const settingsHtml = html.match(/<section class="modal-shell settings-panel"[\s\
 
 test('adds compact hierarchy labels without changing calculation terminology', () => {
   assert.match(html, /<h2 class="section-label">Tasas de referencia<\/h2>[\s\S]*?class="rates-grid"/);
-  assert.match(html, /<h2 class="section-label">Tu operación<\/h2>[\s\S]*?class="kpi-grid"/);
+  assert.match(html, /<div class="kpi-grid">/);
+  assert.doesNotMatch(html, /Tu operación/);
   assert.match(css, /\.section-label\s*\{/);
 });
 
@@ -49,13 +50,13 @@ test('renders a persistent accessible retry action through the same rate loader'
 
 test('marks result-card symbols as decorative and bumps the PWA cache', () => {
   assert.equal(
-    (html.match(/class="material-symbols-rounded card-icon(?: rate-edit-icon)?" aria-hidden="true"/g) || []).length,
-    7
+    (html.match(/class="material-symbols-rounded card-icon(?: rate-edit-icon| rate-exchange-icon)?" aria-hidden="true"/g) || []).length,
+    8
   );
   assert.match(ui, /btn\.setAttribute\('aria-pressed', String\(isActive\)\)/);
   assert.match(app, /btn\.setAttribute\('aria-pressed', String\(isActive\)\)/);
   assert.match(html, /data-theme-val="system" aria-pressed="true"/);
-  assert.match(serviceWorker, /const APP_VERSION\s+= '42';/);
+  assert.match(serviceWorker, /const APP_VERSION\s+= '43';/);
   assert.match(serviceWorker, /'\/js\/bcv-rates\.js'/);
   assert.match(serviceWorker, /requestUrl\.pathname\.startsWith\('\/api\/'\)/);
 });
