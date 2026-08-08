@@ -951,14 +951,33 @@ html[data-theme="dark"] .bank-profile-avatar.has-logo img {
 .rate-spread {
   align-self: center;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  padding: 2px 7px 3px;
+  border-radius: 999px;
+  background: var(--bg-soft);
+  color: var(--muted);
+}
+
+.rate-spread .brecha-label {
+  font-size: 0.44rem;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  line-height: 1.1;
+  opacity: 0.68;
+}
+
+.rate-spread-value {
+  min-width: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 2px;
-  padding: 3px 7px;
-  border-radius: 999px;
-  background: var(--bg-soft);
-  color: var(--muted);
+  line-height: 1;
 }
 
 .rate-spread .brecha-icon {
@@ -976,8 +995,8 @@ html[data-theme="dark"] .bank-profile-avatar.has-logo img {
 
 @media (max-width: 390px) {
   .rate-spread {
-    gap: 1px;
-    padding: 2px 4px;
+    gap: 0;
+    padding: 2px 4px 3px;
   }
 
   .rate-spread .brecha-icon {

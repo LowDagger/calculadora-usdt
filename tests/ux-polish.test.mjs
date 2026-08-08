@@ -56,7 +56,7 @@ test('marks result-card symbols as decorative and bumps the PWA cache', () => {
   assert.match(ui, /btn\.setAttribute\('aria-pressed', String\(isActive\)\)/);
   assert.match(app, /btn\.setAttribute\('aria-pressed', String\(isActive\)\)/);
   assert.match(html, /data-theme-val="system" aria-pressed="true"/);
-  assert.match(serviceWorker, /const APP_VERSION\s+= '46';/);
+  assert.match(serviceWorker, /const APP_VERSION\s+= '47';/);
   assert.match(serviceWorker, /'\/js\/bcv-rates\.js'/);
   assert.match(serviceWorker, /requestUrl\.pathname\.startsWith\('\/api\/'\)/);
 });
@@ -136,11 +136,12 @@ test('keeps rate cards equal and moves BCV metadata into the editable BCV card',
   assert.match(ratesHtml, /class="rates-grid"[\s\S]*?id="openBcvEditorBtn"[\s\S]*?id="bcvView"[\s\S]*?id="bankView"[\s\S]*?id="openP2pEditorBtn"[\s\S]*?id="p2pView"/);
   assert.match(ratesHtml, /id="bankMarginView"[\s\S]*?id="bcvEffectiveDate"[\s\S]*?id="brechaView"/);
   assert.match(ratesHtml, /class="material-symbols-rounded brecha-icon" aria-hidden="true">swap_horiz<\/span>[\s\S]*?class="brecha-val" id="brechaView"/);
+  assert.match(ratesHtml, /class="brecha-label">Brecha<\/span>[\s\S]*?class="rate-spread-value"/);
   assert.match(css, /\.rates-grid\s*\{[\s\S]*?grid-template-columns:\s*minmax\(0,\s*1fr\)\s*auto\s*minmax\(0,\s*1fr\)/);
-  assert.match(css, /\.rate-spread\s*\{[\s\S]*?align-self:\s*center[\s\S]*?border-radius:\s*999px/);
+  assert.match(css, /\.rate-spread\s*\{[\s\S]*?align-self:\s*center[\s\S]*?flex-direction:\s*column[\s\S]*?border-radius:\s*999px/);
   assert.match(css, /\.rate-card\s*\{[\s\S]*?min-height:\s*72px/);
   assert.doesNotMatch(css, /\.rate-meta-row/);
-  assert.doesNotMatch(css, /\.brecha-label/);
+  assert.match(css, /\.rate-spread \.brecha-label\s*\{[\s\S]*?text-transform:\s*uppercase/);
   assert.match(css, /\.brecha-icon\s*\{[\s\S]*?font-size:\s*0\.78rem/);
   assert.match(css, /\.rate-margin-chip\s*\{[\s\S]*?margin-left:\s*auto/);
   assert.match(css, /\.rate-effective-date\s*\{[\s\S]*?white-space:\s*normal/);
