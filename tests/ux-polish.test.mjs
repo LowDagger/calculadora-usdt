@@ -56,7 +56,7 @@ test('marks result-card symbols as decorative and bumps the PWA cache', () => {
   assert.match(ui, /btn\.setAttribute\('aria-pressed', String\(isActive\)\)/);
   assert.match(app, /btn\.setAttribute\('aria-pressed', String\(isActive\)\)/);
   assert.match(html, /data-theme-val="system" aria-pressed="true"/);
-  assert.match(serviceWorker, /const APP_VERSION\s+= '43';/);
+  assert.match(serviceWorker, /const APP_VERSION\s+= '44';/);
   assert.match(serviceWorker, /'\/js\/bcv-rates\.js'/);
   assert.match(serviceWorker, /requestUrl\.pathname\.startsWith\('\/api\/'\)/);
 });
@@ -134,10 +134,11 @@ test('keeps Community actions balanced with the unread marker and compact footer
 test('keeps rate cards equal and places BCV metadata with the spread below them', () => {
   const ratesHtml = html.match(/<h2 class="section-label">Tasas de referencia<\/h2>[\s\S]*?<div class="status"/)?.[0] || '';
   assert.match(ratesHtml, /class="rates-grid"[\s\S]*?id="bcvView"[\s\S]*?id="bankView"[\s\S]*?id="p2pView"[\s\S]*?class="rate-meta-row"/);
-  assert.match(ratesHtml, /class="rate-meta-label">Tasa BCV<[\s\S]*?id="bcvEffectiveDate"[\s\S]*?>Brecha<[\s\S]*?id="brechaView"/);
+  assert.match(ratesHtml, /class="rate-meta-label">BCV<[\s\S]*?id="bcvEffectiveDate"[\s\S]*?>Brecha<[\s\S]*?id="brechaView"/);
   assert.doesNotMatch(ratesHtml.match(/class="rates-grid"[\s\S]*?<\/div>\s*<div class="rate-meta-row"/)?.[0] || '', /id="bcvEffectiveDate"|id="brechaView"/);
   assert.match(css, /\.rate-card\s*\{[\s\S]*?min-height:\s*72px/);
-  assert.match(css, /\.rate-meta-row\s*\{[\s\S]*?flex-wrap:\s*wrap/);
+  assert.match(css, /\.rate-meta-row\s*\{[\s\S]*?grid-template-columns:\s*minmax\(0,\s*1fr\)\s*minmax\(0,\s*1fr\)/);
+  assert.match(css, /\.rate-meta-spread\s*\{[\s\S]*?justify-self:\s*center/);
   assert.match(css, /\.rate-effective-date\s*\{[\s\S]*?white-space:\s*normal/);
 });
 

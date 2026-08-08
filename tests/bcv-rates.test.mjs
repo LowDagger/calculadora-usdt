@@ -229,7 +229,7 @@ test('uses America/Caracas near UTC midnight for announced/current status', () =
 
 test('formats compact effective-date labels without changing the rate', () => {
   const announced = normalizeHistoryRecord(regression, { now: tuesdayNightUtc });
-  assert.equal(formatBcvRateLabel(announced, { now: tuesdayNightUtc }), 'Anunciada · Vigente 5 ago');
+  assert.equal(formatBcvRateLabel(announced, { now: tuesdayNightUtc }), 'Vigente 5 ago');
   assert.equal(formatBcvRateLabel({ ...announced, status: 'current' }, {
     now: new Date('2026-08-05T12:00:00-04:00')
   }), 'Vigente hoy');

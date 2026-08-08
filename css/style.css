@@ -913,12 +913,22 @@ html[data-theme="dark"] .bank-profile-avatar.has-logo img {
   min-height: 26px;
   margin-top: 5px;
   padding: 0 2px;
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
   gap: 3px 12px;
   color: var(--muted);
+}
+
+.rate-meta-bcv {
+  justify-self: start;
+}
+
+.rate-meta-spread {
+  justify-self: center;
+  background: var(--bg-soft);
+  border-radius: 999px;
+  padding: 2px 10px;
 }
 
 .rate-meta-item {
@@ -952,8 +962,8 @@ html[data-theme="dark"] .bank-profile-avatar.has-logo img {
 }
 
 .brecha-val {
-  font-size: 0.61rem;
-  font-weight: 800;
+  font-size: 0.66rem;
+  font-weight: 900;
   line-height: 1.3;
 }
 
