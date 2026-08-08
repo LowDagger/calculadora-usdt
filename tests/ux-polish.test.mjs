@@ -7,6 +7,7 @@ const css = readFileSync(new URL('../css/style.css', import.meta.url), 'utf8');
 const app = readFileSync(new URL('../js/app.js', import.meta.url), 'utf8');
 const ui = readFileSync(new URL('../js/ui.js', import.meta.url), 'utf8');
 const serviceWorker = readFileSync(new URL('../service-worker.js', import.meta.url), 'utf8');
+const settingsHtml = html.match(/<section class="modal-shell settings-panel"[\s\S]*?<\/section>/)?.[0] || '';
 
 test('adds compact hierarchy labels without changing calculation terminology', () => {
   assert.match(html, /<h2 class="section-label">Tasas de referencia<\/h2>[\s\S]*?class="rates-grid"/);
@@ -54,7 +55,7 @@ test('marks result-card symbols as decorative and bumps the PWA cache', () => {
   assert.match(ui, /btn\.setAttribute\('aria-pressed', String\(isActive\)\)/);
   assert.match(app, /btn\.setAttribute\('aria-pressed', String\(isActive\)\)/);
   assert.match(html, /data-theme-val="system" aria-pressed="true"/);
-  assert.match(serviceWorker, /const APP_VERSION\s+= '37';/);
+  assert.match(serviceWorker, /const APP_VERSION\s+= '38';/);
   assert.match(serviceWorker, /'\/js\/bcv-rates\.js'/);
   assert.match(serviceWorker, /requestUrl\.pathname\.startsWith\('\/api\/'\)/);
 });
@@ -80,6 +81,30 @@ test('presents general quick amounts as cohesive accessible 2x2 controls', () =>
   assert.match(css, /\.general-quick-list\s*\{[\s\S]*?grid-template-columns:\s*repeat\(2, minmax\(0, 1fr\)\)/);
   assert.match(css, /\.general-quick-item\s*\{[\s\S]*?grid-template-columns:\s*auto minmax\(0, 1fr\) 44px/);
   assert.match(css, /\.general-quick-remove\s*\{[\s\S]*?width:\s*44px[\s\S]*?min-height:\s*46px/);
+});
+
+test('keeps amount-entry actions together before bank selection', () => {
+  assert.match(html, /id="usdToBuy"[\s\S]*?id="quickAmountRow"[\s\S]*?id="openBsHelperBtn"[\s\S]*?class="bank-profile-field"/);
+  assert.match(css, /\.quick-row\s*\{[\s\S]*?grid-template-columns:\s*repeat\(auto-fit, minmax\(68px, 1fr\)\)/);
+  assert.match(css, /@media \(max-width: 340px\)[\s\S]*?\.quick-row\s*\{[\s\S]*?grid-template-columns:\s*repeat\(2, minmax\(0, 1fr\)\)/);
+  assert.match(css, /\.bs-helper-trigger\s*\{[\s\S]*?width:\s*100%[\s\S]*?min-height:\s*48px[\s\S]*?background:\s*var\(--bg-soft\)/);
+});
+
+test('orders normal settings by usage and keeps rare values collapsed', () => {
+  assert.match(settingsHtml, />Perfil de banco<[\s\S]*?>Montos rápidos<[\s\S]*?>Actualización<[\s\S]*?>Apariencia<[\s\S]*?>Opciones avanzadas</);
+  assert.doesNotMatch(settingsHtml, />Montos generales</);
+  assert.match(settingsHtml, /<details[^>]*id="advancedSettingsDisclosure"(?![^>]*\sopen)[^>]*>/);
+  assert.match(settingsHtml, /id="advancedSettingsDisclosure"[\s\S]*?id="bankMargin"[\s\S]*?id="bpayFee"[\s\S]*?id="bcvRate"[\s\S]*?id="p2pRate"[\s\S]*?id="resetDefaultsBtn"/);
+  assert.match(settingsHtml, /id="cardFee" type="hidden" value="1\.5"/);
+});
+
+test('keeps Settings and Bs sheets usable in short mobile viewports', () => {
+  assert.match(css, /\.settings-content\s*\{[\s\S]*?scroll-padding-block:\s*8px 24px/);
+  assert.match(css, /\.bs-helper-content\s*\{[\s\S]*?overflow-y:\s*auto[\s\S]*?scroll-padding-block:\s*8px 72px/);
+  assert.match(css, /\.bs-helper-actions\s*\{[\s\S]*?position:\s*sticky[\s\S]*?bottom:\s*0/);
+  assert.match(css, /@media \(max-width: 860px\) and \(max-height: 560px\)/);
+  assert.match(app, /if \(e\.key === 'Escape'\)[\s\S]*?dismissSettings\(\)/);
+  assert.match(app, /modalFocusOrigins[\s\S]*?origin\.focus\(\)/);
 });
 
 test('rounds BCV only in the visible rate card', () => {

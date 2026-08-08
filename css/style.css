@@ -558,26 +558,29 @@ html[data-theme="dark"] .bank-profile-avatar.has-logo img {
 
 .bs-helper-trigger {
   width: 100%;
-  min-height: 44px;
-  margin: -4px 0 -8px;
-  padding: 0 4px;
-  border: 0;
-  background: transparent;
-  color: var(--muted);
+  min-height: 48px;
+  margin: 0;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  background: var(--bg-soft);
+  color: var(--text);
   display: grid;
   grid-template-columns: auto 1fr auto;
   align-items: center;
   gap: 8px;
   font: inherit;
-  font-size: 0.72rem;
-  font-weight: 600;
+  font-size: 0.75rem;
+  font-weight: 700;
   text-align: left;
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
+  transition: background-color 180ms ease, border-color 180ms ease, transform 100ms ease;
 }
 
 .bs-helper-trigger .material-symbols-rounded {
   font-size: 1rem;
+  color: var(--muted);
 }
 
 .bs-helper-chevron {
@@ -586,7 +589,8 @@ html[data-theme="dark"] .bank-profile-avatar.has-logo img {
 
 @media (hover: hover) and (pointer: fine) {
   .bs-helper-trigger:hover {
-    color: var(--text);
+    background: var(--surface-hover);
+    border-color: var(--muted);
   }
 }
 
@@ -599,7 +603,6 @@ html[data-theme="dark"] .bank-profile-avatar.has-logo img {
 }
 
 .bs-helper-trigger:focus-visible {
-  border-radius: 8px;
   outline: 2px solid var(--primary);
   outline-offset: 2px;
 }
@@ -609,6 +612,7 @@ html[data-theme="dark"] .bank-profile-avatar.has-logo img {
   min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
+  scroll-padding-block: 8px 72px;
 }
 
 .bs-helper-input input {
@@ -666,6 +670,11 @@ html[data-theme="dark"] .bank-profile-avatar.has-logo img {
 
 .bs-helper-actions {
   display: flex;
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  padding-top: 6px;
+  background: var(--modal);
 }
 
 .bs-helper-confirm {
@@ -2137,6 +2146,8 @@ html[data-theme="light"] .step.step-highlight {
 
 .settings-content {
   gap: 14px;
+  padding: 2px 2px 4px 0;
+  scroll-padding-block: 8px 24px;
 }
 
 /* Compact mobile overrides for Settings screen */
@@ -2197,6 +2208,50 @@ html[data-theme="light"] .step.step-highlight {
   border-radius: 8px;
   outline: 2px solid var(--primary);
   outline-offset: 2px;
+}
+
+.advanced-settings-grid,
+.advanced-settings-group,
+.advanced-settings-reset {
+  display: grid;
+  gap: 8px;
+}
+
+.advanced-settings-group {
+  margin-top: 4px;
+}
+
+.advanced-settings-label {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.advanced-settings-reset {
+  justify-items: start;
+  margin-top: 4px;
+}
+
+.advanced-settings-reset .bank-profile-action {
+  width: 100%;
+}
+
+@media (max-width: 860px) and (max-height: 560px) {
+  .bs-helper-card {
+    gap: 8px;
+    padding-top: 12px;
+  }
+
+  .bs-helper-content {
+    gap: 8px;
+  }
+
+  .bs-helper-preview {
+    padding: 10px;
+  }
 }
 
 .section-title {

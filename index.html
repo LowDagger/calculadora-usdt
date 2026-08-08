@@ -161,6 +161,13 @@
           <button class="chip-btn" type="button" data-quick="1000" aria-pressed="false">1000</button>
         </div>
 
+        <button class="bs-helper-trigger" id="openBsHelperBtn" type="button" aria-label="Calcular desde bolívares"
+          aria-controls="bsHelperPanel" aria-expanded="false">
+          <span class="material-symbols-rounded" aria-hidden="true">payments</span>
+          <span>Calcular desde Bs</span>
+          <span class="material-symbols-rounded bs-helper-chevron" aria-hidden="true">chevron_right</span>
+        </button>
+
         <div class="bank-profile-field">
           <span class="bank-profile-label" id="bankProfileLabel">Banco / tarjeta</span>
           <button class="bank-profile-trigger" id="openBankProfilesBtn" type="button"
@@ -174,13 +181,6 @@
             <span class="material-symbols-rounded bank-profile-chevron" aria-hidden="true">expand_more</span>
           </button>
         </div>
-
-        <button class="bs-helper-trigger" id="openBsHelperBtn" type="button" aria-label="Calcular desde bolívares"
-          aria-controls="bsHelperPanel" aria-expanded="false">
-          <span class="material-symbols-rounded" aria-hidden="true">payments</span>
-          <span>Calcular desde Bs</span>
-          <span class="material-symbols-rounded bs-helper-chevron" aria-hidden="true">chevron_right</span>
-        </button>
       </section>
 
       <!-- Card 2: Rates grid (3 columns) -->
@@ -309,7 +309,6 @@
       <button id="loadRatesBtnMobile"></button>
       <span id="opStatus"></span>
       <!-- Extra buttons moved for compatibility -->
-      <button id="resetDefaultsBtn"></button>
       <button id="copyBtnSettings"></button>
       <button id="loadRatesBtnSettings"></button>
     </div>
@@ -777,7 +776,57 @@
       </div>
 
       <div class="modal-content settings-content">
-        <!-- 🎨 Apariencia -->
+        <div class="settings-section">
+          <div class="section-title">
+            <span class="material-symbols-rounded" aria-hidden="true">account_balance_wallet</span>
+            <span>Perfil de banco</span>
+          </div>
+          <button class="bank-profile-settings-summary bank-profile-settings-manage"
+            id="manageBankProfilesSettingsBtn" type="button" aria-label="Administrar perfiles de banco">
+            <span class="bank-profile-avatar" id="bankProfileSettingsAvatar" aria-hidden="true">BDV</span>
+            <span class="bank-profile-settings-copy">
+              <strong id="bankProfileSettingsName">Banco de Venezuela</strong>
+              <span id="bankProfileSettingsMeta">Física · 1,5%</span>
+            </span>
+            <span class="material-symbols-rounded" aria-hidden="true">chevron_right</span>
+          </button>
+          <input id="cardFee" type="hidden" value="1.5">
+          <span id="cardFeeProfile" hidden>Perfil: Banco de Venezuela · Física</span>
+        </div>
+
+        <div class="settings-section">
+          <div class="section-title">
+            <span class="material-symbols-rounded" aria-hidden="true">payments</span>
+            <span>Montos rápidos</span>
+          </div>
+          <div class="field">
+            <p class="field-desc" id="generalQuickAmountsHelp">Configura los botones del calculador para los bancos sin montos personalizados.</p>
+            <div class="general-quick-list" id="generalQuickAmountsList"></div>
+            <p class="general-quick-message" id="generalQuickAmountsError" role="alert" hidden></p>
+            <div class="general-quick-actions">
+              <div class="general-quick-secondary-actions">
+                <button class="bank-profile-action bank-profile-action--secondary" id="addGeneralQuickAmountBtn"
+                  type="button">Añadir monto</button>
+                <button class="bank-profile-action bank-profile-action--secondary" id="restoreGeneralQuickAmountsBtn"
+                  type="button">Restaurar montos rápidos</button>
+              </div>
+              <button class="bank-profile-action bank-profile-action--primary" id="saveGeneralQuickAmountsBtn"
+                type="button">Guardar montos</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <div class="section-title">
+            <span class="material-symbols-rounded" aria-hidden="true">sync</span>
+            <span>Actualización</span>
+          </div>
+          <label class="switch-row" for="autoRates">
+            <span><strong>Actualizar tasas al abrir</strong><span>Consulta BCV y Binance P2P; usa respaldos identificados si una fuente falla.</span></span>
+            <input class="toggle" id="autoRates" type="checkbox" checked aria-label="Actualizar tasas al abrir">
+          </label>
+        </div>
+
         <div class="settings-section">
           <div class="section-title">
             <span class="material-symbols-rounded" aria-hidden="true">palette</span>
@@ -805,101 +854,44 @@
           </div>
         </div>
 
-        <div class="settings-section">
-          <div class="section-title">
-            <span class="material-symbols-rounded" aria-hidden="true">account_balance_wallet</span>
-            <span>Perfil de banco</span>
-          </div>
-          <button class="bank-profile-settings-summary bank-profile-settings-manage"
-            id="manageBankProfilesSettingsBtn" type="button" aria-label="Administrar perfiles de banco">
-            <span class="bank-profile-avatar" id="bankProfileSettingsAvatar" aria-hidden="true">BDV</span>
-            <span class="bank-profile-settings-copy">
-              <strong id="bankProfileSettingsName">Banco de Venezuela</strong>
-              <span id="bankProfileSettingsMeta">Física · 1,5%</span>
-            </span>
-            <span class="material-symbols-rounded" aria-hidden="true">chevron_right</span>
-          </button>
-        </div>
-
-        <div class="settings-section">
-          <div class="section-title">
-            <span class="material-symbols-rounded" aria-hidden="true">sync</span>
-            <span>Actualización</span>
-          </div>
-          <label class="switch-row" for="autoRates">
-            <span><strong>Actualizar tasas al abrir</strong><span>Consulta BCV y Binance P2P; usa respaldos identificados si una fuente falla.</span></span>
-            <input class="toggle" id="autoRates" type="checkbox" checked aria-label="Actualizar tasas al abrir">
-          </label>
-        </div>
-
-        <details class="settings-section settings-disclosure">
+        <details class="settings-section settings-disclosure" id="advancedSettingsDisclosure">
           <summary class="section-title">
-            <span class="material-symbols-rounded" aria-hidden="true">credit_card</span>
-            <span>Comisiones</span>
+            <span class="material-symbols-rounded" aria-hidden="true">tune</span>
+            <span>Opciones avanzadas</span>
             <span class="material-symbols-rounded settings-disclosure-chevron" aria-hidden="true">expand_more</span>
           </summary>
           <div class="settings-section-body">
-          <div class="field">
-            <div class="label-row"><label for="bankMargin">Margen banco</label><span class="small">BCV + %</span></div>
-            <div class="input-wrap"><input id="bankMargin" type="number" inputmode="decimal" value="0.5" min="0"
-                step="0.1"><span class="unit">%</span></div>
-          </div>
-          <div class="field">
-            <div class="label-row"><label for="cardFee">Tarjeta</label><span class="small"
-                id="cardFeeProfile">Perfil: Banco de Venezuela · Física</span></div>
-            <div class="input-wrap"><input id="cardFee" type="number" inputmode="decimal" value="1.5" min="0"
-                max="100" step="0.1"><span class="unit">%</span></div>
-          </div>
-          <div class="field">
-            <div class="label-row"><label for="bpayFee">BPay</label></div>
-            <div class="input-wrap"><input id="bpayFee" type="number" inputmode="decimal" value="4.1" min="0"
-                step="0.1"><span class="unit">%</span></div>
-          </div>
-          </div>
-        </details>
-
-        <details class="settings-section settings-disclosure">
-          <summary class="section-title">
-            <span class="material-symbols-rounded" aria-hidden="true">payments</span>
-            <span>Montos generales</span>
-            <span class="material-symbols-rounded settings-disclosure-chevron" aria-hidden="true">expand_more</span>
-          </summary>
-          <div class="settings-section-body">
-          <div class="field">
-            <p class="field-desc" id="generalQuickAmountsHelp">Montos de referencia usados por los bancos sin personalización.</p>
-            <div class="general-quick-list" id="generalQuickAmountsList"></div>
-            <p class="general-quick-message" id="generalQuickAmountsError" role="alert" hidden></p>
-            <div class="general-quick-actions">
-              <div class="general-quick-secondary-actions">
-                <button class="bank-profile-action bank-profile-action--secondary" id="addGeneralQuickAmountBtn"
-                  type="button">Añadir monto</button>
-                <button class="bank-profile-action bank-profile-action--secondary" id="restoreGeneralQuickAmountsBtn"
-                  type="button">Restaurar montos generales</button>
+            <p class="field-desc">Valores que normalmente no necesitas cambiar.</p>
+            <div class="advanced-settings-grid">
+              <div class="field">
+                <div class="label-row"><label for="bankMargin">Margen banco</label><span class="small">Predeterminado 0,5%</span></div>
+                <div class="input-wrap"><input id="bankMargin" type="number" inputmode="decimal" value="0.5" min="0"
+                    step="0.1"><span class="unit">%</span></div>
               </div>
-              <button class="bank-profile-action bank-profile-action--primary" id="saveGeneralQuickAmountsBtn"
-                type="button">Guardar montos</button>
+              <div class="field">
+                <div class="label-row"><label for="bpayFee">BPay</label><span class="small">Predeterminado 4,1%</span></div>
+                <div class="input-wrap"><input id="bpayFee" type="number" inputmode="decimal" value="4.1" min="0"
+                    step="0.1"><span class="unit">%</span></div>
+              </div>
             </div>
-          </div>
-          </div>
-        </details>
-
-        <details class="settings-section settings-disclosure">
-          <summary class="section-title">
-            <span class="material-symbols-rounded" aria-hidden="true">monitoring</span>
-            <span>Tasas manuales</span>
-            <span class="material-symbols-rounded settings-disclosure-chevron" aria-hidden="true">expand_more</span>
-          </summary>
-          <div class="settings-section-body">
-          <div class="field">
-            <div class="label-row"><label for="bcvRate">BCV manual</label></div>
-            <div class="input-wrap"><input id="bcvRate" type="number" inputmode="decimal" placeholder="Ej: 622.31"
-                min="0" step="0.01"><span class="unit">Bs/USD</span></div>
-          </div>
-          <div class="field">
-            <div class="label-row"><label for="p2pRate">P2P / Paralelo manual</label></div>
-            <div class="input-wrap"><input id="p2pRate" type="number" inputmode="decimal" placeholder="Ej: 768.44"
-                min="0" step="0.01"><span class="unit">Bs/USDT</span></div>
-          </div>
+            <div class="advanced-settings-group">
+              <h3 class="advanced-settings-label">Tasas manuales</h3>
+              <div class="field">
+                <div class="label-row"><label for="bcvRate">BCV manual</label></div>
+                <div class="input-wrap"><input id="bcvRate" type="number" inputmode="decimal" placeholder="Ej: 622.31"
+                    min="0" step="0.01"><span class="unit">Bs/USD</span></div>
+              </div>
+              <div class="field">
+                <div class="label-row"><label for="p2pRate">P2P / Paralelo manual</label></div>
+                <div class="input-wrap"><input id="p2pRate" type="number" inputmode="decimal" placeholder="Ej: 768.44"
+                    min="0" step="0.01"><span class="unit">Bs/USDT</span></div>
+              </div>
+            </div>
+            <div class="advanced-settings-reset">
+              <button class="bank-profile-action bank-profile-action--secondary" id="resetDefaultsBtn"
+                type="button" aria-describedby="resetDefaultsHelp">Restaurar valores base</button>
+              <p class="field-desc" id="resetDefaultsHelp">Restaura margen, BPay, perfil activo, actualización, tema y monto inicial. Conserva las tasas guardadas y tus montos rápidos.</p>
+            </div>
           </div>
         </details>
 
