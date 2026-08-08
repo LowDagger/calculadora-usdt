@@ -1138,6 +1138,20 @@ html[data-theme="light"] .kpi-loss {
   min-height: 0;
 }
 
+.bank-profiles-content {
+  scroll-padding-block: 8px 88px;
+}
+
+.bank-profile-context-label {
+  margin: 0 0 2px;
+  color: var(--primary);
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
 .bank-profile-list-view {
   display: flex;
   flex-direction: column;
@@ -1285,9 +1299,9 @@ html[data-theme="light"] .kpi-loss {
 }
 
 .bank-profile-edit-icon {
-  width: 44px;
-  height: 44px;
-  border-radius: 12px;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
   background: var(--bg-soft);
   color: var(--muted);
   display: inline-flex;
@@ -1298,8 +1312,8 @@ html[data-theme="light"] .kpi-loss {
 
 .bank-profile-manage-label {
   color: var(--muted);
-  font-size: 0.62rem;
-  font-weight: 700;
+  font-size: 0.64rem;
+  font-weight: 800;
   white-space: nowrap;
 }
 
@@ -1339,6 +1353,43 @@ html[data-theme="light"] .kpi-loss {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
+}
+
+.bank-profile-management-toolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 2px;
+}
+
+.bank-profile-management-toolbar .bank-profile-view-back {
+  min-width: 0;
+  justify-self: start;
+}
+
+.bank-profile-management-toolbar .bank-profile-list-action {
+  min-width: 124px;
+}
+
+.bank-profile-management-danger {
+  display: grid;
+  gap: 7px;
+  margin-top: 2px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+
+.bank-profile-management-danger p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.62rem;
+  line-height: 1.35;
+}
+
+.bank-profile-management-danger .bank-profile-list-action {
+  width: 100%;
+  background: transparent;
 }
 
 .bank-profile-list-action {
@@ -1394,16 +1445,11 @@ html[data-theme="light"] .kpi-loss {
 .bank-profile-editor-head {
   display: flex;
   align-items: center;
-  gap: 10px;
-}
-
-.bank-profile-editor-head strong {
-  font-size: 0.9rem;
 }
 
 .bank-profile-back {
-  min-height: 34px;
-  padding: 0 8px;
+  min-height: 44px;
+  padding: 0 9px;
   border: 0;
   border-radius: 9px;
   background: var(--bg-soft);
@@ -1619,6 +1665,58 @@ html[data-theme="light"] .kpi-loss {
   gap: 7px;
 }
 
+.bank-profile-logo-field {
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  background: var(--bg-soft);
+  overflow: hidden;
+}
+
+.bank-profile-optional-summary {
+  min-height: 48px;
+  padding: 9px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  color: var(--text);
+  cursor: pointer;
+  list-style: none;
+}
+
+.bank-profile-optional-summary::-webkit-details-marker {
+  display: none;
+}
+
+.bank-profile-optional-summary > span:first-child {
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.bank-profile-optional-summary .material-symbols-rounded {
+  color: var(--muted);
+  font-size: 1.1rem;
+  transition: transform 180ms ease;
+}
+
+.bank-profile-logo-field[open] .bank-profile-optional-summary .material-symbols-rounded {
+  transform: rotate(180deg);
+}
+
+.bank-profile-optional-summary:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: -2px;
+}
+
+.bank-profile-logo-field .bank-profile-logo-control {
+  border: 0;
+  border-top: 1px solid var(--border);
+  border-radius: 0;
+  background: transparent;
+}
+
 .general-quick-list {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1779,6 +1877,25 @@ html[data-theme="light"] .kpi-loss {
   margin-top: 2px;
 }
 
+.bank-profile-editor-actions .bank-profile-action--primary {
+  grid-column: 1 / -1;
+  font-size: 0.74rem;
+}
+
+.bank-profile-editor-danger {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 2px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+
+.bank-profile-editor-danger .bank-profile-action {
+  flex: 1 1 150px;
+  background: transparent;
+}
+
 .bank-profile-action {
   min-height: 44px;
   padding: 8px 10px;
@@ -1856,6 +1973,15 @@ html[data-theme="light"] .kpi-loss {
 
   .bank-profiles-card {
     min-height: min(720px, calc(100dvh - env(safe-area-inset-top) - 12px));
+  }
+
+  .bank-profile-editor-actions {
+    position: sticky;
+    z-index: 2;
+    bottom: -1px;
+    padding: 10px 0 calc(2px + env(safe-area-inset-bottom));
+    border-top: 1px solid var(--border);
+    background: var(--surface);
   }
 
   .modal-shell.closing .modal-panel {

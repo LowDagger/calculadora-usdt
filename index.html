@@ -601,6 +601,7 @@
       <div class="modal-handle sheet-grab-handle" aria-hidden="true"></div>
       <div class="modal-header bank-profiles-head">
         <div>
+          <p class="bank-profile-context-label" id="bankProfileContextLabel" hidden></p>
           <h2 class="modal-title" id="bankProfilesTitle">Banco / tarjeta</h2>
           <p class="modal-description subtitle">Elige la comisión que aplicará la tarjeta.</p>
         </div>
@@ -622,6 +623,17 @@
             <span class="material-symbols-rounded" aria-hidden="true">arrow_back</span>
             <span>Todos los bancos</span>
           </button>
+          <div class="bank-profile-management-toolbar" id="bankProfileManagementActions" hidden>
+            <button class="bank-profile-view-back" id="backToBankSelectionBtn" type="button">
+              <span class="material-symbols-rounded" aria-hidden="true">arrow_back</span>
+              <span>Volver al selector</span>
+            </button>
+            <button class="bank-profile-list-action bank-profile-list-action--primary"
+              id="createCustomBankProfileBtn" type="button">
+              <span class="material-symbols-rounded" aria-hidden="true">add</span>
+              <span>Añadir banco</span>
+            </button>
+          </div>
           <div class="bank-profile-list" id="bankProfileList"></div>
           <div class="bank-profile-list-actions" id="bankProfileSelectionActions">
             <button class="bank-profile-list-action" id="openTemporaryBankFeeBtn" type="button">
@@ -633,20 +645,12 @@
               <span>Administrar perfiles</span>
             </button>
           </div>
-          <div class="bank-profile-list-actions" id="bankProfileManagementActions" hidden>
-            <button class="bank-profile-list-action" id="backToBankSelectionBtn" type="button">
-              <span class="material-symbols-rounded" aria-hidden="true">arrow_back</span>
-              <span>Volver a seleccionar</span>
-            </button>
-            <button class="bank-profile-list-action bank-profile-list-action--primary"
-              id="createCustomBankProfileBtn" type="button">
-              <span class="material-symbols-rounded" aria-hidden="true">add</span>
-              <span>Añadir banco</span>
-            </button>
+          <div class="bank-profile-management-danger" id="bankProfileManagementDanger" hidden>
+            <p>¿Quieres deshacer cambios en nombres, comisiones, modalidades o logos?</p>
             <button class="bank-profile-list-action bank-profile-list-action--danger"
               id="restoreDefaultBankProfilesBtn" type="button">
               <span class="material-symbols-rounded" aria-hidden="true">restart_alt</span>
-              <span>Restaurar predeterminados</span>
+              <span>Restaurar perfiles predeterminados</span>
             </button>
           </div>
         </div>
@@ -655,11 +659,9 @@
           <div class="bank-profile-editor-head">
             <button class="bank-profile-back" id="backToBankListBtn" type="button">
               <span class="material-symbols-rounded" aria-hidden="true">arrow_back</span>
-              <span>Volver</span>
+              <span id="bankProfileEditorBackLabel">Volver a perfiles</span>
             </button>
-            <strong id="bankProfileEditorTitle">Editar perfil</strong>
           </div>
-          <p class="bank-profile-editor-description" id="bankProfileEditorDescription"></p>
 
           <div class="field" id="bankProfileNameField">
             <div class="label-row"><label for="bankProfileName">Nombre del banco</label></div>
@@ -678,35 +680,13 @@
                 max="100" step="0.1" required aria-describedby="bankProfileFormError"><span class="unit">%</span></div>
           </div>
 
-          <div class="field bank-profile-logo-field" id="bankProfileLogoField">
-            <div class="label-row"><span class="field-label">Logo del banco <span class="small">(opcional)</span></span></div>
-            <div class="bank-profile-logo-control">
-              <span class="bank-profile-avatar bank-profile-logo-preview" id="bankProfileLogoPreview"
-                aria-hidden="true"></span>
-              <div class="bank-profile-logo-copy">
-                <div class="bank-profile-logo-actions">
-                  <button class="bank-profile-action bank-profile-action--secondary"
-                    id="chooseBankProfileLogoBtn" type="button">Añadir logo</button>
-                  <button class="bank-profile-action bank-profile-action--secondary"
-                    id="removeBankProfileLogoBtn" type="button" hidden>Quitar logo</button>
-                </div>
-                <p class="bank-profile-logo-help" id="bankProfileLogoHelp">
-                  PNG, JPEG o WebP · máximo 2 MB · recomendado 512 × 512 px.
-                </p>
-                <p class="bank-profile-logo-status" id="bankProfileLogoStatus" role="status" aria-live="polite"></p>
-              </div>
-            </div>
-            <input id="bankProfileLogoInput" class="visually-hidden" type="file"
-              accept="image/png,image/jpeg,image/webp" aria-describedby="bankProfileLogoHelp bankProfileLogoStatus">
-          </div>
-
           <div class="field bank-profile-quick-field" id="bankProfileQuickAmountsField">
             <button class="bank-profile-quick-summary" id="bankProfileQuickSummaryBtn" type="button"
               aria-expanded="false" aria-controls="bankProfileQuickDetails">
               <span class="bank-profile-quick-summary-copy">
                 <span class="field-label" id="bankProfileQuickHeading">Montos rápidos</span>
                 <span class="bank-profile-quick-summary-mode" id="bankProfileQuickSummaryMode">Usando montos generales</span>
-                <span class="bank-profile-quick-summary-values" id="bankProfileQuickSummaryValues">$100 · $500 · $1.000</span>
+                <span class="bank-profile-quick-summary-values" id="bankProfileQuickSummaryValues">$100 · $200 · $500 · $1.000</span>
               </span>
               <span class="material-symbols-rounded bank-profile-quick-chevron" aria-hidden="true">expand_more</span>
             </button>
@@ -740,13 +720,37 @@
             </div>
           </div>
 
+          <details class="field bank-profile-logo-field" id="bankProfileLogoField">
+            <summary class="bank-profile-optional-summary">
+              <span>
+                <span class="field-label">Logo del banco</span>
+                <span class="small">Opcional</span>
+              </span>
+              <span class="material-symbols-rounded" aria-hidden="true">expand_more</span>
+            </summary>
+            <div class="bank-profile-logo-control">
+              <span class="bank-profile-avatar bank-profile-logo-preview" id="bankProfileLogoPreview"
+                aria-hidden="true"></span>
+              <div class="bank-profile-logo-copy">
+                <div class="bank-profile-logo-actions">
+                  <button class="bank-profile-action bank-profile-action--secondary"
+                    id="chooseBankProfileLogoBtn" type="button">Añadir logo</button>
+                  <button class="bank-profile-action bank-profile-action--secondary"
+                    id="removeBankProfileLogoBtn" type="button" hidden>Quitar logo</button>
+                </div>
+                <p class="bank-profile-logo-help" id="bankProfileLogoHelp">
+                  PNG, JPEG o WebP · máximo 2 MB · recomendado 512 × 512 px.
+                </p>
+                <p class="bank-profile-logo-status" id="bankProfileLogoStatus" role="status" aria-live="polite"></p>
+              </div>
+            </div>
+            <input id="bankProfileLogoInput" class="visually-hidden" type="file"
+              accept="image/png,image/jpeg,image/webp" aria-describedby="bankProfileLogoHelp bankProfileLogoStatus">
+          </details>
+
           <p class="bank-profile-form-error" id="bankProfileFormError" role="alert" hidden></p>
 
           <div class="bank-profile-editor-actions">
-            <button class="bank-profile-action bank-profile-action--secondary" id="restoreBankProfileBtn"
-              type="button" hidden>Restaurar predeterminado</button>
-            <button class="bank-profile-action bank-profile-action--danger" id="deleteBankProfileBtn"
-              type="button" hidden>Eliminar perfil</button>
             <button class="bank-profile-action bank-profile-action--primary" id="saveBankProfileBtn"
               type="submit" hidden>Guardar cambios</button>
             <button class="bank-profile-action bank-profile-action--secondary" id="applyManualFeeBtn"
@@ -755,6 +759,12 @@
               type="button" hidden>Guardar como perfil</button>
             <button class="bank-profile-action bank-profile-action--secondary" id="clearTemporaryBankFeeBtn"
               type="button" hidden>Usar valor del perfil</button>
+          </div>
+          <div class="bank-profile-editor-danger">
+            <button class="bank-profile-action bank-profile-action--secondary" id="restoreBankProfileBtn"
+              type="button" hidden>Restaurar este banco</button>
+            <button class="bank-profile-action bank-profile-action--danger" id="deleteBankProfileBtn"
+              type="button" hidden>Eliminar perfil</button>
           </div>
         </form>
       </div>

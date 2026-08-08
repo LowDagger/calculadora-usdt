@@ -34,7 +34,7 @@ test('uses one in-sheet modality view and the calculation-only adjustment copy',
 });
 
 test('routes Settings and selection to the same profile manager', () => {
-  assert.match(app, /settingsManage\.addEventListener[\s\S]*showBankProfiles\('manage'\)/);
+  assert.match(app, /settingsManage\.addEventListener[\s\S]*showBankProfiles\('manage', \{ returnFocus: els\.openSettingsBtn \}\)/);
   assert.match(app, /bankProfileEls\.manage\.addEventListener\('click', \(\) => showBankProfileList\(\{ mode: 'manage' \}\)\)/);
 });
 
@@ -59,7 +59,7 @@ test('renders every visible profile card as one full-width native button', () =>
 
 test('exposes complete bank CRUD and a restrained destructive restore flow in Spanish', () => {
   assert.match(html, /id="createCustomBankProfileBtn"[\s\S]*?Añadir banco/);
-  assert.match(html, /id="restoreDefaultBankProfilesBtn"[\s\S]*?Restaurar predeterminados/);
+  assert.match(html, /id="restoreDefaultBankProfilesBtn"[\s\S]*?Restaurar perfiles predeterminados/);
   assert.match(html, /id="deleteBankProfileBtn"[\s\S]*?Eliminar perfil/);
   assert.match(app, /function deleteEditingBankProfile/);
   assert.match(app, /Debe quedar al menos un perfil de banco\./);
@@ -68,6 +68,38 @@ test('exposes complete bank CRUD and a restrained destructive restore flow in Sp
     /¿Restaurar todos los bancos predeterminados\? Se eliminarán los perfiles añadidos y todos los cambios/
   );
   assert.match(app, /Ya existe un perfil con ese nombre\. Usa un nombre diferente\./);
+});
+
+test('makes profile management a distinct mode with one predictable way back', () => {
+  assert.match(html, /id="bankProfileContextLabel" hidden/);
+  assert.match(
+    html,
+    /id="bankProfileManagementActions" hidden[\s\S]*?id="backToBankSelectionBtn"[\s\S]*?id="createCustomBankProfileBtn"[\s\S]*?id="bankProfileList"/
+  );
+  assert.match(
+    html,
+    /id="bankProfileSelectionActions"[\s\S]*?id="bankProfileManagementDanger" hidden[\s\S]*?id="restoreDefaultBankProfilesBtn"/
+  );
+  assert.match(app, /classList\.toggle\('is-managing', mode === 'manage'\)/);
+  assert.match(app, /function navigateBackWithinBankProfiles\(\)/);
+  assert.match(app, /if \(!navigateBackWithinBankProfiles\(\)\) dismissBankProfiles\(\)/);
+  assert.match(css, /\.bank-profile-management-toolbar\s*\{[\s\S]*?grid-template-columns:\s*minmax\(0, 1fr\) auto/);
+  assert.match(css, /\.bank-profile-back\s*\{[\s\S]*?min-height:\s*44px/);
+});
+
+test('prioritizes profile essentials and separates optional and destructive controls', () => {
+  assert.match(
+    html,
+    /id="bankProfileNameField"[\s\S]*?id="bankProfileCardTypeField"[\s\S]*?id="bankProfileFee"[\s\S]*?id="bankProfileQuickAmountsField"[\s\S]*?id="bankProfileLogoField"/
+  );
+  assert.match(html, /id="bankProfileQuickSummaryValues">\$100 · \$200 · \$500 · \$1\.000</);
+  assert.match(html, /<details class="field bank-profile-logo-field" id="bankProfileLogoField">/);
+  assert.match(
+    html,
+    /class="bank-profile-editor-actions"[\s\S]*?id="saveBankProfileBtn"[\s\S]*?class="bank-profile-editor-danger"[\s\S]*?id="deleteBankProfileBtn"/
+  );
+  assert.match(css, /\.bank-profile-editor-actions \.bank-profile-action--primary\s*\{[\s\S]*?grid-column:\s*1 \/ -1/);
+  assert.match(css, /\.bank-profile-editor-danger\s*\{[\s\S]*?border-top:\s*1px solid var\(--border\)/);
 });
 
 test('shows accessible optional logo controls and requirements near the upload action', () => {
