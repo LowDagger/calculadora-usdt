@@ -2122,8 +2122,7 @@ const storedAppState = loadState();
 initBankProfiles(storedAppState);
 initChangelog({
   lockScroll: lockBodyScroll,
-  unlockScroll: unlockBodyScroll,
-  onConfigureQuickAmounts: configureSelectedProfileQuickAmounts
+  unlockScroll: unlockBodyScroll
 });
 initTheme();
 initShare();

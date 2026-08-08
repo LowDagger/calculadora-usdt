@@ -1,22 +1,23 @@
 export const CHANGELOG_STORAGE_KEY = 'calcuflow:last-seen-changelog';
-export const CURRENT_CHANGELOG_VERSION = '2026.07.23';
+export const CURRENT_CHANGELOG_VERSION = '2026.08.08';
 export const FEATURE_ANNOUNCEMENT_STORAGE_KEY = 'calcuflow:last-seen-announcement';
-export const QUICK_AMOUNTS_ANNOUNCEMENT_ID = 'bank-quick-amounts-v1';
+export const V1_POLISH_ANNOUNCEMENT_ID = 'v1-polish-2026-08';
 
 export const CURRENT_CHANGELOG_RELEASE = Object.freeze({
   version: CURRENT_CHANGELOG_VERSION,
-  dateLabel: '23 de julio de 2026',
-  title: 'Perfiles bancarios',
-  summary: 'Perfiles bancarios y mejoras recientes',
+  dateLabel: '8 de agosto de 2026',
+  title: 'CalcuFlow más rápido y cómodo',
+  summary: 'Montos rápidos, bancos y cálculo desde Bs mejorados',
   changes: Object.freeze([
-    'Montos rápidos por banco: elige los botones que quieres tener a mano para cada perfil.',
-    'Selecciona tu banco y tipo de tarjeta.',
-    'Edita o restaura las comisiones cuando lo necesites.',
-    'Crea perfiles personalizados.',
-    'Cómo funciona: abre Configuración, entra en Perfiles bancarios, toca el lápiz del banco, abre Montos rápidos, selecciona “Personalizar para este banco”, escribe hasta cuatro montos y guarda. Cuando cambies de banco, la calculadora mostrará automáticamente los montos guardados para ese perfil. Los cambios se guardan únicamente en este dispositivo y puedes modificarlos cuando quieras.'
+    'Nuevos montos rápidos: 100, 200, 500 y 1.000 USD.',
+    'Personaliza los montos rápidos para cada banco.',
+    'Calcula directamente desde los Bs que tienes disponibles.',
+    'Selecciona y administra tus bancos de forma más sencilla.',
+    'Encuentra las opciones importantes más rápido en Configuración.',
+    'Disfruta una vista más clara y cómoda en teléfonos.'
   ]),
   telegramText:
-    'CalcuFlow es desarrollado y mantenido por una sola persona. ¿Encontraste un error o tienes una idea que realmente mejoraría la calculadora? Únete al grupo de Telegram y cuéntamela.'
+    '¿Tienes una idea o encontraste algo que podemos mejorar? Cuéntanos en Telegram.'
 });
 
 export function hasUnreadChangelog(lastSeenVersion, currentVersion = CURRENT_CHANGELOG_VERSION) {
@@ -48,7 +49,7 @@ export function readLastSeenAnnouncement(storage) {
   }
 }
 
-export function markAnnouncementSeen(storage, announcementId = QUICK_AMOUNTS_ANNOUNCEMENT_ID) {
+export function markAnnouncementSeen(storage, announcementId = V1_POLISH_ANNOUNCEMENT_ID) {
   try {
     storage?.setItem(FEATURE_ANNOUNCEMENT_STORAGE_KEY, announcementId);
     return Boolean(storage);
@@ -73,14 +74,12 @@ export function initChangelog({
   documentRef = document,
   storage = getBrowserStorage(),
   lockScroll = () => {},
-  unlockScroll = () => {},
-  onConfigureQuickAmounts = () => {}
+  unlockScroll = () => {}
 } = {}) {
   const communityTrigger = documentRef.getElementById('openChangelogBtn');
   const topTrigger = documentRef.getElementById('openTopChangelogBtn');
-  const configureQuickAmountsButton = documentRef.getElementById('configureQuickAmountsAnnouncementBtn');
-  const learnQuickAmountsButton = documentRef.getElementById('learnQuickAmountsAnnouncementBtn');
-  const dismissQuickAmountsButton = documentRef.getElementById('dismissQuickAmountsAnnouncementBtn');
+  const viewAnnouncementButton = documentRef.getElementById('viewLatestAnnouncementBtn');
+  const dismissAnnouncementButton = documentRef.getElementById('dismissLatestAnnouncementBtn');
   const panel = documentRef.getElementById('changelogPanel');
   const closeButton = documentRef.getElementById('closeChangelogBtn');
   const badge = documentRef.getElementById('changelogBadge');
@@ -92,14 +91,13 @@ export function initChangelog({
   const changesList = documentRef.getElementById('changelogChanges');
   const telegramText = documentRef.getElementById('changelogTelegramText');
   const telegramLink = documentRef.getElementById('changelogTelegramLink');
-  const communityLink = documentRef.querySelector('.support-actions a[href*="telegram"]');
 
   if (!communityTrigger || !panel || !closeButton || !badge || !releaseMeta || !releaseTitle
       || !changesList || !telegramText || !telegramLink) {
     return null;
   }
 
-  releaseMeta.textContent = `${CURRENT_CHANGELOG_RELEASE.dateLabel} · Versión ${CURRENT_CHANGELOG_RELEASE.version}`;
+  releaseMeta.textContent = CURRENT_CHANGELOG_RELEASE.dateLabel;
   releaseTitle.textContent = CURRENT_CHANGELOG_RELEASE.title;
   changesList.replaceChildren(
     ...CURRENT_CHANGELOG_RELEASE.changes.map(change => {
@@ -109,15 +107,10 @@ export function initChangelog({
     })
   );
   telegramText.textContent = CURRENT_CHANGELOG_RELEASE.telegramText;
-  if (topSummary) topSummary.textContent = 'Montos rápidos para cada banco';
+  if (topSummary) topSummary.textContent = CURRENT_CHANGELOG_RELEASE.title;
   if (communitySummary) communitySummary.textContent = CURRENT_CHANGELOG_RELEASE.summary;
-  if (topTrigger?.dataset) topTrigger.dataset.announcementId = QUICK_AMOUNTS_ANNOUNCEMENT_ID;
-
-  if (communityLink?.href) {
-    telegramLink.href = communityLink.href;
-  } else {
-    telegramLink.hidden = true;
-  }
+  if (topTrigger?.dataset) topTrigger.dataset.announcementId = V1_POLISH_ANNOUNCEMENT_ID;
+  telegramLink.href = 'https://telegram.me/CalcuFlow';
 
   let isOpen = false;
   let seenThisSession = false;
@@ -125,7 +118,7 @@ export function initChangelog({
   let activeTrigger = communityTrigger;
 
   const hasUnreadAnnouncement = () => !announcementSeenThisSession
-    && readLastSeenAnnouncement(storage) !== QUICK_AMOUNTS_ANNOUNCEMENT_ID;
+    && readLastSeenAnnouncement(storage) !== V1_POLISH_ANNOUNCEMENT_ID;
   const renderUnread = (unread = !seenThisSession
     && (hasUnreadChangelog(readLastSeenChangelog(storage)) || hasUnreadAnnouncement())) => {
     badge.hidden = !unread;
@@ -142,7 +135,7 @@ export function initChangelog({
     panel.classList.add('open');
     panel.setAttribute('aria-hidden', 'false');
     communityTrigger.setAttribute('aria-expanded', 'true');
-    learnQuickAmountsButton?.setAttribute('aria-expanded', 'true');
+    viewAnnouncementButton?.setAttribute('aria-expanded', 'true');
     seenThisSession = true;
     markChangelogSeen(storage);
     renderUnread(false);
@@ -157,7 +150,7 @@ export function initChangelog({
       panel.classList.remove('open', 'closing');
       panel.setAttribute('aria-hidden', 'true');
       communityTrigger.setAttribute('aria-expanded', 'false');
-      learnQuickAmountsButton?.setAttribute('aria-expanded', 'false');
+      viewAnnouncementButton?.setAttribute('aria-expanded', 'false');
       isOpen = false;
       unlockScroll();
       const focusTarget = activeTrigger === topTrigger
@@ -172,19 +165,12 @@ export function initChangelog({
   };
 
   communityTrigger.addEventListener('click', () => open(communityTrigger));
-  configureQuickAmountsButton?.addEventListener('click', () => {
-    seenThisSession = true;
+  viewAnnouncementButton?.addEventListener('click', () => {
     announcementSeenThisSession = true;
     markAnnouncementSeen(storage);
-    renderUnread();
-    onConfigureQuickAmounts();
+    open(viewAnnouncementButton);
   });
-  learnQuickAmountsButton?.addEventListener('click', () => {
-    announcementSeenThisSession = true;
-    markAnnouncementSeen(storage);
-    open(learnQuickAmountsButton);
-  });
-  dismissQuickAmountsButton?.addEventListener('click', () => {
+  dismissAnnouncementButton?.addEventListener('click', () => {
     seenThisSession = true;
     announcementSeenThisSession = true;
     markAnnouncementSeen(storage);

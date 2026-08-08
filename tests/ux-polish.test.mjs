@@ -55,7 +55,7 @@ test('marks result-card symbols as decorative and bumps the PWA cache', () => {
   assert.match(ui, /btn\.setAttribute\('aria-pressed', String\(isActive\)\)/);
   assert.match(app, /btn\.setAttribute\('aria-pressed', String\(isActive\)\)/);
   assert.match(html, /data-theme-val="system" aria-pressed="true"/);
-  assert.match(serviceWorker, /const APP_VERSION\s+= '39';/);
+  assert.match(serviceWorker, /const APP_VERSION\s+= '40';/);
   assert.match(serviceWorker, /'\/js\/bcv-rates\.js'/);
   assert.match(serviceWorker, /requestUrl\.pathname\.startsWith\('\/api\/'\)/);
 });
@@ -105,6 +105,27 @@ test('keeps Settings and Bs sheets usable in short mobile viewports', () => {
   assert.match(css, /@media \(max-width: 860px\) and \(max-height: 560px\)/);
   assert.match(app, /if \(e\.key === 'Escape'\)[\s\S]*?dismissSettings\(\)/);
   assert.match(app, /modalFocusOrigins[\s\S]*?origin\.focus\(\)/);
+});
+
+test('keeps the compact mobile header accessible without duplicate ids', () => {
+  assert.match(html, /id="telegramHeaderLink"[\s\S]*?href="https:\/\/telegram\.me\/CalcuFlow"[\s\S]*?target="_blank"[\s\S]*?rel="noopener noreferrer"/);
+  assert.match(html, /id="telegramHeaderLink"[\s\S]*?id="shareBtn"[\s\S]*?id="openSettingsBtn"/);
+  assert.match(css, /\.topbar\s*\{[\s\S]*?min-height:\s*48px/);
+  assert.match(css, /\.rates-refresh-btn\s*\{[\s\S]*?position:\s*absolute[\s\S]*?width:\s*44px[\s\S]*?height:\s*44px/);
+  assert.match(css, /@media \(max-width: 480px\)[\s\S]*?\.calculator-card\s*\{[\s\S]*?gap:\s*9px[\s\S]*?padding:\s*12px/);
+
+  const ids = [...html.matchAll(/\sid="([^"]+)"/g)].map(match => match[1]);
+  assert.equal(new Set(ids).size, ids.length);
+});
+
+test('simplifies Community, the unread marker and the footer', () => {
+  const communityHtml = html.match(/<div class="support-section">[\s\S]*?<\/div>/)?.[0] || '';
+  assert.match(communityHtml, />Novedades</);
+  assert.match(communityHtml, />Apoyar el proyecto</);
+  assert.doesNotMatch(communityHtml, /telegram\.me|Unirme al grupo/);
+  assert.match(html, /id="changelogBadge" role="status" aria-label="Novedad sin leer"[\s\S]*?class="changelog-badge-dot"/);
+  assert.match(css, /\.changelog-badge-dot\s*\{[\s\S]*?width:\s*7px[\s\S]*?height:\s*7px/);
+  assert.match(css, /footer\s*\{[\s\S]*?font-size:\s*0\.6rem[\s\S]*?line-height:\s*1\.35/);
 });
 
 test('rounds BCV only in the visible rate card', () => {

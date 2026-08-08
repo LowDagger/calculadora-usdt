@@ -105,9 +105,8 @@ function changelogDocument() {
     'closeChangelogBtn',
     'changelogBadge',
     'topChangelogSummary',
-    'configureQuickAmountsAnnouncementBtn',
-    'learnQuickAmountsAnnouncementBtn',
-    'dismissQuickAmountsAnnouncementBtn',
+    'viewLatestAnnouncementBtn',
+    'dismissLatestAnnouncementBtn',
     'communityChangelogSummary',
     'mainCalculator',
     'changelogReleaseMeta',
@@ -157,14 +156,15 @@ test('continues safely when localStorage throws', () => {
 
 test('keeps the release content in one updateable data object', () => {
   assert.equal(CURRENT_CHANGELOG_RELEASE.version, CURRENT_CHANGELOG_VERSION);
-  assert.equal(CURRENT_CHANGELOG_RELEASE.title, 'Perfiles bancarios');
-  assert.equal(CURRENT_CHANGELOG_RELEASE.summary, 'Perfiles bancarios y mejoras recientes');
+  assert.equal(CURRENT_CHANGELOG_RELEASE.title, 'CalcuFlow más rápido y cómodo');
+  assert.equal(CURRENT_CHANGELOG_RELEASE.summary, 'Montos rápidos, bancos y cálculo desde Bs mejorados');
   assert.deepEqual(CURRENT_CHANGELOG_RELEASE.changes, [
-    'Montos rápidos por banco: elige los botones que quieres tener a mano para cada perfil.',
-    'Selecciona tu banco y tipo de tarjeta.',
-    'Edita o restaura las comisiones cuando lo necesites.',
-    'Crea perfiles personalizados.',
-    'Cómo funciona: abre Configuración, entra en Perfiles bancarios, toca el lápiz del banco, abre Montos rápidos, selecciona “Personalizar para este banco”, escribe hasta cuatro montos y guarda. Cuando cambies de banco, la calculadora mostrará automáticamente los montos guardados para ese perfil. Los cambios se guardan únicamente en este dispositivo y puedes modificarlos cuando quieras.'
+    'Nuevos montos rápidos: 100, 200, 500 y 1.000 USD.',
+    'Personaliza los montos rápidos para cada banco.',
+    'Calcula directamente desde los Bs que tienes disponibles.',
+    'Selecciona y administra tus bancos de forma más sencilla.',
+    'Encuentra las opciones importantes más rápido en Configuración.',
+    'Disfruta una vista más clara y cómoda en teléfonos.'
   ]);
 });
 
@@ -194,7 +194,7 @@ test('shares unread state and one dialog between both changelog triggers', () =>
     });
 
     const topTrigger = documentRef.getElementById('openTopChangelogBtn');
-    const learnButton = documentRef.getElementById('learnQuickAmountsAnnouncementBtn');
+    const viewAnnouncementButton = documentRef.getElementById('viewLatestAnnouncementBtn');
     const communityTrigger = documentRef.getElementById('openChangelogBtn');
     const badge = documentRef.getElementById('changelogBadge');
     const panel = documentRef.getElementById('changelogPanel');
@@ -203,7 +203,7 @@ test('shares unread state and one dialog between both changelog triggers', () =>
 
     assert.equal(topTrigger.hidden, false);
     assert.equal(badge.hidden, false);
-    learnButton.click();
+    viewAnnouncementButton.click();
     assert.equal(panel.classList.contains('open'), true);
     assert.equal(topTrigger.hidden, true);
     assert.equal(badge.hidden, true);
@@ -213,7 +213,7 @@ test('shares unread state and one dialog between both changelog triggers', () =>
 
     closeButton.click();
     assert.equal(panel.classList.contains('open'), false);
-    assert.equal(documentRef.activeElement, learnButton);
+    assert.equal(documentRef.activeElement, viewAnnouncementButton);
     assert.equal(unlockCount, 1);
 
     communityTrigger.click();
@@ -248,7 +248,7 @@ test('hides the top row for the session even when localStorage writes fail', () 
     };
     initChangelog({ documentRef, storage: unavailableStorage });
     const topTrigger = documentRef.getElementById('openTopChangelogBtn');
-    const dismissButton = documentRef.getElementById('dismissQuickAmountsAnnouncementBtn');
+    const dismissButton = documentRef.getElementById('dismissLatestAnnouncementBtn');
 
     assert.equal(topTrigger.hidden, false);
     dismissButton.click();

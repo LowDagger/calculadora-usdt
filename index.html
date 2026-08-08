@@ -111,6 +111,14 @@
         </div>
       </div>
       <div class="icon-actions">
+        <a class="icon-btn" id="telegramHeaderLink" href="https://telegram.me/CalcuFlow" target="_blank"
+          rel="noopener noreferrer" title="Grupo de Telegram de CalcuFlow"
+          aria-label="Grupo de Telegram de CalcuFlow">
+          <svg class="header-telegram-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path
+              d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69.01-.03.01-.14-.07-.2-.08-.06-.19-.04-.27-.02-.12.02-1.96 1.25-5.54 3.69-.52.36-1 .53-1.42.52-.47-.01-1.37-.26-2.03-.48-.82-.27-1.47-.42-1.42-.88.03-.24.35-.49.96-.75 3.78-1.65 6.31-2.74 7.58-3.27 3.61-1.51 4.36-1.77 4.85-1.78.11 0 .35.03.5.16.13.12.17.29.18.41 0 .04 0 .19-.01.25z" />
+          </svg>
+        </a>
         <button class="icon-btn" id="shareBtn" type="button" title="Compartir cálculo"
           aria-label="Compartir cálculo"><span class="material-symbols-rounded" aria-hidden="true">share</span></button>
         <button class="icon-btn" id="openSettingsBtn" type="button" title="Configuración" aria-label="Configuración"
@@ -124,20 +132,17 @@
         <span class="changelog-announcement-dot" aria-hidden="true"></span>
         <span class="changelog-announcement-copy">
           <span class="changelog-announcement-label">Nuevo</span>
-          <strong id="topChangelogSummary">Montos rápidos para cada banco</strong>
-          <span>Ahora puedes elegir los montos que quieres tener a mano en cada perfil bancario.</span>
+          <strong id="topChangelogSummary">CalcuFlow más rápido y cómodo</strong>
+          <span>Mejoramos los montos rápidos, bancos, configuración y cálculo desde Bs.</span>
         </span>
       </div>
       <div class="changelog-announcement-actions">
-        <button class="changelog-announcement-action" id="configureQuickAmountsAnnouncementBtn" type="button">
-          Configurar ahora
+        <button class="changelog-announcement-action" id="viewLatestAnnouncementBtn" type="button"
+          aria-controls="changelogPanel" aria-expanded="false">
+          Ver novedades
         </button>
-        <button class="changelog-announcement-action changelog-announcement-action--secondary"
-          id="learnQuickAmountsAnnouncementBtn" type="button" aria-controls="changelogPanel" aria-expanded="false">
-          Cómo funciona
-        </button>
-        <button class="changelog-announcement-dismiss" id="dismissQuickAmountsAnnouncementBtn" type="button"
-          aria-label="Ocultar novedad de montos rápidos">
+        <button class="changelog-announcement-dismiss" id="dismissLatestAnnouncementBtn" type="button"
+          aria-label="Ocultar anuncio de novedades">
           <span class="material-symbols-rounded" aria-hidden="true">close</span>
         </button>
       </div>
@@ -275,29 +280,21 @@
     <!-- Section: Support the Project -->
     <div class="support-section">
       <span class="support-title">Comunidad</span>
-      <p class="support-desc">Comparte sugerencias y conoce las novedades.</p>
       <button class="changelog-trigger" id="openChangelogBtn" type="button" aria-controls="changelogPanel"
         aria-expanded="false">
         <span class="changelog-trigger-copy">
           <strong>Novedades</strong>
-          <span id="communityChangelogSummary">Perfiles bancarios y mejoras recientes</span>
+          <span id="communityChangelogSummary">CalcuFlow más rápido y cómodo</span>
         </span>
         <span class="changelog-trigger-end">
-          <span class="changelog-badge" id="changelogBadge">Nuevo</span>
+          <span class="changelog-badge" id="changelogBadge" role="status" aria-label="Novedad sin leer">
+            <span class="changelog-badge-dot" aria-hidden="true"></span>
+          </span>
           <span class="material-symbols-rounded" aria-hidden="true">chevron_right</span>
         </span>
       </button>
-      <div class="support-actions">
-        <a href="https://telegram.me/CalcuFlow" target="_blank" rel="noopener noreferrer" class="btn-support-trigger">
-          <svg class="telegram-icon" viewBox="0 0 24 24" fill="currentColor">
-            <path
-              d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69.01-.03.01-.14-.07-.2-.08-.06-.19-.04-.27-.02-.12.02-1.96 1.25-5.54 3.69-.52.36-1 .53-1.42.52-.47-.01-1.37-.26-2.03-.48-.82-.27-1.47-.42-1.42-.88.03-.24.35-.49.96-.75 3.78-1.65 6.31-2.74 7.58-3.27 3.61-1.51 4.36-1.77 4.85-1.78.11 0 .35.03.5.16.13.12.17.29.18.41 0 .04 0 .19-.01.25z" />
-          </svg>
-          <span>Unirme al grupo</span>
-        </a>
-        <button class="btn-support-trigger" id="openSupportBtn" type="button" aria-controls="supportPanel"
-          aria-expanded="false">Apoyar el proyecto</button>
-      </div>
+      <button class="btn-support-trigger" id="openSupportBtn" type="button" aria-controls="supportPanel"
+        aria-expanded="false">Apoyar el proyecto</button>
     </div>
 
     <!-- Hidden compatibility controls to prevent original JS from throwing errors -->
@@ -589,8 +586,8 @@
           <ul id="changelogChanges"></ul>
         </div>
         <p class="changelog-telegram-copy" id="changelogTelegramText"></p>
-        <a class="changelog-telegram-button" id="changelogTelegramLink" target="_blank"
-          rel="noopener noreferrer">Unirme al grupo de Telegram</a>
+        <a class="changelog-telegram-link" id="changelogTelegramLink" href="https://telegram.me/CalcuFlow"
+          target="_blank" rel="noopener noreferrer">Compartir una idea en Telegram</a>
       </div>
     </div>
   </section>

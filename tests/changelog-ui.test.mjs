@@ -14,13 +14,13 @@ test('keeps one permanent and one temporary trigger for the same changelog dialo
   assert.equal((changelog.match(/markChangelogSeen\(storage\)/g) || []).length, 1);
 });
 
-test('keeps the community actions and reuses its Telegram URL', () => {
+test('keeps Community focused and places Telegram in the header', () => {
   assert.match(html, /class="support-title">Comunidad</);
   assert.doesNotMatch(html, /💗 Comunidad/);
-  assert.match(html, /Comparte sugerencias y conoce las novedades\./);
-  assert.match(html, />Unirme al grupo</);
+  assert.match(html, /id="telegramHeaderLink"[\s\S]*?href="https:\/\/telegram\.me\/CalcuFlow"[\s\S]*?target="_blank"[\s\S]*?rel="noopener noreferrer"[\s\S]*?aria-label="Grupo de Telegram de CalcuFlow"/);
+  assert.doesNotMatch(html.match(/<div class="support-section">[\s\S]*?<\/div>/)?.[0] || '', /telegram\.me|Unirme al grupo/);
   assert.match(html, />Apoyar el proyecto</);
-  assert.match(changelog, /querySelector\('\.support-actions a\[href\*="telegram"\]'\)/);
+  assert.match(changelog, /telegramLink\.href = 'https:\/\/telegram\.me\/CalcuFlow'/);
 });
 
 test('uses a full-width accessible announcement card without reserved hidden space', () => {
@@ -28,8 +28,8 @@ test('uses a full-width accessible announcement card without reserved hidden spa
   assert.match(css, /\.changelog-announcement:hover\s*\{/);
   assert.match(css, /\.changelog-announcement:active\s*\{/);
   assert.match(css, /\.changelog-announcement-action:focus-visible\s*,\s*\.changelog-announcement-dismiss:focus-visible\s*\{/);
-  assert.match(html, /id="configureQuickAmountsAnnouncementBtn"[\s\S]*?Configurar ahora/);
-  assert.match(html, /id="learnQuickAmountsAnnouncementBtn"[\s\S]*?Cómo funciona/);
+  assert.match(html, /id="viewLatestAnnouncementBtn"[\s\S]*?Ver novedades/);
+  assert.match(html, /id="dismissLatestAnnouncementBtn"[\s\S]*?aria-label="Ocultar anuncio de novedades"/);
   assert.match(css, /@media \(prefers-reduced-motion: reduce\)[\s\S]*?\.changelog-announcement/);
   assert.match(css, /\[hidden\]\s*\{\s*display:\s*none !important;/);
 });

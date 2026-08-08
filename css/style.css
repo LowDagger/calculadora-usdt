@@ -148,13 +148,17 @@ textarea,
   display: flex;
   align-items: center;
   justify-content: space-between;
-  width: calc(100% - 8px);
+  width: 100%;
+  min-height: 48px;
   margin: 0 auto;
-  padding: 0 4px 2px;
+  padding: 0 0 3px;
+  gap: 8px;
   border-bottom: 1px solid var(--border);
 }
 
 .brand {
+  min-width: 0;
+  flex: 1 1 auto;
   display: flex;
   flex-direction: column;
   gap: 0;
@@ -188,6 +192,10 @@ textarea,
 }
 
 .subtitle-row {
+  position: relative;
+  width: max-content;
+  max-width: 100%;
+  padding-right: 30px;
   display: flex;
   align-items: center;
   gap: 4px;
@@ -229,9 +237,12 @@ textarea,
 }
 
 .rates-refresh-btn {
+  position: absolute;
+  top: 50%;
+  right: -8px;
   width: 44px;
   height: 44px;
-  margin-left: 1px;
+  margin: 0;
   border: 0;
   border-radius: 50%;
   background: transparent;
@@ -239,6 +250,7 @@ textarea,
   display: grid;
   place-items: center;
   cursor: pointer;
+  transform: translateY(-50%);
   transition: background-color 150ms ease, color 150ms ease, transform 150ms ease;
 }
 
@@ -252,7 +264,7 @@ textarea,
 }
 
 .rates-refresh-btn:active:not(:disabled) {
-  transform: scale(0.96);
+  transform: translateY(-50%) scale(0.96);
 }
 
 .rates-refresh-btn:focus {
@@ -274,11 +286,13 @@ textarea,
 }
 
 .icon-actions {
+  flex: 0 0 auto;
   display: flex;
-  gap: 4px;
+  gap: 0;
 }
 
 .icon-btn {
+  flex: 0 0 44px;
   width: 44px;
   height: 44px;
   border-radius: 50%;
@@ -288,7 +302,14 @@ textarea,
   display: grid;
   place-items: center;
   cursor: pointer;
+  text-decoration: none;
   transition: background-color 150ms ease, color 150ms ease, transform 150ms ease, filter 150ms ease;
+}
+
+.header-telegram-icon {
+  width: 20px;
+  height: 20px;
+  fill: currentColor;
 }
 
 .icon-btn:hover {
@@ -2648,16 +2669,96 @@ html[data-theme="light"] .step.step-highlight {
 
 footer {
   text-align: center;
-  font-size: 0.65rem;
+  font-size: 0.6rem;
   color: var(--muted);
-  line-height: 1.4;
-  padding: 16px 0;
+  line-height: 1.35;
+  padding: 10px 6px;
 }
 
 /* Responsiveness helper for larger viewports */
 @media (min-width: 480px) {
   body {
     padding: 32px 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  body {
+    padding: calc(5px + env(safe-area-inset-top)) 8px calc(12px + env(safe-area-inset-bottom));
+  }
+
+  .app {
+    gap: 8px;
+  }
+
+  .topbar {
+    min-height: 46px;
+    padding-bottom: 2px;
+  }
+
+  .brand-title {
+    font-size: 1.08rem;
+    line-height: 1.05;
+  }
+
+  .subtitle-row {
+    gap: 3px;
+  }
+
+  .brand-subtitle,
+  .header-update {
+    font-size: 0.58rem;
+  }
+
+  .layout {
+    gap: 8px;
+  }
+
+  .calculator-card {
+    gap: 9px;
+    padding: 12px;
+  }
+
+  .calculator-display-wrap {
+    min-height: 56px;
+    padding: 7px 12px;
+  }
+
+  .calculator-display-wrap input {
+    font-size: 2.15rem;
+  }
+
+  .quick-row {
+    gap: 6px;
+  }
+
+  .bank-profile-field {
+    gap: 4px;
+  }
+
+  .bank-profile-trigger {
+    min-height: 50px;
+  }
+
+  .changelog-announcement {
+    padding: 7px 8px;
+    gap: 6px;
+  }
+
+  .changelog-announcement-status {
+    gap: 6px;
+  }
+
+  .changelog-announcement-copy {
+    font-size: 0.63rem;
+  }
+
+  .changelog-announcement-action {
+    padding-inline: 8px;
+  }
+
+  footer {
+    padding-block: 8px;
   }
 }
 
@@ -3059,7 +3160,7 @@ html[data-theme="light"] .skeleton-shimmer::after {
   gap: 10px;
   font: inherit;
   text-align: left;
-  cursor: pointer;
+  cursor: default;
   transition: background-color 0.18s ease, border-color 0.18s ease;
 }
 
@@ -3168,7 +3269,7 @@ html[data-theme="light"] .skeleton-shimmer::after {
   padding: 12px 2px 0;
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 8px;
   margin-top: 4px;
   text-align: left;
 }
@@ -3177,20 +3278,6 @@ html[data-theme="light"] .skeleton-shimmer::after {
   font-size: 0.74rem;
   font-weight: 700;
   color: var(--text);
-}
-
-.support-desc {
-  font-size: 0.64rem;
-  color: var(--muted);
-  line-height: 1.35;
-  margin-top: 1px;
-}
-
-.support-actions {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-  width: 100%;
 }
 
 .changelog-trigger {
@@ -3245,13 +3332,18 @@ html[data-theme="light"] .skeleton-shimmer::after {
 }
 
 .changelog-badge {
-  padding: 3px 6px;
-  border-radius: 999px;
+  width: 14px;
+  height: 14px;
+  display: grid;
+  place-items: center;
+}
+
+.changelog-badge-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
   background: var(--primary);
-  color: var(--primary-on);
-  font-size: 0.56rem;
-  font-weight: 800;
-  line-height: 1;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 14%, transparent);
 }
 
 .changelog-badge[hidden] {
@@ -3274,6 +3366,7 @@ html[data-theme="light"] .skeleton-shimmer::after {
 }
 
 .btn-support-trigger {
+  width: 100%;
   align-self: stretch;
   background: var(--bg-soft);
   border: 1px solid var(--border);
@@ -3309,14 +3402,6 @@ html[data-theme="light"] .skeleton-shimmer::after {
   outline-offset: 2px;
 }
 
-.telegram-icon {
-  width: 14px;
-  height: 14px;
-  margin-right: 4px;
-  fill: currentColor;
-  display: inline-block;
-}
-
 .changelog-content {
   gap: 16px;
 }
@@ -3349,22 +3434,20 @@ html[data-theme="light"] .skeleton-shimmer::after {
   line-height: 1.5;
 }
 
-.changelog-telegram-button {
+.changelog-telegram-link {
   min-height: 44px;
-  padding: 10px 14px;
-  border-radius: 11px;
-  background: var(--primary);
-  color: var(--primary-on);
+  width: fit-content;
+  padding: 8px 2px;
+  color: var(--primary);
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  font-size: 0.75rem;
-  font-weight: 800;
-  text-align: center;
-  text-decoration: none;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-underline-offset: 3px;
 }
 
-.changelog-telegram-button:focus-visible {
-  outline: 2px solid var(--text);
+.changelog-telegram-link:focus-visible {
+  border-radius: 4px;
+  outline: 2px solid var(--primary);
   outline-offset: 2px;
 }
