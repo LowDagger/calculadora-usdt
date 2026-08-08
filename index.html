@@ -205,13 +205,18 @@
           </div>
           <strong class="rate-val" id="bankView">--</strong>
         </div>
-        <div class="rate-card">
+        <button class="rate-card rate-card--editable" id="openP2pEditorBtn" type="button"
+          aria-label="Editar tasa P2P" aria-controls="p2pEditorPanel" aria-expanded="false"
+          data-od-id="p2p-rate-card">
           <div class="card-header">
-            <span class="rate-label">P2P</span>
-            <span class="material-symbols-rounded card-icon" aria-hidden="true">currency_exchange</span>
+            <span class="rate-card-heading">
+              <span class="rate-label">P2P</span>
+              <span class="rate-manual-indicator" id="p2pManualIndicator" hidden>Manual</span>
+            </span>
+            <span class="material-symbols-rounded card-icon rate-edit-icon" aria-hidden="true">edit</span>
           </div>
           <strong class="rate-val" id="p2pView">--</strong>
-        </div>
+        </button>
       </div>
       <div class="rate-meta-row" aria-live="polite">
         <span class="rate-meta-item rate-meta-bcv">
@@ -367,6 +372,41 @@
           <button class="bs-helper-confirm" id="confirmBsHelperBtn" type="submit" disabled>Usar este monto</button>
         </div>
       </form>
+    </div>
+  </section>
+
+  <section class="modal-shell p2p-editor-panel" id="p2pEditorPanel" role="dialog" aria-modal="true"
+    aria-labelledby="p2pEditorTitle" aria-describedby="p2pEditorHelper" aria-hidden="true"
+    data-od-id="p2p-editor-panel">
+    <div class="modal-panel modal-panel--compact p2p-editor-card">
+      <div class="modal-handle sheet-grab-handle" aria-hidden="true"></div>
+      <div class="modal-header">
+        <div>
+          <h2 class="modal-title" id="p2pEditorTitle">Editar tasa P2P</h2>
+          <p class="modal-description subtitle" id="p2pEditorHelper">Usa una tasa personalizada para simular tu operación.</p>
+        </div>
+        <button class="modal-close icon-btn" id="closeP2pEditorBtn" type="button" title="Cerrar"
+          aria-label="Cerrar editor de tasa P2P"><span class="material-symbols-rounded" aria-hidden="true">close</span></button>
+      </div>
+      <div class="modal-content p2p-editor-content">
+        <form class="p2p-editor-form" id="p2pEditorForm" novalidate>
+          <div class="field">
+            <div class="label-row"><label for="p2pQuickRate">Tasa P2P</label></div>
+            <div class="input-wrap p2p-editor-input">
+              <input id="p2pQuickRate" type="text" inputmode="decimal" autocomplete="off"
+                aria-describedby="p2pEditorHelper p2pEditorMessage" data-od-id="p2p-editor-input">
+              <span class="unit">Bs/USDT</span>
+            </div>
+          </div>
+          <p class="p2p-editor-message" id="p2pEditorMessage" role="status" hidden></p>
+          <div class="p2p-editor-actions">
+            <button class="bank-profile-action bank-profile-action--secondary" id="restoreP2pRateBtn"
+              type="button" data-od-id="p2p-editor-restore">Restaurar tasa actual</button>
+            <button class="bank-profile-action bank-profile-action--primary" id="applyP2pRateBtn"
+              type="submit" data-od-id="p2p-editor-apply">Aplicar</button>
+          </div>
+        </form>
+      </div>
     </div>
   </section>
 
@@ -838,17 +878,6 @@
 
         <div class="settings-section">
           <div class="section-title">
-            <span class="material-symbols-rounded" aria-hidden="true">sync</span>
-            <span>Actualización</span>
-          </div>
-          <label class="switch-row" for="autoRates">
-            <span><strong>Actualizar tasas al abrir</strong><span>Consulta BCV y Binance P2P; usa respaldos identificados si una fuente falla.</span></span>
-            <input class="toggle" id="autoRates" type="checkbox" checked aria-label="Actualizar tasas al abrir">
-          </label>
-        </div>
-
-        <div class="settings-section">
-          <div class="section-title">
             <span class="material-symbols-rounded" aria-hidden="true">palette</span>
             <span>Apariencia</span>
           </div>
@@ -882,6 +911,10 @@
           </summary>
           <div class="settings-section-body">
             <p class="field-desc">Valores que normalmente no necesitas cambiar.</p>
+            <label class="switch-row advanced-auto-rates" for="autoRates">
+              <span><strong>Actualizar tasas al abrir</strong><span>Consulta BCV y Binance P2P; usa respaldos identificados si una fuente falla.</span></span>
+              <input class="toggle" id="autoRates" type="checkbox" checked aria-label="Actualizar tasas al abrir">
+            </label>
             <div class="advanced-settings-grid">
               <div class="field">
                 <div class="label-row"><label for="bankMargin">Margen banco</label><span class="small">Predeterminado 0,5%</span></div>

@@ -40,6 +40,7 @@ let ratesLastUpdated = null;
 let ratesRequestInFlight = false;
 let activeBcvRecord = null;
 let activeP2pRecord = null;
+let lastAutomaticP2pRecord = null;
 let bankProfileState = null;
 let manualCardFee = '1.5';
 let temporaryCardFee = null;
@@ -1259,6 +1260,7 @@ function loadState() {
   }
   if (data.p2pRecord && typeof data.p2pRecord === 'object') {
     activeP2pRecord = data.p2pRecord;
+    lastAutomaticP2pRecord = data.p2pRecord;
   }
   if (data.lastUpdate) {
     els.lastUpdate.textContent = data.lastUpdate;
@@ -1308,8 +1310,12 @@ async function loadRates(showSuccessToast = false) {
     else activeBcvRecord = markBcvRecordCached(activeBcvRecord);
     if (bcvUpdated) els.bcvRate.value = String(activeBcvRecord.rate);
 
-    if (result.p2p.ok) activeP2pRecord = result.p2p.record;
-    else activeP2pRecord = markP2pRecordCached(activeP2pRecord);
+    if (result.p2p.ok) {
+      activeP2pRecord = result.p2p.record;
+      lastAutomaticP2pRecord = result.p2p.record;
+    } else {
+      activeP2pRecord = markP2pRecordCached(activeP2pRecord);
+    }
     if (p2pUpdated) els.p2pRate.value = activeP2pRecord.rate.toFixed(4);
 
     if (!bcvUpdated && !p2pUpdated) throw new Error('No rate was refreshed');
@@ -1359,6 +1365,7 @@ function calculate() {
   const p2p = n(els.p2pRate.value);
 
   renderRates({ bcv, bank, p2p });
+  renderP2pRateMode();
   renderUsdAmountValidation(amountValidation.error);
 
   const result = calculateValues({
@@ -1492,6 +1499,18 @@ const bsHelperEls = {
   usdPreview: document.getElementById('bsHelperUsdPreview'),
   message: document.getElementById('bsHelperMessage'),
   confirm: document.getElementById('confirmBsHelperBtn')
+};
+
+const p2pEditorEls = {
+  trigger: document.getElementById('openP2pEditorBtn'),
+  panel: document.getElementById('p2pEditorPanel'),
+  close: document.getElementById('closeP2pEditorBtn'),
+  form: document.getElementById('p2pEditorForm'),
+  input: document.getElementById('p2pQuickRate'),
+  message: document.getElementById('p2pEditorMessage'),
+  restore: document.getElementById('restoreP2pRateBtn'),
+  apply: document.getElementById('applyP2pRateBtn'),
+  indicator: document.getElementById('p2pManualIndicator')
 };
 
 function openManagedModal(panel, trigger, openFn, initialFocus, returnFocus = null, focusDelay = 0) {
@@ -1653,6 +1672,101 @@ function confirmBsHelper() {
   dismissBsHelper();
 }
 
+function parsePositiveRateInput(value) {
+  const normalized = String(value || '').trim().replace(',', '.');
+  if (!/^(?:\d+\.?\d*|\.\d+)$/.test(normalized)) return null;
+  const rate = Number(normalized);
+  return Number.isFinite(rate) && rate > 0 ? rate : null;
+}
+
+function setP2pEditorMessage(text = '', type = '') {
+  p2pEditorEls.message.textContent = text;
+  p2pEditorEls.message.hidden = !text;
+  p2pEditorEls.message.classList.toggle('is-error', type === 'error');
+  p2pEditorEls.message.setAttribute('role', type === 'error' ? 'alert' : 'status');
+}
+
+function renderP2pEditorValidation(showError = false) {
+  const rate = parsePositiveRateInput(p2pEditorEls.input.value);
+  const invalid = rate === null;
+  p2pEditorEls.apply.disabled = invalid;
+  p2pEditorEls.input.setAttribute('aria-invalid', String(showError && invalid));
+  if (showError && invalid) setP2pEditorMessage('Ingresa una tasa P2P válida.', 'error');
+  else if (p2pEditorEls.message.classList.contains('is-error')) setP2pEditorMessage();
+  return rate;
+}
+
+function renderP2pRateMode() {
+  const displayedRate = n(els.p2pRate.value);
+  const automaticRate = n(activeP2pRecord?.rate);
+  const isManual = displayedRate > 0 && (!automaticRate || Math.abs(displayedRate - automaticRate) > 0.000001);
+  p2pEditorEls.indicator.hidden = !isManual;
+  p2pEditorEls.trigger.classList.toggle('is-manual', isManual);
+  p2pEditorEls.trigger.setAttribute(
+    'aria-label',
+    isManual ? 'Editar tasa P2P. Ajuste manual activo' : 'Editar tasa P2P'
+  );
+}
+
+function showP2pEditor() {
+  p2pEditorEls.input.value = els.p2pRate.value;
+  setP2pEditorMessage();
+  renderP2pEditorValidation();
+  openManagedModal(p2pEditorEls.panel, p2pEditorEls.trigger, () => {
+    p2pEditorEls.panel.classList.remove('closing');
+    p2pEditorEls.panel.classList.add('open');
+    p2pEditorEls.panel.setAttribute('aria-hidden', 'false');
+    triggerHaptic('light');
+    lockBodyScroll();
+  }, p2pEditorEls.input, p2pEditorEls.trigger,
+    window.matchMedia('(max-width: 860px)').matches ? 220 : 0
+  );
+}
+
+function dismissP2pEditor() {
+  closeManagedModal(p2pEditorEls.panel, p2pEditorEls.trigger, () => {
+    p2pEditorEls.panel.classList.add('closing');
+    triggerHaptic('light');
+    const duration = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 250;
+    setTimeout(() => {
+      p2pEditorEls.panel.classList.remove('open', 'closing');
+      p2pEditorEls.panel.setAttribute('aria-hidden', 'true');
+      unlockBodyScroll();
+    }, duration);
+  });
+}
+
+function applyP2pEditorRate() {
+  const rate = renderP2pEditorValidation(true);
+  if (rate === null) return;
+  els.p2pRate.value = String(rate);
+  els.p2pRate.dispatchEvent(new Event('input', { bubbles: true }));
+  showToast('Tasa P2P ajustada para esta simulación.');
+  dismissP2pEditor();
+}
+
+async function restoreP2pAutomaticRate() {
+  p2pEditorEls.restore.disabled = true;
+  p2pEditorEls.apply.disabled = true;
+  setP2pEditorMessage('Buscando la tasa P2P actual…');
+
+  if (!lastAutomaticP2pRecord) await loadRates(true);
+
+  p2pEditorEls.restore.disabled = false;
+  if (!lastAutomaticP2pRecord) {
+    renderP2pEditorValidation();
+    setP2pEditorMessage('No se pudo recuperar una tasa P2P automática.', 'error');
+    return;
+  }
+
+  activeP2pRecord = lastAutomaticP2pRecord;
+  els.p2pRate.value = Number(activeP2pRecord.rate).toFixed(4);
+  calculate();
+  saveState(false);
+  showToast('Tasa P2P actual restaurada.');
+  dismissP2pEditor();
+}
+
 function bindEvents() {
   ['usdToBuy','bankMargin','bcvRate','p2pRate','cardFee','bpayFee','autoRates'].forEach(key => {
     els[key].addEventListener('input', () => {
@@ -1663,7 +1777,10 @@ function bindEvents() {
         activeBcvRecord = null;
         renderBcvDate(null);
       }
-      if (key === 'p2pRate') activeP2pRecord = null;
+      if (key === 'p2pRate') {
+        if (activeP2pRecord) lastAutomaticP2pRecord = activeP2pRecord;
+        activeP2pRecord = null;
+      }
       if (key === 'cardFee') syncActiveProfileFromCardFee();
       calculate();
       saveState(false);
@@ -1739,6 +1856,21 @@ function bindEvents() {
     e.preventDefault();
     confirmBsHelper();
   });
+  p2pEditorEls.trigger.addEventListener('click', showP2pEditor);
+  p2pEditorEls.close.addEventListener('click', dismissP2pEditor);
+  p2pEditorEls.panel.addEventListener('click', e => { if (e.target === p2pEditorEls.panel) dismissP2pEditor(); });
+  p2pEditorEls.input.addEventListener('input', () => {
+    setP2pEditorMessage();
+    renderP2pEditorValidation();
+  });
+  p2pEditorEls.input.addEventListener('beforeinput', e => {
+    if (e.data && /[^\d.,]/.test(e.data)) e.preventDefault();
+  });
+  p2pEditorEls.form.addEventListener('submit', e => {
+    e.preventDefault();
+    applyP2pEditorRate();
+  });
+  p2pEditorEls.restore.addEventListener('click', () => restoreP2pAutomaticRate());
 
   // Prevent scroll leaking through any shared modal backdrop on mobile
   document.querySelectorAll('.modal-shell').forEach(shell => shell.addEventListener('touchmove', e => {
@@ -1763,6 +1895,7 @@ function bindEvents() {
         if (!navigateBackWithinBankProfiles()) dismissBankProfiles();
       }
       else if (bsHelperEls.panel.classList.contains('open')) dismissBsHelper();
+      else if (p2pEditorEls.panel.classList.contains('open')) dismissP2pEditor();
       else if (els.settingsPanel.classList.contains('open')) dismissSettings();
       else if (els.breakdownPanel.classList.contains('open')) dismissBreakdown();
       else if (els.supportPanel.classList.contains('open')) dismissSupport();

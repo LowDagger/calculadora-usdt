@@ -49,13 +49,13 @@ test('renders a persistent accessible retry action through the same rate loader'
 
 test('marks result-card symbols as decorative and bumps the PWA cache', () => {
   assert.equal(
-    (html.match(/class="material-symbols-rounded card-icon" aria-hidden="true"/g) || []).length,
+    (html.match(/class="material-symbols-rounded card-icon(?: rate-edit-icon)?" aria-hidden="true"/g) || []).length,
     7
   );
   assert.match(ui, /btn\.setAttribute\('aria-pressed', String\(isActive\)\)/);
   assert.match(app, /btn\.setAttribute\('aria-pressed', String\(isActive\)\)/);
   assert.match(html, /data-theme-val="system" aria-pressed="true"/);
-  assert.match(serviceWorker, /const APP_VERSION\s+= '41';/);
+  assert.match(serviceWorker, /const APP_VERSION\s+= '42';/);
   assert.match(serviceWorker, /'\/js\/bcv-rates\.js'/);
   assert.match(serviceWorker, /requestUrl\.pathname\.startsWith\('\/api\/'\)/);
 });
@@ -91,10 +91,11 @@ test('keeps amount-entry actions together before bank selection', () => {
 });
 
 test('orders normal settings by usage and keeps rare values collapsed', () => {
-  assert.match(settingsHtml, />Perfil de banco<[\s\S]*?>Montos rápidos<[\s\S]*?>Actualización<[\s\S]*?>Apariencia<[\s\S]*?>Opciones avanzadas</);
+  assert.match(settingsHtml, />Perfil de banco<[\s\S]*?>Montos rápidos<[\s\S]*?>Apariencia<[\s\S]*?>Opciones avanzadas</);
   assert.doesNotMatch(settingsHtml, />Montos generales</);
+  assert.doesNotMatch(settingsHtml, /<div class="section-title">[\s\S]*?>Actualización<[\s\S]*?<\/div>/);
   assert.match(settingsHtml, /<details[^>]*id="advancedSettingsDisclosure"(?![^>]*\sopen)[^>]*>/);
-  assert.match(settingsHtml, /id="advancedSettingsDisclosure"[\s\S]*?id="bankMargin"[\s\S]*?id="bpayFee"[\s\S]*?id="bcvRate"[\s\S]*?id="p2pRate"[\s\S]*?id="resetDefaultsBtn"/);
+  assert.match(settingsHtml, /id="advancedSettingsDisclosure"[\s\S]*?id="autoRates"[\s\S]*?id="bankMargin"[\s\S]*?id="bpayFee"[\s\S]*?id="bcvRate"[\s\S]*?id="p2pRate"[\s\S]*?id="resetDefaultsBtn"/);
   assert.match(settingsHtml, /id="cardFee" type="hidden" value="1\.5"/);
 });
 
@@ -137,6 +138,27 @@ test('keeps rate cards equal and places BCV metadata with the spread below them'
   assert.match(css, /\.rate-card\s*\{[\s\S]*?min-height:\s*72px/);
   assert.match(css, /\.rate-meta-row\s*\{[\s\S]*?flex-wrap:\s*wrap/);
   assert.match(css, /\.rate-effective-date\s*\{[\s\S]*?white-space:\s*normal/);
+});
+
+test('offers one accessible P2P quick editor without making BCV directly editable', () => {
+  assert.match(html, /<button class="rate-card rate-card--editable" id="openP2pEditorBtn"[\s\S]*?aria-label="Editar tasa P2P"[\s\S]*?id="p2pView"[\s\S]*?<\/button>/);
+  assert.doesNotMatch(html, /<button[^>]*class="[^"]*rate-card[^"]*"[^>]*>[\s\S]*?id="bcvView"[\s\S]*?<\/button>/);
+  assert.match(html, /id="p2pManualIndicator" hidden>Manual</);
+  assert.match(html, /id="p2pEditorPanel"[\s\S]*?Editar tasa P2P[\s\S]*?Usa una tasa personalizada para simular tu operación\.[\s\S]*?id="p2pQuickRate"[\s\S]*?Bs\/USDT[\s\S]*?Restaurar tasa actual[\s\S]*?>Aplicar</);
+  assert.match(css, /\.rate-card--editable\s*\{[\s\S]*?cursor:\s*pointer/);
+  assert.match(css, /\.rate-card--editable:focus-visible\s*\{/);
+  assert.match(css, /\.p2p-editor-content\s*\{[\s\S]*?overflow-y:\s*auto[\s\S]*?scroll-padding-block:\s*8px 72px/);
+});
+
+test('keeps the quick editor synchronized with the existing manual P2P state', () => {
+  assert.match(app, /p2pEditorEls\.input\.value = els\.p2pRate\.value/);
+  assert.match(app, /els\.p2pRate\.value = String\(rate\)[\s\S]*?dispatchEvent\(new Event\('input'/);
+  assert.match(app, /if \(activeP2pRecord\) lastAutomaticP2pRecord = activeP2pRecord;[\s\S]*?activeP2pRecord = null/);
+  assert.match(app, /activeP2pRecord = lastAutomaticP2pRecord[\s\S]*?els\.p2pRate\.value = Number\(activeP2pRecord\.rate\)\.toFixed\(4\)[\s\S]*?calculate\(\)[\s\S]*?saveState\(false\)/);
+  assert.match(app, /p2pEditorEls\.indicator\.hidden = !isManual/);
+  assert.match(app, /openManagedModal\(p2pEditorEls\.panel, p2pEditorEls\.trigger[\s\S]*?p2pEditorEls\.input, p2pEditorEls\.trigger/);
+  assert.match(app, /closeManagedModal\(p2pEditorEls\.panel, p2pEditorEls\.trigger/);
+  assert.match(app, /p2pEditorEls\.panel\.classList\.contains\('open'\)\) dismissP2pEditor\(\)/);
 });
 
 test('uses icon-only profile editing while preserving the row accessibility contract', () => {
