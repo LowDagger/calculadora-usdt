@@ -69,7 +69,7 @@ function memoryStorage(initial = {}, { quotaError = false } = {}) {
 }
 
 test('includes every immutable initial bank profile and reported percentage', () => {
-  assert.equal(BANK_PROFILE_STATE_VERSION, 3);
+  assert.equal(BANK_PROFILE_STATE_VERSION, 4);
   assert.equal(DEFAULT_BANK_PROFILES.length, 8);
   assert.deepEqual(
     Object.fromEntries(DEFAULT_BANK_PROFILES.map(profile => [profile.id, profile.defaultFee])),
@@ -201,6 +201,29 @@ test('manages general and bank-specific quick amounts without cross-profile leak
 
   state = restoreGeneralQuickAmounts(state);
   assert.deepEqual(getGeneralQuickAmounts(state), [...DEFAULT_QUICK_AMOUNTS]);
+});
+
+test('migrates only the V3 general defaults while preserving custom and profile-specific amounts', () => {
+  const profiles = sanitizeBankProfileState({}).profiles;
+  const target = profiles.find(profile => profile.id === 'bdv-fisica');
+  target.quickAmounts = [100, 500, 1000];
+
+  const migratedDefaults = sanitizeBankProfileState({
+    version: 3,
+    selectedId: 'bdv-fisica',
+    quickAmounts: [100, 500, 1000],
+    profiles
+  });
+  assert.deepEqual(getGeneralQuickAmounts(migratedDefaults), [100, 200, 500, 1000]);
+  assert.deepEqual(getProfileQuickAmounts(migratedDefaults, 'bdv-fisica'), [100, 500, 1000]);
+
+  const migratedCustom = sanitizeBankProfileState({
+    version: 3,
+    selectedId: 'bdv-fisica',
+    quickAmounts: [150, 350],
+    profiles
+  });
+  assert.deepEqual(getGeneralQuickAmounts(migratedCustom), [150, 350]);
 });
 
 test('validates quick amounts and supports add, edit, delete, and numeric sorting', () => {

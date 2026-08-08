@@ -15,7 +15,8 @@ test('keeps one permanent and one temporary trigger for the same changelog dialo
 });
 
 test('keeps the community actions and reuses its Telegram URL', () => {
-  assert.match(html, /💗 Comunidad/);
+  assert.match(html, /class="support-title">Comunidad</);
+  assert.doesNotMatch(html, /💗 Comunidad/);
   assert.match(html, /Comparte sugerencias y conoce las novedades\./);
   assert.match(html, />Unirme al grupo</);
   assert.match(html, />Apoyar el proyecto</);

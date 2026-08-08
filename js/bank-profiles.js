@@ -1,10 +1,10 @@
 export const BANK_PROFILE_STORAGE_KEY = 'calcuflowBankProfilesV1';
-export const BANK_PROFILE_STATE_VERSION = 3;
+export const BANK_PROFILE_STATE_VERSION = 4;
 export const MANUAL_PROFILE_ID = 'manual';
 export const DEFAULT_PROFILE_ID = 'bdv-fisica';
 export const MAX_CARD_FEE = 100;
 export const MAX_PERSISTED_LOGO_BYTES = 100 * 1024;
-export const DEFAULT_QUICK_AMOUNTS = Object.freeze([100, 500, 1000]);
+export const DEFAULT_QUICK_AMOUNTS = Object.freeze([100, 200, 500, 1000]);
 export const MAX_QUICK_AMOUNT = 10000;
 
 export const BANK_ICONS = Object.freeze({
@@ -292,6 +292,34 @@ function migrateVersionTwoState(source, fallbackSelectedId) {
   };
 }
 
+function migrateVersionThreeState(source, fallbackSelectedId) {
+  const usedIds = new Set();
+  const profiles = Array.isArray(source.profiles)
+    ? source.profiles
+      .slice(0, 58)
+      .map(profile => sanitizeStoredProfile(profile, usedIds))
+      .filter(Boolean)
+    : [];
+  const safeProfiles = profiles.length ? profiles : getFreshDefaultProfiles();
+  const validIds = new Set(safeProfiles.map(profile => profile.id));
+  validIds.add(MANUAL_PROFILE_ID);
+  const requestedSelectedId = cleanText(source.selectedId, 87).toLowerCase();
+  const safeFallback = validIds.has(fallbackSelectedId)
+    ? fallbackSelectedId
+    : safeProfiles[0]?.id || DEFAULT_PROFILE_ID;
+  const legacyDefaults = [100, 500, 1000];
+  const storedQuickAmounts = getSafeQuickAmounts(source.quickAmounts);
+  const usesLegacyDefaults = storedQuickAmounts.length === legacyDefaults.length
+    && storedQuickAmounts.every((amount, index) => amount === legacyDefaults[index]);
+
+  return {
+    version: BANK_PROFILE_STATE_VERSION,
+    selectedId: validIds.has(requestedSelectedId) ? requestedSelectedId : safeFallback,
+    quickAmounts: usesLegacyDefaults ? [...DEFAULT_QUICK_AMOUNTS] : storedQuickAmounts,
+    profiles: safeProfiles
+  };
+}
+
 export function createEmptyBankProfileState(selectedId = DEFAULT_PROFILE_ID) {
   const profiles = getFreshDefaultProfiles();
   const validSelectedId = selectedId === MANUAL_PROFILE_ID || profiles.some(profile => profile.id === selectedId)
@@ -309,6 +337,9 @@ export function sanitizeBankProfileState(value, fallbackSelectedId = DEFAULT_PRO
   const source = isRecord(value) ? value : {};
   if (source.version === 2 && Array.isArray(source.profiles)) {
     return migrateVersionTwoState(source, fallbackSelectedId);
+  }
+  if (source.version === 3 && Array.isArray(source.profiles)) {
+    return migrateVersionThreeState(source, fallbackSelectedId);
   }
   if (source.version !== BANK_PROFILE_STATE_VERSION || !Array.isArray(source.profiles)) {
     return migrateVersionOneState(source, fallbackSelectedId);
@@ -580,6 +611,7 @@ export function readBankProfileState(storage, { hasLegacyCardFee = false } = {})
       && Object.prototype.hasOwnProperty.call(parsed, 'version')
       && parsed.version !== 1
       && parsed.version !== 2
+      && parsed.version !== 3
       && parsed.version !== BANK_PROFILE_STATE_VERSION;
     const hasUnusableProfileCollection = parsed?.version === BANK_PROFILE_STATE_VERSION
       && Array.isArray(parsed.profiles)

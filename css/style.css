@@ -9,6 +9,7 @@
   --text: #F5F7FA;
   --muted: #A8AFBB;
   --primary: #3b82f6;
+  --primary-on: #0B1730;
   --primary-bg: rgba(59, 130, 246, 0.15);
   --green: #17C995;
   --green-bg: rgba(23, 201, 149, 0.12);
@@ -31,6 +32,7 @@ html[data-theme="light"] {
   --text: #171A20;
   --muted: #5E6673;
   --primary: #2563EB;
+  --primary-on: #ffffff;
   --primary-bg: rgba(37, 99, 235, 0.09);
   --green: #078A68;
   --green-bg: rgba(7, 138, 104, 0.08);
@@ -52,6 +54,7 @@ html[data-theme="light"] {
     --text: #171A20;
     --muted: #5E6673;
     --primary: #2563EB;
+    --primary-on: #ffffff;
     --primary-bg: rgba(37, 99, 235, 0.09);
     --green: #078A68;
     --green-bg: rgba(7, 138, 104, 0.08);
@@ -226,8 +229,8 @@ textarea,
 }
 
 .rates-refresh-btn {
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
   margin-left: 1px;
   border: 0;
   border-radius: 50%;
@@ -276,8 +279,8 @@ textarea,
 }
 
 .icon-btn {
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   background: transparent;
   border: none;
@@ -403,8 +406,14 @@ textarea,
   gap: 8px;
 }
 
+@media (max-width: 340px) {
+  .quick-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 .chip-btn {
-  height: 38px;
+  min-height: 44px;
   border-radius: 19px;
   background: var(--bg-soft);
   border: 1px solid var(--border);
@@ -425,7 +434,7 @@ textarea,
 .chip-btn.active {
   background: var(--primary);
   border-color: var(--primary);
-  color: #ffffff;
+  color: var(--primary-on);
 }
 
 .bank-profile-field {
@@ -597,6 +606,9 @@ html[data-theme="dark"] .bank-profile-avatar.has-logo img {
 
 .bs-helper-content {
   gap: 10px;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .bs-helper-input input {
@@ -662,7 +674,7 @@ html[data-theme="dark"] .bank-profile-avatar.has-logo img {
   border: 0;
   border-radius: 12px;
   background: var(--primary);
-  color: #ffffff;
+  color: var(--primary-on);
   font: inherit;
   font-size: 0.82rem;
   font-weight: 800;
@@ -1347,11 +1359,11 @@ html[data-theme="light"] .kpi-loss {
 .bank-profile-list-action--primary {
   border-color: var(--primary);
   background: var(--primary);
-  color: #ffffff;
+  color: var(--primary-on);
 }
 
 .bank-profile-list-action--primary .material-symbols-rounded {
-  color: #ffffff;
+  color: var(--primary-on);
 }
 
 .bank-profile-list-action--danger {
@@ -1592,11 +1604,90 @@ html[data-theme="light"] .kpi-loss {
   font-size: 1rem;
 }
 
-.bank-profile-quick-preview,
-.general-quick-list {
+.bank-profile-quick-preview {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(68px, 1fr));
   gap: 7px;
+}
+
+.general-quick-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.general-quick-item {
+  min-width: 0;
+  min-height: 48px;
+  grid-template-columns: auto minmax(0, 1fr) 44px;
+  gap: 0;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-soft);
+  overflow: hidden;
+  transition: border-color 150ms ease, box-shadow 150ms ease, background-color 150ms ease;
+}
+
+.general-quick-item:focus-within {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-bg);
+}
+
+.general-quick-item .bank-profile-quick-prefix {
+  padding-left: 12px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  opacity: 0.72;
+}
+
+.general-quick-item input {
+  width: 100%;
+  min-width: 0;
+  min-height: 46px;
+  padding: 0 4px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 800;
+  appearance: textfield;
+}
+
+.general-quick-item input::-webkit-inner-spin-button,
+.general-quick-item input::-webkit-outer-spin-button {
+  margin: 0;
+  appearance: none;
+}
+
+.general-quick-item input:focus {
+  outline: none;
+}
+
+.general-quick-remove {
+  width: 44px;
+  min-width: 44px;
+  min-height: 46px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--muted);
+}
+
+.general-quick-remove:hover:not(:disabled) {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+
+.general-quick-remove:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: -3px;
+}
+
+.general-quick-remove:disabled {
+  cursor: not-allowed;
+  opacity: 0.35;
 }
 
 .bank-profile-quick-preview-chip {
@@ -1626,6 +1717,34 @@ html[data-theme="light"] .kpi-loss {
   margin-top: 8px;
 }
 
+.general-quick-secondary-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.general-quick-secondary-actions .bank-profile-action {
+  background: transparent;
+  color: var(--muted);
+}
+
+.general-quick-secondary-actions .bank-profile-action:hover:not(:disabled) {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+
+.general-quick-actions .bank-profile-action--primary {
+  font-size: 0.75rem;
+}
+
+.general-quick-message {
+  margin-top: 2px;
+  color: var(--red);
+  font-size: 0.68rem;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
 .field-label {
   color: var(--text);
   font-size: 0.72rem;
@@ -1652,7 +1771,7 @@ html[data-theme="light"] .kpi-loss {
 }
 
 .bank-profile-action {
-  min-height: 40px;
+  min-height: 44px;
   padding: 8px 10px;
   border: 1px solid var(--border);
   border-radius: 10px;
@@ -1668,7 +1787,7 @@ html[data-theme="light"] .kpi-loss {
 .bank-profile-action--primary {
   border-color: var(--primary);
   background: var(--primary);
-  color: #ffffff;
+  color: var(--primary-on);
 }
 
 .bank-profile-action--danger {
@@ -1691,6 +1810,10 @@ html[data-theme="light"] .kpi-loss {
     animation: fade-out 150ms ease-in forwards !important;
   }
   .modal-panel, .modal-content {
+    animation: none !important;
+  }
+  .skeleton-shimmer,
+  .skeleton-shimmer::after {
     animation: none !important;
   }
 }
@@ -1846,7 +1969,7 @@ html[data-theme="light"] .step.step-highlight {
 
 .num.num-highlight {
   background: var(--primary);
-  color: #ffffff;
+  color: var(--primary-on);
 }
 
 .step-desc-pos {
@@ -1984,7 +2107,7 @@ html[data-theme="light"] .step.step-highlight {
 
 .status-action {
   flex: 0 0 auto;
-  min-height: 36px;
+  min-height: 44px;
   padding: 0 12px;
   border: 1px solid currentColor;
   border-radius: 9px;
@@ -2041,6 +2164,39 @@ html[data-theme="light"] .step.step-highlight {
 .settings-section:not(:last-child) {
   border-bottom: 1px solid rgba(156, 163, 175, 0.1);
   padding-bottom: 12px;
+}
+
+.settings-section-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 8px;
+}
+
+.settings-disclosure > summary {
+  min-height: 44px;
+  margin: 0;
+  cursor: pointer;
+  list-style: none;
+}
+
+.settings-disclosure > summary::-webkit-details-marker {
+  display: none;
+}
+
+.settings-disclosure-chevron {
+  margin-left: auto;
+  transition: transform 180ms ease;
+}
+
+.settings-disclosure[open] .settings-disclosure-chevron {
+  transform: rotate(180deg);
+}
+
+.settings-disclosure > summary:focus-visible {
+  border-radius: 8px;
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
 }
 
 .section-title {
@@ -2102,6 +2258,25 @@ html[data-theme="light"] .step.step-highlight {
   gap: 9px;
 }
 
+.bank-profile-settings-summary.bank-profile-settings-manage {
+  width: 100%;
+  min-height: 52px;
+  padding: 8px 2px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 10px;
+  text-align: left;
+}
+
+.bank-profile-settings-summary.bank-profile-settings-manage:focus-visible {
+  border-radius: 8px;
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
 .bank-profile-settings-active {
   min-width: 0;
   display: flex;
@@ -2159,7 +2334,7 @@ html[data-theme="light"] .step.step-highlight {
 
 .input-wrap input {
   width: 100%;
-  height: 38px;
+  min-height: 44px;
   border-radius: 10px;
   background: var(--bg-soft);
   border: 1px solid var(--border);
@@ -2209,6 +2384,7 @@ html[data-theme="light"] .step.step-highlight {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  min-height: 52px;
   padding: 10px 12px;
   background: var(--bg-soft);
   border: none;
@@ -2218,6 +2394,7 @@ html[data-theme="light"] .step.step-highlight {
 .switch-row strong {
   font-size: 0.78rem;
   font-weight: 700;
+  color: var(--text);
 }
 
 .switch-row span {
@@ -2417,7 +2594,7 @@ footer {
 }
 
 .segment-btn {
-  height: 32px;
+  min-height: 44px;
   border-radius: 8px;
   border: none;
   background: transparent;
@@ -2538,6 +2715,7 @@ html[data-theme="light"] .segment-btn:hover:not(.active) {
 }
 
 .install-prompt-actions button {
+  min-height: 44px;
   padding: 8px 16px;
   font-size: 0.75rem;
   font-weight: 700;
@@ -2559,7 +2737,7 @@ html[data-theme="light"] .segment-btn:hover:not(.active) {
 
 .install-prompt-actions .btn-primary {
   background: var(--primary);
-  color: #ffffff;
+  color: var(--primary-on);
 }
 
 .install-prompt-actions .btn-primary:hover {
@@ -2612,18 +2790,12 @@ html[data-theme="light"] .segment-btn:hover:not(.active) {
 }
 
 .sheet-grab-handle {
-  display: none;
+  display: none !important;
 }
 
 @media (max-width: 860px) {
   .sheet-grab-handle {
-    display: block;
-    width: 40px;
-    height: 4px;
-    background: var(--text);
-    border-radius: 2px;
-    margin: -8px auto 4px auto;
-    opacity: 0.15;
+    display: none !important;
   }
 }
 
@@ -2758,11 +2930,12 @@ html[data-theme="light"] .skeleton-shimmer::after {
 
 .changelog-announcement-action,
 .changelog-announcement-dismiss {
-  min-height: 34px;
+  min-width: 44px;
+  min-height: 44px;
   border: 1px solid color-mix(in srgb, var(--primary) 42%, var(--border));
   border-radius: 9px;
   background: var(--primary);
-  color: #ffffff;
+  color: var(--primary-on);
   font: inherit;
   font-size: 0.65rem;
   font-weight: 800;
@@ -2807,10 +2980,11 @@ html[data-theme="light"] .skeleton-shimmer::after {
 }
 
 .support-section {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 9px 10px;
+  background: transparent;
+  border: 0;
+  border-top: 1px solid var(--border);
+  border-radius: 0;
+  padding: 12px 2px 0;
   display: flex;
   flex-direction: column;
   gap: 5px;
@@ -2893,7 +3067,7 @@ html[data-theme="light"] .skeleton-shimmer::after {
   padding: 3px 6px;
   border-radius: 999px;
   background: var(--primary);
-  color: #ffffff;
+  color: var(--primary-on);
   font-size: 0.56rem;
   font-weight: 800;
   line-height: 1;
@@ -2999,7 +3173,7 @@ html[data-theme="light"] .skeleton-shimmer::after {
   padding: 10px 14px;
   border-radius: 11px;
   background: var(--primary);
-  color: #ffffff;
+  color: var(--primary-on);
   display: inline-flex;
   align-items: center;
   justify-content: center;

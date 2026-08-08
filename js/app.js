@@ -110,6 +110,7 @@ const bankProfileEls = {
   generalQuickAdd: document.getElementById('addGeneralQuickAmountBtn'),
   generalQuickRestore: document.getElementById('restoreGeneralQuickAmountsBtn'),
   generalQuickSave: document.getElementById('saveGeneralQuickAmountsBtn'),
+  generalQuickError: document.getElementById('generalQuickAmountsError'),
   error: document.getElementById('bankProfileFormError'),
   restore: document.getElementById('restoreBankProfileBtn'),
   remove: document.getElementById('deleteBankProfileBtn'),
@@ -562,9 +563,19 @@ function collectQuickAmountInputsFrom(container) {
   const sanitized = sanitizeQuickAmounts(values);
   if (!sanitized || invalidInput) {
     if (container === bankProfileEls.quickList) setQuickAmountDisclosure(true);
-    setBankProfileFormError('Usa entre 1 y 4 montos enteros, positivos, sin duplicados y hasta $10.000.', invalidInput || bankProfileEls.quickList);
+    const message = 'Usa entre 1 y 4 montos enteros, positivos, sin duplicados y hasta $10.000.';
+    if (container === bankProfileEls.generalQuickList) {
+      bankProfileEls.generalQuickError.textContent = message;
+      bankProfileEls.generalQuickError.hidden = false;
+    } else {
+      setBankProfileFormError(message, invalidInput || bankProfileEls.quickList);
+    }
     invalidInput?.focus();
     return null;
+  }
+  if (container === bankProfileEls.generalQuickList) {
+    bankProfileEls.generalQuickError.textContent = '';
+    bankProfileEls.generalQuickError.hidden = true;
   }
   return sanitized;
 }
@@ -572,6 +583,8 @@ function collectQuickAmountInputsFrom(container) {
 function renderGeneralQuickAmountSettings(amounts = getGeneralQuickAmounts(bankProfileState)) {
   renderQuickAmountInputList(bankProfileEls.generalQuickList, amounts);
   bankProfileEls.generalQuickAdd.hidden = amounts.length >= 4;
+  bankProfileEls.generalQuickError.textContent = '';
+  bankProfileEls.generalQuickError.hidden = true;
 }
 
 function saveGeneralQuickAmountSettings() {
@@ -607,9 +620,10 @@ function renderQuickAmountPreview(amounts) {
 }
 
 function renderQuickAmountInputList(container, amounts) {
+  const isGeneralEditor = container === bankProfileEls.generalQuickList;
   container.replaceChildren(...amounts.map((amount, index) => {
     const item = document.createElement('div');
-    item.className = 'bank-profile-quick-item';
+    item.className = `bank-profile-quick-item${isGeneralEditor ? ' general-quick-item' : ''}`;
     const moneyPrefix = document.createElement('span');
     moneyPrefix.className = 'bank-profile-quick-prefix';
     moneyPrefix.textContent = '$';
@@ -622,15 +636,17 @@ function renderQuickAmountInputList(container, amounts) {
     input.step = '1';
     input.value = formatQuickAmountInput(amount);
     input.setAttribute('aria-label', `Monto rápido ${index + 1}`);
-    input.setAttribute('aria-describedby', 'bankProfileFormError bankProfileQuickAmountsHelp');
+    input.setAttribute('aria-describedby', isGeneralEditor
+      ? 'generalQuickAmountsHelp generalQuickAmountsError'
+      : 'bankProfileFormError bankProfileQuickAmountsHelp');
 
     const remove = document.createElement('button');
-    remove.className = 'bank-profile-quick-icon';
+    remove.className = `bank-profile-quick-icon${isGeneralEditor ? ' general-quick-remove' : ''}`;
     remove.type = 'button';
     remove.dataset.quickRemove = String(index);
     remove.disabled = amounts.length <= 1;
-    remove.setAttribute('aria-label', `Eliminar monto ${formatQuickAmountInput(amount)}`);
-    remove.innerHTML = '<span class="material-symbols-rounded" aria-hidden="true">delete</span>';
+    remove.setAttribute('aria-label', `${isGeneralEditor ? 'Quitar' : 'Eliminar'} monto ${formatQuickAmountInput(amount)}`);
+    remove.innerHTML = `<span class="material-symbols-rounded" aria-hidden="true">${isGeneralEditor ? 'close' : 'delete'}</span>`;
 
     item.append(moneyPrefix, input, remove);
     return item;
@@ -1477,7 +1493,7 @@ function closeManagedModal(panel, trigger, closeFn) {
 
 function trapModalFocus(event) {
   if (event.key !== 'Tab') return;
-  const panel = document.querySelector('.modal-shell.open');
+  const panel = document.querySelector('.modal-shell.open, .install-prompt.show');
   if (!panel) return;
 
   const focusable = Array.from(panel.querySelectorAll(
@@ -1720,6 +1736,7 @@ function bindEvents() {
       else if (els.settingsPanel.classList.contains('open')) dismissSettings();
       else if (els.breakdownPanel.classList.contains('open')) dismissBreakdown();
       else if (els.supportPanel.classList.contains('open')) dismissSupport();
+      else if (installPrompt?.classList.contains('show')) hideInstallPrompt();
     }
   });
 
@@ -1946,13 +1963,6 @@ function setupKeyboardUX() {
     saveState(false);
   });
 
-  // --- Focus: scroll into view (center so the keyboard doesn't hide it) ---
-  input.addEventListener('focus', () => {
-    setTimeout(() => {
-      input.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }, 300);
-  });
-
   // --- Tap outside any input: dismiss keyboard ---
   document.addEventListener('touchend', (e) => {
     const tag = e.target.tagName;
@@ -1967,6 +1977,15 @@ function setupKeyboardUX() {
 
 // --- PWA Install Prompt & iOS detection ---
 let deferredPrompt = null;
+let installPromptFocusOrigin = null;
+
+function revealInstallPrompt(promptEl, focusTarget) {
+  installPromptFocusOrigin = document.activeElement;
+  promptEl.classList.add('show');
+  promptEl.setAttribute('aria-hidden', 'false');
+  lockBodyScroll();
+  requestAnimationFrame(() => focusTarget?.focus());
+}
 
 function shouldShowInstallPrompt() {
   const dismissedTime = localStorage.getItem('installPromptDismissed');
@@ -1986,8 +2005,7 @@ function showAndroidInstallPrompt() {
   document.getElementById('installPromptDesc').textContent = 'Agrega CalcuFlow a tu pantalla de inicio para un acceso más rápido.';
   const dismissBtn = document.getElementById('installDismissBtn');
   if (dismissBtn) dismissBtn.textContent = 'Ahora no';
-  promptEl.classList.add('show');
-  lockBodyScroll();
+  revealInstallPrompt(promptEl, document.getElementById('installConfirmBtn'));
 }
 
 function showIOSInstallPrompt() {
@@ -1999,15 +2017,19 @@ function showIOSInstallPrompt() {
   if (dismissBtn) dismissBtn.textContent = 'Entendido';
   const confirmBtn = document.getElementById('installConfirmBtn');
   if (confirmBtn) confirmBtn.style.display = 'none';
-  promptEl.classList.add('show');
-  lockBodyScroll();
+  revealInstallPrompt(promptEl, dismissBtn);
 }
 
 function hideInstallPrompt() {
   const promptEl = document.getElementById('installPrompt');
   if (promptEl && promptEl.classList.contains('show')) {
     promptEl.classList.remove('show');
+    promptEl.setAttribute('aria-hidden', 'true');
     unlockBodyScroll();
+    if (installPromptFocusOrigin && document.contains(installPromptFocusOrigin)) {
+      installPromptFocusOrigin.focus();
+    }
+    installPromptFocusOrigin = null;
   }
 }
 

@@ -88,18 +88,12 @@ export function renderUsdAmountValidation(error = '') {
 }
 
 export function setLoadingRates(isLoading) {
-  els.loadRatesBtn.disabled = isLoading;
-  els.loadRatesBtn.setAttribute('aria-busy', String(isLoading));
-  // Toggle .loading class to drive the CSS spin animation; preserve icon markup
-  els.loadRatesBtn.classList.toggle('loading', isLoading);
-  if (els.loadRatesBtnMobile) {
-    els.loadRatesBtnMobile.disabled = isLoading;
-    els.loadRatesBtnMobile.classList.toggle('loading', isLoading);
-  }
-  if (els.loadRatesBtnSettings) {
-    els.loadRatesBtnSettings.disabled = isLoading;
-    els.loadRatesBtnSettings.classList.toggle('loading', isLoading);
-  }
+  [els.loadRatesBtn, els.loadRatesBtnMobile, els.loadRatesBtnSettings].filter(Boolean).forEach(button => {
+    button.disabled = isLoading;
+    button.setAttribute('aria-busy', String(isLoading));
+    button.classList.toggle('loading', isLoading);
+  });
+  els.loadRatesBtn.setAttribute('aria-label', isLoading ? 'Actualizando tasas' : 'Actualizar tasas');
   const retryButton = document.getElementById('retryRatesBtn');
   if (retryButton) {
     retryButton.disabled = isLoading;
@@ -107,14 +101,18 @@ export function setLoadingRates(isLoading) {
     retryButton.textContent = isLoading ? 'Reintentando…' : 'Reintentar';
   }
 
-  if (isLoading) {
+  const hasRenderedRates = [els.bcvView, els.bankView, els.p2pView].every(element => {
+    const value = element?.textContent?.trim();
+    return value && value !== '--';
+  });
+
+  if (isLoading && !hasRenderedRates) {
     const skeletonHTML = '<span class="skeleton-shimmer"></span>';
     if (els.bcvView) els.bcvView.innerHTML = skeletonHTML;
     if (els.bankView) els.bankView.innerHTML = skeletonHTML;
     if (els.p2pView) els.p2pView.innerHTML = skeletonHTML;
     if (els.lastUpdate) els.lastUpdate.innerHTML = skeletonHTML;
     if (els.brechaView) els.brechaView.innerHTML = skeletonHTML;
-    // Clear the BCV date while loading so no stale date shows during refresh
     if (els.bcvEffectiveDate) els.bcvEffectiveDate.textContent = '';
   }
 }

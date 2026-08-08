@@ -105,7 +105,7 @@ calculadora-usdt/
 - [ ] Una tasa anunciada para el próximo día hábil se aplica inmediatamente
 - [ ] La tarjeta distingue “BCV vigente hoy” de “Tasa anunciada”
 - [ ] P2P coincide con la mediana SELL de Binance o indica el respaldo usado
-- [ ] Chips rápidos: 100 / 500 / 1000
+- [ ] Chips rápidos: 100 / 200 / 500 / 1000
 - [ ] Cálculos actualizan al cambiar el monto
 - [ ] Un fallo parcial conserva solo la tasa que no pudo actualizarse
 - [ ] `/api/` no aparece en el caché estático del service worker
