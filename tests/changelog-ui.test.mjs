@@ -14,13 +14,18 @@ test('keeps one permanent and one temporary trigger for the same changelog dialo
   assert.equal((changelog.match(/markChangelogSeen\(storage\)/g) || []).length, 1);
 });
 
-test('keeps Telegram discoverable in both the header and Community', () => {
+test('keeps the shared Community modal discoverable from header, Community, and Settings', () => {
   assert.match(html, /class="support-title">Comunidad</);
   assert.doesNotMatch(html, /💗 Comunidad/);
-  assert.match(html, /id="telegramHeaderLink"[\s\S]*?href="https:\/\/telegram\.me\/CalcuFlow"[\s\S]*?target="_blank"[\s\S]*?rel="noopener noreferrer"[\s\S]*?aria-label="Grupo de Telegram de CalcuFlow"/);
-  assert.match(html.match(/<div class="support-section">[\s\S]*?<\/div>/)?.[0] || '', /href="https:\/\/telegram\.me\/CalcuFlow"[\s\S]*?Unirme al grupo/);
+  assert.match(html, /id="openCommunityHeaderBtn"[^>]*type="button"[^>]*aria-controls="qrPanel"[^>]*aria-expanded="false"/);
+  assert.match(html, /id="openCommunityBtn"[^>]*aria-controls="qrPanel"[^>]*aria-expanded="false"/);
+  assert.match(html, /id="openCommunitySettingsBtn"[^>]*aria-controls="qrPanel"[^>]*aria-expanded="false"/);
+  assert.doesNotMatch(html, /id="openCommunityHeaderBtn"[^>]*href=/);
+  assert.match(html.match(/<div class="support-section">[\s\S]*?<\/div>/)?.[0] || '', />Unirme al grupo<[\s\S]*?>t\.me\/CalcuFlow</);
   assert.match(html, />Apoyar el proyecto</);
-  assert.match(changelog, /telegramLink\.href = 'https:\/\/telegram\.me\/CalcuFlow'/);
+  assert.doesNotMatch(html, />Código QR de Telegram</);
+  assert.doesNotMatch([html, changelog].join('\n'), /https:\/\/telegram\.me\/CalcuFlow/);
+  assert.match(changelog, /telegramLink\.href = 'https:\/\/t\.me\/CalcuFlow'/);
 });
 
 test('uses a full-width accessible announcement card without reserved hidden space', () => {

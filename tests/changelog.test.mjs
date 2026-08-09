@@ -116,7 +116,7 @@ function changelogDocument() {
     'changelogTelegramLink'
   ].forEach(id => documentRef.elements.set(id, new FakeElement(id, documentRef)));
   documentRef.communityLink = new FakeElement('communityTelegram', documentRef);
-  documentRef.communityLink.href = 'https://telegram.me/CalcuFlow';
+  documentRef.communityLink.href = 'https://t.me/CalcuFlow';
   return documentRef;
 }
 

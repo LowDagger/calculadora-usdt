@@ -21,7 +21,6 @@ export const els = {
   supportPanel: $('supportPanel'),
   openSupportBtn: $('openSupportBtn'),
   closeSupportBtn: $('closeSupportBtn'),
-  openQrBtn: $('openQrBtn'),
   qrPanel: $('qrPanel'),
   closeQrBtn: $('closeQrBtn'),
   brechaView: $('brechaView'),
@@ -179,10 +178,9 @@ export function renderBcvDate(record) {
 }
 
 export function renderRates({ bcv, bank, p2p }) {
-  const uBsUsdt = '<span class="rate-unit">Bs/USDT</span>';
   els.bcvView.textContent  = bcv  ? money(bcv, 2)  : '--';
   els.bankView.textContent = bank ? money(bank, 2) : '--';
-  els.p2pView.innerHTML    = p2p  ? money(p2p, 2)  + uBsUsdt : '--';
+  els.p2pView.textContent  = p2p  ? money(p2p, 2)  : '--';
 
   if (els.bankMarginView) {
     const margin = n(els.bankMargin.value);
@@ -375,9 +373,6 @@ export function openQr() {
   els.qrPanel.classList.remove('closing');
   els.qrPanel.classList.add('open');
   els.qrPanel.setAttribute('aria-hidden', 'false');
-  if (els.openQrBtn) {
-    els.openQrBtn.setAttribute('aria-expanded', 'true');
-  }
   triggerHaptic('light');
   lockBodyScroll();
 }
@@ -391,9 +386,6 @@ export function closeQr() {
   setTimeout(() => {
     panel.classList.remove('open', 'closing');
     panel.setAttribute('aria-hidden', 'true');
-    if (els.openQrBtn) {
-      els.openQrBtn.setAttribute('aria-expanded', 'false');
-    }
     unlockBodyScroll();
   }, duration);
 }

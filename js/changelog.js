@@ -111,7 +111,7 @@ export function initChangelog({
   if (topSummary) topSummary.textContent = CURRENT_CHANGELOG_RELEASE.title;
   if (communitySummary) communitySummary.textContent = CURRENT_CHANGELOG_RELEASE.summary;
   if (topTrigger?.dataset) topTrigger.dataset.announcementId = V1_POLISH_ANNOUNCEMENT_ID;
-  telegramLink.href = 'https://telegram.me/CalcuFlow';
+  telegramLink.href = 'https://t.me/CalcuFlow';
 
   let isOpen = false;
   let seenThisSession = false;

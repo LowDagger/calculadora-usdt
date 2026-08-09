@@ -1546,7 +1546,7 @@ function openManagedModal(panel, trigger, openFn, initialFocus, returnFocus = nu
 }
 
 function closeManagedModal(panel, trigger, closeFn) {
-  if (!panel.classList.contains('open')) return;
+  if (!panel.classList.contains('open') || panel.classList.contains('closing')) return;
   closeFn();
   trigger.setAttribute('aria-expanded', 'false');
   const duration = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 260;
@@ -1933,10 +1933,43 @@ function bindEvents() {
   const dismissBreakdown = () => closeManagedModal(els.breakdownPanel, els.openBreakdownBtn, closeBreakdown);
   const showSupport = () => openManagedModal(els.supportPanel, els.openSupportBtn, openSupport, els.closeSupportBtn);
   const dismissSupport = () => closeManagedModal(els.supportPanel, els.openSupportBtn, closeSupport);
+  const communityTriggers = [
+    document.getElementById('openCommunityHeaderBtn'),
+    document.getElementById('openCommunityBtn'),
+    document.getElementById('openCommunitySettingsBtn')
+  ].filter(Boolean);
+  let activeCommunityTrigger = communityTriggers[0] || null;
+  let settingsObscuredByCommunity = false;
+  const showCommunity = trigger => {
+    activeCommunityTrigger = trigger;
+    settingsObscuredByCommunity = trigger.id === 'openCommunitySettingsBtn'
+      && els.settingsPanel.classList.contains('open');
+    if (settingsObscuredByCommunity) {
+      els.settingsPanel.setAttribute('aria-hidden', 'true');
+      els.settingsPanel.setAttribute('inert', '');
+    }
+    openManagedModal(els.qrPanel, trigger, openQr, els.closeQrBtn);
+  };
+  const dismissCommunity = () => {
+    if (!activeCommunityTrigger || !els.qrPanel.classList.contains('open')
+      || els.qrPanel.classList.contains('closing')) return;
+    if (settingsObscuredByCommunity) {
+      const restoreDelay = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 250;
+      setTimeout(() => {
+        els.settingsPanel.setAttribute('aria-hidden', 'false');
+        els.settingsPanel.removeAttribute('inert');
+      }, restoreDelay);
+    }
+    closeManagedModal(els.qrPanel, activeCommunityTrigger, closeQr);
+    settingsObscuredByCommunity = false;
+  };
 
   els.openSettingsBtn.addEventListener('click', showSettings);
   els.closeSettingsBtn.addEventListener('click', dismissSettings);
   els.settingsPanel.addEventListener('click', e => { if (e.target === els.settingsPanel) dismissSettings(); });
+  communityTriggers.forEach(trigger => {
+    trigger.addEventListener('click', () => showCommunity(trigger));
+  });
   bankProfileEls.settingsManage.addEventListener('click', () => {
     dismissSettings();
     const duration = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 270;
@@ -2021,9 +2054,9 @@ function bindEvents() {
       else if (bsHelperEls.panel.classList.contains('open')) dismissBsHelper();
       else if (p2pEditorEls.panel.classList.contains('open')) dismissP2pEditor();
       else if (bcvEditorEls.panel.classList.contains('open')) dismissBcvEditor();
+      else if (els.qrPanel.classList.contains('open')) dismissCommunity();
       else if (els.settingsPanel.classList.contains('open')) dismissSettings();
       else if (els.breakdownPanel.classList.contains('open')) dismissBreakdown();
-      else if (els.qrPanel.classList.contains('open')) dismissQr();
       else if (els.supportPanel.classList.contains('open')) dismissSupport();
       else if (installPrompt?.classList.contains('show')) hideInstallPrompt();
     }
@@ -2080,20 +2113,12 @@ function bindEvents() {
     }
   }
 
-  // QR modal opens like the other sheets (focus restore, scroll lock, single haptic)
-  const showQr = () => {
-    openManagedModal(els.qrPanel, els.openQrBtn, openQr, els.closeQrBtn);
-  };
-  const dismissQr = () => closeManagedModal(els.qrPanel, els.openQrBtn, closeQr);
-  if (els.openQrBtn) {
-    els.openQrBtn.addEventListener('click', showQr);
-  }
   if (els.closeQrBtn) {
-    els.closeQrBtn.addEventListener('click', dismissQr);
+    els.closeQrBtn.addEventListener('click', dismissCommunity);
   }
   if (els.qrPanel) {
     els.qrPanel.addEventListener('click', (e) => {
-      if (e.target === els.qrPanel) dismissQr();
+      if (e.target === els.qrPanel) dismissCommunity();
     });
   }
 

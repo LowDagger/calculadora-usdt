@@ -314,8 +314,8 @@ textarea,
 }
 
 .header-telegram-icon {
-  width: 20px;
-  height: 20px;
+  width: 23px;
+  height: 23px;
   fill: currentColor;
 }
 
@@ -799,73 +799,45 @@ html[data-theme="dark"] .bank-profile-avatar.has-logo img {
 }
 
 .rate-card {
-  background: transparent;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 7px 8px;
+  background: color-mix(in srgb, var(--bg-soft) 82%, transparent);
+  border: 1px solid color-mix(in srgb, var(--border) 78%, transparent);
+  border-radius: 14px;
+  padding: 8px 9px;
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
   min-width: 0;
-  min-height: 72px;
-  gap: 3px;
+  min-height: 76px;
+  gap: 4px;
 }
 
 .rate-label {
-  font-size: 0.56rem;
+  font-size: 0.58rem;
   font-weight: 700;
   color: var(--muted);
   letter-spacing: 0.05em;
+  white-space: nowrap;
 }
 
 .rate-val {
   min-width: 0;
-  font-size: 0.82rem;
+  font-size: 0.88rem;
   font-weight: 800;
   color: var(--text);
   letter-spacing: -0.02em;
   line-height: 1.1;
+  white-space: nowrap;
 }
 
 .rate-card .card-icon {
   font-size: 0.72rem;
 }
 
-/* BCV + Banco card: hierarchical pair of rates with the bank spread chip */
-.rate-pair {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.rate-pair-row {
+.rate-value-row {
   min-width: 0;
   display: flex;
   align-items: baseline;
   gap: 4px;
-}
-
-.rate-unit-label {
-  flex-shrink: 0;
-  font-size: 0.52rem;
-  font-weight: 700;
-  color: var(--muted);
-  letter-spacing: 0.04em;
-  line-height: 1.2;
-}
-
-.rate-margin-chip {
-  flex-shrink: 0;
-  margin-left: auto;
-  padding: 1px 6px;
-  border-radius: 999px;
-  background: var(--bg-soft);
-  color: var(--muted);
-  font-size: 0.5rem;
-  font-weight: 800;
-  line-height: 1.4;
-  white-space: nowrap;
 }
 
 .rate-card--editable {
@@ -908,9 +880,10 @@ html[data-theme="dark"] .bank-profile-avatar.has-logo img {
 }
 
 .rate-manual-indicator {
+  flex: 0 0 auto;
   padding: 1px 4px;
   border-radius: 999px;
-  background: var(--bg-soft);
+  background: color-mix(in srgb, var(--surface) 68%, transparent);
   color: var(--muted);
   font-size: 0.46rem;
   font-weight: 800;
@@ -994,6 +967,14 @@ html[data-theme="dark"] .bank-profile-avatar.has-logo img {
 }
 
 @media (max-width: 390px) {
+  .rates-grid {
+    gap: 4px;
+  }
+
+  .rate-card {
+    padding-inline: 7px;
+  }
+
   .rate-spread {
     gap: 0;
     padding: 2px 4px 3px;
@@ -3642,46 +3623,55 @@ html[data-theme="light"] .skeleton-shimmer::after {
   outline-offset: 2px;
 }
 
-.btn-support-trigger {
-  width: 100%;
-  align-self: stretch;
-  background: var(--bg-soft);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  min-height: 44px;
-  padding: 7px 10px;
-  font-weight: 700;
-  font-size: 0.72rem;
-  color: var(--text);
-  cursor: pointer;
-  outline: none;
-  font-family: var(--font);
-  transition: background-color var(--dur-state) ease, border-color var(--dur-state) ease, transform var(--dur-press) ease;
-  display: inline-flex;
+.community-row-main {
+  min-width: 0;
+  display: flex;
   align-items: center;
-  justify-content: center;
-  text-decoration: none;
-  box-sizing: border-box;
+  gap: 9px;
 }
 
-.support-actions {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-}
-
-.support-telegram-icon {
-  width: 15px;
-  height: 15px;
-  margin-right: 6px;
+.community-telegram-icon {
+  width: 18px;
+  height: 18px;
   fill: currentColor;
   flex: 0 0 auto;
+  color: var(--muted);
 }
 
-/* Telegram QR modal */
+.settings-community-section {
+  padding-top: 2px;
+}
+
+.settings-community-trigger {
+  background: transparent;
+  border-color: color-mix(in srgb, var(--border) 72%, transparent);
+}
+
+/* Shared Telegram Community modal */
+.qr-panel {
+  z-index: 110;
+}
+
 .qr-content {
   align-items: center;
   padding-bottom: 8px;
+}
+
+.community-handle {
+  color: var(--primary);
+  font-size: 0.8rem;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.community-handle:hover {
+  text-decoration: underline;
+}
+
+.community-handle:focus-visible,
+.community-primary-action:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
 }
 
 .qr-modal-img {
@@ -3694,33 +3684,19 @@ html[data-theme="light"] .skeleton-shimmer::after {
   border: 1px solid var(--border);
 }
 
+.community-primary-action {
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  text-decoration: none;
+}
+
 @media (min-width: 400px) {
   .qr-modal-img {
-    max-width: 340px;
+    max-width: 280px;
   }
-}
-
-
-@media (max-width: 340px) {
-  .support-actions {
-    grid-template-columns: 1fr;
-  }
-}
-
-@media (hover: hover) and (pointer: fine) {
-  .btn-support-trigger:hover {
-    background: var(--surface-hover);
-    transform: translateY(-1px);
-  }
-}
-
-.btn-support-trigger:active {
-  transform: scale(0.98);
-}
-
-.btn-support-trigger:focus-visible {
-  outline: 2px solid var(--primary);
-  outline-offset: 2px;
 }
 
 .changelog-content {
