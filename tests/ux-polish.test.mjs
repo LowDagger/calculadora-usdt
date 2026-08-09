@@ -56,7 +56,7 @@ test('marks result-card symbols as decorative and bumps the PWA cache', () => {
   assert.match(ui, /btn\.setAttribute\('aria-pressed', String\(isActive\)\)/);
   assert.match(app, /btn\.setAttribute\('aria-pressed', String\(isActive\)\)/);
   assert.match(html, /data-theme-val="system" aria-pressed="true"/);
-  assert.match(serviceWorker, /const APP_VERSION\s+= '50';/);
+  assert.match(serviceWorker, /const APP_VERSION\s+= '51';/);
   assert.match(serviceWorker, /'\/js\/bcv-rates\.js'/);
   assert.match(serviceWorker, /requestUrl\.pathname\.startsWith\('\/api\/'\)/);
 });
@@ -132,11 +132,12 @@ test('consolidates Community actions into one accessible Telegram modal', () => 
   assert.match(html, /id="qrPanel" role="dialog" aria-modal="true"[\s\S]*?aria-labelledby="qrTitle"/);
   assert.match(html, /id="qrTitle">Comunidad CalcuFlow<[\s\S]*?Únete al grupo de Telegram/);
   assert.match(html, /id="closeQrBtn"/);
-  assert.match(html, /class="community-handle" href="https:\/\/t\.me\/CalcuFlow"[\s\S]*?>t\.me\/CalcuFlow<\/a>/);
+  assert.match(html, /class="community-handle" href="https:\/\/t\.me\/CalcuFlow"[\s\S]*?class="community-telegram-icon"[\s\S]*?<span>t\.me\/CalcuFlow<\/span>/);
+  assert.match(html, /class="qr-image-link" href="https:\/\/t\.me\/CalcuFlow" target="_blank" rel="noopener noreferrer"[\s\S]*?aria-label="Abrir grupo de CalcuFlow en Telegram"/);
   assert.match(html, /<img[^>]*src="assets\/telegram-qr\.webp"[^>]*alt="Código QR del grupo de Telegram de CalcuFlow"[^>]*width="700"[^>]*height="700"[^>]*loading="lazy"[^>]*decoding="async"[^>]*\/?>/);
-  assert.match(html, /class="bank-profile-action bank-profile-action--primary community-primary-action"[\s\S]*?href="https:\/\/t\.me\/CalcuFlow"[\s\S]*?>Abrir en Telegram<\/a>/);
+  assert.match(html, /class="bank-profile-action bank-profile-action--primary community-primary-action"[\s\S]*?href="https:\/\/t\.me\/CalcuFlow"[\s\S]*?class="community-telegram-icon"[\s\S]*?<span>Abrir en Telegram<\/span>/);
   assert.match(serviceWorker, /'\/assets\/telegram-qr\.webp'/);
-  assert.equal((html.match(/href="https:\/\/t\.me\/CalcuFlow"/g) || []).length, 3);
+  assert.equal((html.match(/href="https:\/\/t\.me\/CalcuFlow"/g) || []).length, 4);
   assert.doesNotMatch([html, app, ui].join('\n'), /https:\/\/telegram\.me\/CalcuFlow/);
   assert.match(app, /const communityTriggers = \[[\s\S]*?openCommunityHeaderBtn[\s\S]*?openCommunityBtn[\s\S]*?openCommunitySettingsBtn/);
   assert.match(app, /openManagedModal\(els\.qrPanel, trigger, openQr, els\.closeQrBtn\)/);
@@ -158,24 +159,25 @@ test('consolidates Community actions into one accessible Telegram modal', () => 
 
 test('keeps the BCV, Brecha, and P2P composition compact without exposing internal bank presentation', () => {
   const ratesHtml = html.match(/<h2 class="section-label">Tasas de referencia<\/h2>[\s\S]*?<div class="status"/)?.[0] || '';
-  assert.match(ratesHtml, /class="rates-grid"[\s\S]*?id="openBcvEditorBtn"[\s\S]*?>BCV<[\s\S]*?id="bcvView"[\s\S]*?id="bcvEffectiveDate"[\s\S]*?id="brechaView"[\s\S]*?id="openP2pEditorBtn"[\s\S]*?>P2P<[\s\S]*?id="p2pView"/);
+  assert.match(ratesHtml, /class="rates-grid"[\s\S]*?id="openBcvEditorBtn"[\s\S]*?>BCV<[\s\S]*?id="bcvEffectiveDate"[\s\S]*?id="bcvView"[\s\S]*?id="brechaView"[\s\S]*?id="openP2pEditorBtn"[\s\S]*?>P2P<[\s\S]*?id="p2pUpdateTime"[\s\S]*?id="p2pView"/);
   assert.doesNotMatch(ratesHtml, /BCV \+ Banco|id="bankView"|id="bankMarginView"|rate-margin-chip|rate-unit-label|Bs\/USDT/);
   assert.match(html, /display: none !important;[\s\S]*?id="bankView"[\s\S]*?id="bankMarginView"/);
   assert.match(ratesHtml, /class="material-symbols-rounded brecha-icon" aria-hidden="true">swap_horiz<\/span>[\s\S]*?class="brecha-val" id="brechaView"/);
   assert.match(ratesHtml, /class="brecha-label">Brecha<\/span>[\s\S]*?class="rate-spread-value"/);
   assert.match(css, /\.rates-grid\s*\{[\s\S]*?grid-template-columns:\s*minmax\(0,\s*1fr\)\s*auto\s*minmax\(0,\s*1fr\)/);
   assert.match(css, /\.rate-spread\s*\{[\s\S]*?align-self:\s*center[\s\S]*?flex-direction:\s*column[\s\S]*?border-radius:\s*999px/);
-  assert.match(css, /\.rate-card\s*\{[\s\S]*?border-radius:\s*14px[\s\S]*?min-height:\s*76px/);
+  assert.match(css, /\.rate-card\s*\{[\s\S]*?border-radius:\s*24px[\s\S]*?min-height:\s*64px/);
   assert.doesNotMatch(css, /\.rate-meta-row/);
   assert.match(css, /\.rate-spread \.brecha-label\s*\{[\s\S]*?text-transform:\s*uppercase/);
   assert.match(css, /\.brecha-icon\s*\{[\s\S]*?font-size:\s*0\.78rem/);
-  assert.match(css, /\.rate-effective-date\s*\{[\s\S]*?white-space:\s*normal/);
+  assert.match(css, /\.rate-metadata\s*\{[\s\S]*?font-size:\s*0\.46rem[\s\S]*?white-space:\s*nowrap/);
+  assert.match(css, /\.rate-metadata::before\s*\{[\s\S]*?content:\s*'·'/);
   assert.match(css, /\.rate-value-row\s*\{[\s\S]*?align-items:\s*baseline/);
   assert.match(css, /@media \(max-width: 390px\)[\s\S]*?\.rates-grid\s*\{[\s\S]*?gap:\s*4px/);
 });
 
 test('offers one accessible quick editor for each editable rate card', () => {
-  assert.match(html, /<button class="rate-card rate-card--editable" id="openBcvEditorBtn"[\s\S]*?aria-label="Editar tasa BCV"[\s\S]*?id="bcvView"[\s\S]*?id="bcvEffectiveDate"[\s\S]*?<\/button>/);
+  assert.match(html, /<button class="rate-card rate-card--editable" id="openBcvEditorBtn"[\s\S]*?aria-label="Editar tasa BCV"[\s\S]*?id="bcvEffectiveDate"[\s\S]*?id="bcvView"[\s\S]*?<\/button>/);
   assert.match(html, /<button class="rate-card rate-card--editable" id="openP2pEditorBtn"[\s\S]*?aria-label="Editar tasa P2P"[\s\S]*?id="p2pView"[\s\S]*?<\/button>/);
   assert.match(html, /id="bcvManualIndicator" hidden>Manual</);
   assert.match(html, /id="p2pManualIndicator" hidden>Manual</);
@@ -195,6 +197,8 @@ test('keeps the quick editor synchronized with the existing manual P2P state', (
   assert.match(app, /openManagedModal\(p2pEditorEls\.panel, p2pEditorEls\.trigger[\s\S]*?p2pEditorEls\.input, p2pEditorEls\.trigger/);
   assert.match(app, /closeManagedModal\(p2pEditorEls\.panel, p2pEditorEls\.trigger/);
   assert.match(app, /p2pEditorEls\.panel\.classList\.contains\('open'\)\) dismissP2pEditor\(\)/);
+  assert.match(app, /renderRates\(\{ bcv, bank, p2p, p2pRecord: activeP2pRecord \}\)/);
+  assert.match(ui, /Date\.parse\(p2pRecord\?\.fetchedAt\)[\s\S]*?toLocaleTimeString\('en-US'[\s\S]*?timeZone: 'America\/Caracas'/);
 });
 
 test('keeps the BCV quick editor synchronized with the manual BCV state', () => {
@@ -206,6 +210,7 @@ test('keeps the BCV quick editor synchronized with the manual BCV state', () => 
   assert.match(app, /openManagedModal\(bcvEditorEls\.panel, bcvEditorEls\.trigger[\s\S]*?bcvEditorEls\.input, bcvEditorEls\.trigger/);
   assert.match(app, /closeManagedModal\(bcvEditorEls\.panel, bcvEditorEls\.trigger/);
   assert.match(app, /bcvEditorEls\.panel\.classList\.contains\('open'\)\) dismissBcvEditor\(\)/);
+  assert.match(ui, /formatBcvRateLabel\(record\)[\s\S]*?replace\(\/\^Vigente\\s\+\//);
 });
 
 test('uses icon-only profile editing while preserving the row accessibility contract', () => {

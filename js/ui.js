@@ -25,6 +25,7 @@ export const els = {
   closeQrBtn: $('closeQrBtn'),
   brechaView: $('brechaView'),
   bcvEffectiveDate: $('bcvEffectiveDate'),
+  p2pUpdateTime: $('p2pUpdateTime'),
   usdAmountError: $('usdAmountError')
 };
 
@@ -160,7 +161,9 @@ export function renderEmpty() {
  */
 export function renderBcvDate(record) {
   if (!els.bcvEffectiveDate) return;
-  els.bcvEffectiveDate.textContent = formatBcvRateLabel(record);
+  els.bcvEffectiveDate.textContent = formatBcvRateLabel(record)
+    .replace(/^Vigente\s+/, '')
+    .replace(/\s*·\s*guardada$/, '');
   if (!record) {
     delete els.bcvEffectiveDate.dataset.status;
     delete els.bcvEffectiveDate.dataset.source;
@@ -177,10 +180,34 @@ export function renderBcvDate(record) {
     : record.source || '';
 }
 
-export function renderRates({ bcv, bank, p2p }) {
+export function renderRates({ bcv, bank, p2p, p2pRecord = null }) {
   els.bcvView.textContent  = bcv  ? money(bcv, 2)  : '--';
   els.bankView.textContent = bank ? money(bank, 2) : '--';
   els.p2pView.textContent  = p2p  ? money(p2p, 2)  : '--';
+
+  if (els.p2pUpdateTime) {
+    const fetchedAt = Date.parse(p2pRecord?.fetchedAt);
+    if (Number.isFinite(fetchedAt)) {
+      const fetchedDate = new Date(fetchedAt);
+      els.p2pUpdateTime.textContent = fetchedDate.toLocaleTimeString('en-US', {
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true,
+        timeZone: 'America/Caracas'
+      }).toLowerCase();
+      const sourceLabel = typeof p2pRecord?.source === 'string' && p2pRecord.source
+        ? ` · ${p2pRecord.source}`
+        : '';
+      els.p2pUpdateTime.title = `Actualizada ${fetchedDate.toLocaleString('es-VE', {
+        dateStyle: 'short',
+        timeStyle: 'short',
+        timeZone: 'America/Caracas'
+      })}${sourceLabel}`;
+    } else {
+      els.p2pUpdateTime.textContent = '';
+      els.p2pUpdateTime.removeAttribute('title');
+    }
+  }
 
   if (els.bankMarginView) {
     const margin = n(els.bankMargin.value);

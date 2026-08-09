@@ -1370,7 +1370,7 @@ function calculate() {
   const bank = currentBankRate(bcv, els.bankMargin.value);
   const p2p = n(els.p2pRate.value);
 
-  renderRates({ bcv, bank, p2p });
+  renderRates({ bcv, bank, p2p, p2pRecord: activeP2pRecord });
   renderBcvRateMode();
   renderP2pRateMode();
   renderUsdAmountValidation(amountValidation.error);
