@@ -3678,53 +3678,28 @@ html[data-theme="light"] .skeleton-shimmer::after {
   flex: 0 0 auto;
 }
 
-.community-qr-card {
-  margin-top: 10px;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  background: var(--bg-soft);
-  padding: 10px;
-}
-
-.community-qr-row {
-  display: flex;
+/* Telegram QR modal */
+.qr-content {
   align-items: center;
-  justify-content: space-between;
-  gap: 10px;
+  padding-bottom: 8px;
 }
 
-.community-qr-label {
-  font-size: 0.7rem;
-  font-weight: 800;
-  color: var(--muted);
-}
-
-.community-qr-toggle {
-  width: auto;
-  min-height: 36px;
-  padding: 6px 12px;
-  font-size: 0.68rem;
-  border-radius: 8px;
-  flex: 0 0 auto;
-}
-
-.community-qr-box {
-  margin-top: 10px;
-  padding: 12px;
-  background: #ffffff;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  text-align: center;
-}
-
-.community-qr-img {
+.qr-modal-img {
   display: block;
-  margin: 0 auto;
-  max-width: 220px;
+  max-width: 100%;
   width: 100%;
   height: auto;
-  border-radius: 6px;
+  border-radius: 12px;
+  background: #ffffff;
+  border: 1px solid var(--border);
 }
+
+@media (min-width: 400px) {
+  .qr-modal-img {
+    max-width: 340px;
+  }
+}
+
 
 @media (max-width: 340px) {
   .support-actions {

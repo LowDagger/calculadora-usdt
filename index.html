@@ -321,17 +321,17 @@
           aria-expanded="false">Apoyar el proyecto</button>
       </div>
 
-      <div class="community-qr-card">
-        <div class="community-qr-row">
-          <span class="community-qr-label">Código QR del grupo</span>
-          <button class="btn-support-trigger community-qr-toggle" id="toggleQrBtn" type="button"
-            aria-expanded="false" aria-controls="supportQrBox">Mostrar QR</button>
-        </div>
-        <div id="supportQrBox" class="community-qr-box" style="display: none;">
-          <img src="assets/telegram-qr.jpg" alt="Código QR del grupo de Telegram de CalcuFlow"
-            class="community-qr-img" width="996" height="1189" loading="lazy" decoding="async" />
-        </div>
-      </div>
+      <button class="changelog-trigger" id="openQrBtn" type="button" aria-controls="qrPanel"
+        aria-expanded="false">
+        <span class="changelog-trigger-copy">
+          <strong>Código QR de Telegram</strong>
+          <span>Escanea para unirte a la comunidad</span>
+        </span>
+        <span class="changelog-trigger-end">
+          <span class="material-symbols-rounded" aria-hidden="true">qr_code_2</span>
+          <span class="material-symbols-rounded" aria-hidden="true">chevron_right</span>
+        </span>
+      </button>
     </div>
 
     <!-- Hidden compatibility controls to prevent original JS from throwing errors -->
@@ -672,6 +672,26 @@
           </p>
         </div>
       </div>
+  </section>
+
+  <section class="modal-shell qr-panel" id="qrPanel" role="dialog" aria-modal="true"
+    aria-labelledby="qrTitle" aria-hidden="true">
+    <div class="modal-panel modal-panel--compact qr-card">
+      <div class="modal-handle sheet-grab-handle" aria-hidden="true"></div>
+      <div class="modal-header">
+        <div>
+          <h2 class="modal-title" id="qrTitle">Código QR de Telegram</h2>
+          <p class="modal-description subtitle">Escanea para unirte a la comunidad</p>
+        </div>
+        <button class="modal-close icon-btn" id="closeQrBtn" type="button" title="Cerrar"
+          aria-label="Cerrar código QR"><span class="material-symbols-rounded" aria-hidden="true">close</span></button>
+      </div>
+
+      <div class="modal-content qr-content">
+        <img src="assets/telegram-qr.webp" alt="Código QR del grupo de Telegram de CalcuFlow"
+          class="qr-modal-img" width="700" height="700" loading="lazy" decoding="async" />
+      </div>
+    </div>
   </section>
 
   <section class="modal-shell changelog-panel" id="changelogPanel" role="dialog" aria-modal="true"

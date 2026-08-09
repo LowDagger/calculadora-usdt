@@ -34,7 +34,7 @@ import { processBankLogo } from './bank-logo-processing.js';
 import { initChangelog } from './changelog.js';
 import { loadState as readState, saveState as writeState } from './storage.js';
 import { money, n, triggerHaptic } from './utils.js';
-import { els, updateUsdToBuyDisplay, setStatus, clearStatus, showRateError, clearRateError, setLoadingRates, showToast, renderEmpty, renderRates, renderResult, renderBcvDate, renderUsdAmountValidation, openSettings, closeSettings, openBreakdown, closeBreakdown, openSupport, closeSupport, lockBodyScroll, unlockBodyScroll } from './ui.js';
+import { els, updateUsdToBuyDisplay, setStatus, clearStatus, showRateError, clearRateError, setLoadingRates, showToast, renderEmpty, renderRates, renderResult, renderBcvDate, renderUsdAmountValidation, openSettings, closeSettings, openBreakdown, closeBreakdown, openSupport, closeSupport, openQr, closeQr, lockBodyScroll, unlockBodyScroll } from './ui.js';
 
 let ratesLastUpdated = null;
 let ratesRequestInFlight = false;
@@ -2023,6 +2023,7 @@ function bindEvents() {
       else if (bcvEditorEls.panel.classList.contains('open')) dismissBcvEditor();
       else if (els.settingsPanel.classList.contains('open')) dismissSettings();
       else if (els.breakdownPanel.classList.contains('open')) dismissBreakdown();
+      else if (els.qrPanel.classList.contains('open')) dismissQr();
       else if (els.supportPanel.classList.contains('open')) dismissSupport();
       else if (installPrompt?.classList.contains('show')) hideInstallPrompt();
     }
@@ -2079,14 +2080,20 @@ function bindEvents() {
     }
   }
 
-  // Support toggle QR button
-  if (els.toggleQrBtn && els.supportQrBox) {
-    els.toggleQrBtn.addEventListener('click', () => {
-      const isHidden = els.supportQrBox.style.display === 'none';
-      els.supportQrBox.style.display = isHidden ? 'block' : 'none';
-      els.toggleQrBtn.textContent = isHidden ? 'Ocultar QR' : 'Mostrar QR';
-      els.toggleQrBtn.setAttribute('aria-expanded', String(!isHidden));
-      triggerHaptic('light');
+  // QR modal opens like the other sheets (focus restore, scroll lock, single haptic)
+  const showQr = () => {
+    openManagedModal(els.qrPanel, els.openQrBtn, openQr, els.closeQrBtn);
+  };
+  const dismissQr = () => closeManagedModal(els.qrPanel, els.openQrBtn, closeQr);
+  if (els.openQrBtn) {
+    els.openQrBtn.addEventListener('click', showQr);
+  }
+  if (els.closeQrBtn) {
+    els.closeQrBtn.addEventListener('click', dismissQr);
+  }
+  if (els.qrPanel) {
+    els.qrPanel.addEventListener('click', (e) => {
+      if (e.target === els.qrPanel) dismissQr();
     });
   }
 

@@ -21,8 +21,9 @@ export const els = {
   supportPanel: $('supportPanel'),
   openSupportBtn: $('openSupportBtn'),
   closeSupportBtn: $('closeSupportBtn'),
-  toggleQrBtn: $('toggleQrBtn'),
-  supportQrBox: $('supportQrBox'),
+  openQrBtn: $('openQrBtn'),
+  qrPanel: $('qrPanel'),
+  closeQrBtn: $('closeQrBtn'),
   brechaView: $('brechaView'),
   bcvEffectiveDate: $('bcvEffectiveDate'),
   usdAmountError: $('usdAmountError')
@@ -366,6 +367,33 @@ export function closeSupport() {
   setTimeout(() => {
     panel.classList.remove('open', 'closing');
     panel.setAttribute('aria-hidden', 'true');
+    unlockBodyScroll();
+  }, duration);
+}
+
+export function openQr() {
+  els.qrPanel.classList.remove('closing');
+  els.qrPanel.classList.add('open');
+  els.qrPanel.setAttribute('aria-hidden', 'false');
+  if (els.openQrBtn) {
+    els.openQrBtn.setAttribute('aria-expanded', 'true');
+  }
+  triggerHaptic('light');
+  lockBodyScroll();
+}
+
+export function closeQr() {
+  const panel = els.qrPanel;
+  if (!panel.classList.contains('open')) return;
+  panel.classList.add('closing');
+  triggerHaptic('light');
+  const duration = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 250;
+  setTimeout(() => {
+    panel.classList.remove('open', 'closing');
+    panel.setAttribute('aria-hidden', 'true');
+    if (els.openQrBtn) {
+      els.openQrBtn.setAttribute('aria-expanded', 'false');
+    }
     unlockBodyScroll();
   }, duration);
 }
