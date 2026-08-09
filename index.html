@@ -320,6 +320,18 @@
         <button class="btn-support-trigger" id="openSupportBtn" type="button" aria-controls="supportPanel"
           aria-expanded="false">Apoyar el proyecto</button>
       </div>
+
+      <div class="community-qr-card">
+        <div class="community-qr-row">
+          <span class="community-qr-label">Código QR del grupo</span>
+          <button class="btn-support-trigger community-qr-toggle" id="toggleQrBtn" type="button"
+            aria-expanded="false" aria-controls="supportQrBox">Mostrar QR</button>
+        </div>
+        <div id="supportQrBox" class="community-qr-box" style="display: none;">
+          <img src="assets/telegram-qr.jpg" alt="Código QR del grupo de Telegram de CalcuFlow"
+            class="community-qr-img" width="996" height="1189" loading="lazy" decoding="async" />
+        </div>
+      </div>
     </div>
 
     <!-- Hidden compatibility controls to prevent original JS from throwing errors -->

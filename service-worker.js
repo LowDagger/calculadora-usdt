@@ -1,6 +1,6 @@
 // ─── Version ──────────────────────────────────────────────────────────────────
 // Bump APP_VERSION on every new deployment to bust the old cache automatically.
-const APP_VERSION  = '47';
+const APP_VERSION  = '48';
 const CACHE_NAME   = `calcuflow-v${APP_VERSION}`;
 
 // ─── Pre-cache manifest ───────────────────────────────────────────────────────
@@ -21,6 +21,7 @@ const PRECACHE_ASSETS = [
   '/js/ui.js',
   '/js/utils.js',
   '/assets/icon.svg',
+  '/assets/telegram-qr.jpg',
   '/assets/banks/banco-de-venezuela.png',
   '/assets/banks/bbva-provisional.png',
   '/assets/banks/banco-del-tesoro.png',

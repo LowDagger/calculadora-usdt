@@ -2085,6 +2085,7 @@ function bindEvents() {
       const isHidden = els.supportQrBox.style.display === 'none';
       els.supportQrBox.style.display = isHidden ? 'block' : 'none';
       els.toggleQrBtn.textContent = isHidden ? 'Ocultar QR' : 'Mostrar QR';
+      els.toggleQrBtn.setAttribute('aria-expanded', String(!isHidden));
       triggerHaptic('light');
     });
   }
