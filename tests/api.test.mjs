@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 import { fetchRates, markP2pRecordCached, RATES_ENDPOINT } from '../js/api.js';
 
 const appSource = readFileSync(new URL('../js/app.js', import.meta.url), 'utf8');
+const ratesControllerSource = readFileSync(new URL('../js/rates-controller.js', import.meta.url), 'utf8');
 const now = () => new Date('2026-08-06T01:00:00Z');
 const bcv = {
   ok: true,
@@ -127,12 +128,13 @@ test('marks preserved P2P metadata cached and eventually stale', () => {
 });
 
 test('UI updates each input only when that provider succeeded and persists per-rate records', () => {
-  assert.match(appSource, /const bcvUpdated = result\.bcv\.ok && result\.bcv\.updated/);
-  assert.match(appSource, /const p2pUpdated = result\.p2p\.ok && result\.p2p\.updated/);
-  assert.match(appSource, /if \(bcvUpdated\) els\.bcvRate\.value/);
-  assert.match(appSource, /if \(p2pUpdated\) els\.p2pRate\.value/);
-  assert.match(appSource, /bcvRecord: activeBcvRecord/);
-  assert.match(appSource, /p2pRecord: activeP2pRecord/);
-  assert.match(appSource, /BCV actualizada\. P2P conservada\./);
-  assert.match(appSource, /P2P actualizada\. BCV conservada\./);
+  assert.match(ratesControllerSource, /const bcvUpdated = result\.bcv\.ok && result\.bcv\.updated/);
+  assert.match(ratesControllerSource, /const p2pUpdated = result\.p2p\.ok && result\.p2p\.updated/);
+  assert.match(ratesControllerSource, /if \(bcvUpdated\) els\.bcvRate\.value/);
+  assert.match(ratesControllerSource, /if \(p2pUpdated\) els\.p2pRate\.value/);
+  assert.match(ratesControllerSource, /bcvRecord: activeBcvRecord/);
+  assert.match(ratesControllerSource, /p2pRecord: activeP2pRecord/);
+  assert.match(ratesControllerSource, /BCV actualizada\. P2P conservada\./);
+  assert.match(ratesControllerSource, /P2P actualizada\. BCV conservada\./);
+  assert.match(appSource, /\.\.\.ratesController\.getStoredState\(\)/);
 });

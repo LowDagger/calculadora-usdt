@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 
 const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 const app = readFileSync(new URL('../js/app.js', import.meta.url), 'utf8');
+const settingsController = readFileSync(new URL('../js/settings-controller.js', import.meta.url), 'utf8');
 const css = readFileSync(new URL('../css/style.css', import.meta.url), 'utf8');
 
 test('renders exactly one compact general commission notice', () => {
@@ -34,7 +35,8 @@ test('uses one in-sheet modality view and the calculation-only adjustment copy',
 });
 
 test('routes Settings and selection to the same profile manager', () => {
-  assert.match(app, /settingsManage\.addEventListener[\s\S]*showBankProfiles\('manage', \{ returnFocus: els\.openSettingsBtn \}\)/);
+  assert.match(settingsController, /manageButton\.addEventListener/);
+  assert.match(app, /onManageBankProfiles: \(\) => showBankProfiles\('manage', \{ returnFocus: els\.openSettingsBtn \}\)/);
   assert.match(app, /bankProfileEls\.manage\.addEventListener\('click', \(\) => showBankProfileList\(\{ mode: 'manage' \}\)\)/);
 });
 

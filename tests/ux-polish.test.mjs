@@ -6,6 +6,10 @@ const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 const css = readFileSync(new URL('../css/style.css', import.meta.url), 'utf8');
 const app = readFileSync(new URL('../js/app.js', import.meta.url), 'utf8');
 const ui = readFileSync(new URL('../js/ui.js', import.meta.url), 'utf8');
+const modalController = readFileSync(new URL('../js/modal-controller.js', import.meta.url), 'utf8');
+const ratesController = readFileSync(new URL('../js/rates-controller.js', import.meta.url), 'utf8');
+const settingsController = readFileSync(new URL('../js/settings-controller.js', import.meta.url), 'utf8');
+const share = readFileSync(new URL('../js/share.js', import.meta.url), 'utf8');
 const serviceWorker = readFileSync(new URL('../service-worker.js', import.meta.url), 'utf8');
 const settingsHtml = html.match(/<section class="modal-shell settings-panel"[\s\S]*?<\/section>/)?.[0] || '';
 
@@ -24,13 +28,13 @@ test('exposes one accessible manual rate refresh control', () => {
 });
 
 test('deduplicates rate requests and keeps initial success quiet', () => {
-  assert.match(app, /let ratesRequestInFlight = false;/);
-  assert.match(app, /if \(ratesRequestInFlight\) return;/);
-  assert.match(app, /ratesRequestInFlight = true;/);
-  assert.match(app, /ratesRequestInFlight = false;[\s\S]*?setLoadingRates\(false\)/);
+  assert.match(ratesController, /let requestInFlight = false;/);
+  assert.match(ratesController, /if \(requestInFlight\) return;/);
+  assert.match(ratesController, /requestInFlight = true;/);
+  assert.match(ratesController, /requestInFlight = false;[\s\S]*?setLoadingRates\(false\)/);
   assert.match(app, /window\.addEventListener\('load', \(\) => \{[\s\S]*?loadRates\(false\)/);
-  assert.match(app, /if \(showSuccessToast === true \|\| !bcvUpdated \|\| !p2pUpdated \|\| usedFallback\)/);
-  assert.match(app, /Tasas actualizadas: BCV y Binance P2P\./);
+  assert.match(ratesController, /if \(showSuccessToast === true \|\| !bcvUpdated \|\| !p2pUpdated \|\| usedFallback\)/);
+  assert.match(ratesController, /Tasas actualizadas: BCV y Binance P2P\./);
 });
 
 test('keeps existing rate values visible during a manual refresh', () => {
@@ -40,7 +44,7 @@ test('keeps existing rate values visible during a manual refresh', () => {
 });
 
 test('renders a persistent accessible retry action through the same rate loader', () => {
-  assert.match(app, /showRateError\(\(\) => loadRates\(true\)\)/);
+  assert.match(ratesController, /showRateError\(\(\) => loadRates\(true\)\)/);
   assert.match(ui, /retryButton\.id = 'retryRatesBtn'/);
   assert.match(ui, /retryButton\.type = 'button'/);
   assert.match(ui, /retryButton\.textContent = 'Reintentar'/);
@@ -54,10 +58,13 @@ test('marks result-card symbols as decorative and bumps the PWA cache', () => {
     8
   );
   assert.match(ui, /btn\.setAttribute\('aria-pressed', String\(isActive\)\)/);
-  assert.match(app, /btn\.setAttribute\('aria-pressed', String\(isActive\)\)/);
+  assert.match(settingsController, /btn\.setAttribute\('aria-pressed', String\(isActive\)\)/);
   assert.match(html, /data-theme-val="system" aria-pressed="true"/);
-  assert.match(serviceWorker, /const APP_VERSION\s+= '51';/);
+  assert.match(serviceWorker, /const APP_VERSION\s+= '52';/);
   assert.match(serviceWorker, /'\/js\/bcv-rates\.js'/);
+  for (const moduleName of ['modal-controller', 'rates-controller', 'settings-controller', 'share']) {
+    assert.match(serviceWorker, new RegExp(`'/js/${moduleName}\\.js'`));
+  }
   assert.match(serviceWorker, /requestUrl\.pathname\.startsWith\('\/api\/'\)/);
 });
 
@@ -106,7 +113,7 @@ test('keeps Settings and Bs sheets usable in short mobile viewports', () => {
   assert.match(css, /\.bs-helper-actions\s*\{[\s\S]*?position:\s*sticky[\s\S]*?bottom:\s*0/);
   assert.match(css, /@media \(max-width: 860px\) and \(max-height: 560px\)/);
   assert.match(app, /if \(e\.key === 'Escape'\)[\s\S]*?dismissSettings\(\)/);
-  assert.match(app, /modalFocusOrigins[\s\S]*?origin\.focus\(\)/);
+  assert.match(modalController, /modalFocusOrigins[\s\S]*?origin\.focus\(\)/);
 });
 
 test('keeps the compact mobile header accessible without duplicate ids', () => {
@@ -138,14 +145,15 @@ test('consolidates Community actions into one accessible Telegram modal', () => 
   assert.match(html, /class="bank-profile-action bank-profile-action--primary community-primary-action"[\s\S]*?href="https:\/\/t\.me\/CalcuFlow"[\s\S]*?class="community-telegram-icon"[\s\S]*?<span>Abrir en Telegram<\/span>/);
   assert.match(serviceWorker, /'\/assets\/telegram-qr\.webp'/);
   assert.equal((html.match(/href="https:\/\/t\.me\/CalcuFlow"/g) || []).length, 4);
-  assert.doesNotMatch([html, app, ui].join('\n'), /https:\/\/telegram\.me\/CalcuFlow/);
+  assert.doesNotMatch([html, app, ui, modalController].join('\n'), /https:\/\/telegram\.me\/CalcuFlow/);
   assert.match(app, /const communityTriggers = \[[\s\S]*?openCommunityHeaderBtn[\s\S]*?openCommunityBtn[\s\S]*?openCommunitySettingsBtn/);
-  assert.match(app, /openManagedModal\(els\.qrPanel, trigger, openQr, els\.closeQrBtn\)/);
-  assert.match(app, /closeManagedModal\(els\.qrPanel, activeCommunityTrigger, closeQr\)/);
-  assert.match(app, /settingsObscuredByCommunity[\s\S]*?setAttribute\('aria-hidden', 'true'\)[\s\S]*?setAttribute\('inert', ''\)[\s\S]*?removeAttribute\('inert'\)/);
-  assert.match(app, /!panel\.classList\.contains\('open'\) \|\| panel\.classList\.contains\('closing'\)/);
+  assert.match(app, /createCommunityModalController\(\{[\s\S]*?panel: els\.qrPanel[\s\S]*?openModal: openQr[\s\S]*?closeModal: closeQr/);
+  assert.match(modalController, /openManagedModal\(panel, trigger, openModal, closeButton\)/);
+  assert.match(modalController, /closeManagedModal\(panel, activeTrigger, closeModal\)/);
+  assert.match(modalController, /settingsObscured[\s\S]*?setAttribute\('aria-hidden', 'true'\)[\s\S]*?setAttribute\('inert', ''\)[\s\S]*?removeAttribute\('inert'\)/);
+  assert.match(modalController, /!panel\.classList\.contains\('open'\) \|\| panel\.classList\.contains\('closing'\)/);
   assert.match(app, /else if \(els\.qrPanel\.classList\.contains\('open'\)\) dismissCommunity\(\);[\s\S]*?dismissSettings\(\)/);
-  assert.match(app, /els\.qrPanel\.addEventListener\('click',[\s\S]*?e\.target === els\.qrPanel[\s\S]*?dismissCommunity\(\)/);
+  assert.match(modalController, /panel\?\.addEventListener\('click',[\s\S]*?event\.target === panel[\s\S]*?dismiss\(\)/);
   assert.match(ui, /export function openQr\(\)/);
   assert.match(ui, /export function closeQr\(\)/);
   const openQrBlock = ui.match(/export function openQr\(\)[\s\S]*?(?=export function closeQr\(\))/)?.[0] || '';
@@ -191,21 +199,21 @@ test('offers one accessible quick editor for each editable rate card', () => {
 test('keeps the quick editor synchronized with the existing manual P2P state', () => {
   assert.match(app, /p2pEditorEls\.input\.value = els\.p2pRate\.value/);
   assert.match(app, /els\.p2pRate\.value = String\(rate\)[\s\S]*?dispatchEvent\(new Event\('input'/);
-  assert.match(app, /if \(activeP2pRecord\) lastAutomaticP2pRecord = activeP2pRecord;[\s\S]*?activeP2pRecord = null/);
-  assert.match(app, /activeP2pRecord = lastAutomaticP2pRecord[\s\S]*?els\.p2pRate\.value = Number\(activeP2pRecord\.rate\)\.toFixed\(4\)[\s\S]*?calculate\(\)[\s\S]*?saveState\(false\)/);
+  assert.match(ratesController, /if \(activeP2pRecord\) lastAutomaticP2pRecord = activeP2pRecord;[\s\S]*?activeP2pRecord = null/);
+  assert.match(app, /const activeP2pRecord = ratesController\.restoreAutomaticP2p\(\)[\s\S]*?els\.p2pRate\.value = Number\(activeP2pRecord\.rate\)\.toFixed\(4\)[\s\S]*?calculate\(\)[\s\S]*?saveState\(false\)/);
   assert.match(app, /p2pEditorEls\.indicator\.hidden = !isManual/);
   assert.match(app, /openManagedModal\(p2pEditorEls\.panel, p2pEditorEls\.trigger[\s\S]*?p2pEditorEls\.input, p2pEditorEls\.trigger/);
   assert.match(app, /closeManagedModal\(p2pEditorEls\.panel, p2pEditorEls\.trigger/);
   assert.match(app, /p2pEditorEls\.panel\.classList\.contains\('open'\)\) dismissP2pEditor\(\)/);
-  assert.match(app, /renderRates\(\{ bcv, bank, p2p, p2pRecord: activeP2pRecord \}\)/);
+  assert.match(app, /renderRates\(\{ bcv, bank, p2p, p2pRecord: ratesController\.getActiveP2pRecord\(\) \}\)/);
   assert.match(ui, /Date\.parse\(p2pRecord\?\.fetchedAt\)[\s\S]*?toLocaleTimeString\('en-US'[\s\S]*?timeZone: 'America\/Caracas'/);
 });
 
 test('keeps the BCV quick editor synchronized with the manual BCV state', () => {
   assert.match(app, /bcvEditorEls\.input\.value = els\.bcvRate\.value/);
   assert.match(app, /els\.bcvRate\.value = String\(rate\)[\s\S]*?dispatchEvent\(new Event\('input'/);
-  assert.match(app, /if \(activeBcvRecord\) lastAutomaticBcvRecord = activeBcvRecord;[\s\S]*?activeBcvRecord = null/);
-  assert.match(app, /activeBcvRecord = lastAutomaticBcvRecord[\s\S]*?els\.bcvRate\.value = String\(activeBcvRecord\.rate\)[\s\S]*?renderBcvDate\(activeBcvRecord\)[\s\S]*?calculate\(\)[\s\S]*?saveState\(false\)/);
+  assert.match(ratesController, /if \(activeBcvRecord\) lastAutomaticBcvRecord = activeBcvRecord;[\s\S]*?activeBcvRecord = null/);
+  assert.match(app, /const activeBcvRecord = ratesController\.restoreAutomaticBcv\(\)[\s\S]*?els\.bcvRate\.value = String\(activeBcvRecord\.rate\)[\s\S]*?renderBcvDate\(activeBcvRecord\)[\s\S]*?calculate\(\)[\s\S]*?saveState\(false\)/);
   assert.match(app, /bcvEditorEls\.indicator\.hidden = !isManual/);
   assert.match(app, /openManagedModal\(bcvEditorEls\.panel, bcvEditorEls\.trigger[\s\S]*?bcvEditorEls\.input, bcvEditorEls\.trigger/);
   assert.match(app, /closeManagedModal\(bcvEditorEls\.panel, bcvEditorEls\.trigger/);
@@ -221,14 +229,14 @@ test('uses icon-only profile editing while preserving the row accessibility cont
 });
 
 test('shares the current calculation hierarchy with bank context and keeps both delivery paths', () => {
-  assert.match(app, /CalcuFlow — Banco → USDT/);
-  assert.match(app, /Compra: \$\{amount\} USD[\s\S]*?Banco: \$\{bankDescription\}/);
-  assert.match(app, /BCV: \$\{bcv\}[\s\S]*?Banco: \$\{bankRate\}[\s\S]*?P2P: \$\{p2p\}/);
-  assert.match(app, /Bs necesarios: \$\{bsNeeded\} Bs[\s\S]*?Monto en BPay: \$\{bpayAmount\} USD[\s\S]*?USDT finales: \$\{finalUsdt\} USDT/);
-  assert.match(app, /Ganancia estimada: \$\{profitUsd\} USD[\s\S]*?Retorno: \$\{roi\}%/);
-  assert.doesNotMatch(app, /💵 Compra Banco|Calculado con CalcuFlow:/);
-  assert.match(app, /if \(navigator\.share\)[\s\S]*?navigator\.share\(/);
-  assert.match(app, /navigator\.clipboard\.writeText\(text\)/);
+  assert.match(share, /CalcuFlow — Banco → USDT/);
+  assert.match(share, /Compra: \$\{amount\} USD[\s\S]*?Banco: \$\{bankDescription\}/);
+  assert.match(share, /BCV: \$\{bcv\}[\s\S]*?Banco: \$\{bankRate\}[\s\S]*?P2P: \$\{p2p\}/);
+  assert.match(share, /Bs necesarios: \$\{bsNeeded\} Bs[\s\S]*?Monto en BPay: \$\{bpayAmount\} USD[\s\S]*?USDT finales: \$\{finalUsdt\} USDT/);
+  assert.match(share, /Ganancia estimada: \$\{profitUsd\} USD[\s\S]*?Retorno: \$\{roi\}%/);
+  assert.doesNotMatch(share, /💵 Compra Banco|Calculado con CalcuFlow:/);
+  assert.match(share, /if \(navigator\.share\)[\s\S]*?navigator\.share\(/);
+  assert.match(share, /navigator\.clipboard\.writeText\(text\)/);
 });
 
 test('rounds BCV only in the visible rate card', () => {

@@ -1,5 +1,3 @@
-import { fetchRates, markP2pRecordCached } from './api.js';
-import { markBcvRecordCached } from './bcv-rates.js';
 import { MAX_REQUESTED_USD, calculateValues, currentBankRate, sanitizeRequestedUsdInput, validateRequestedUsd } from './calculator.js';
 import {
   DEFAULT_PROFILE_ID,
@@ -32,16 +30,14 @@ import {
 import { renderBankLogo } from './bank-logo.js';
 import { processBankLogo } from './bank-logo-processing.js';
 import { initChangelog } from './changelog.js';
+import { closeManagedModal, createCommunityModalController, openManagedModal, trapModalFocus } from './modal-controller.js';
+import { createRatesController } from './rates-controller.js';
+import { applyTheme, createSettingsController, initTheme, updateThemeUI } from './settings-controller.js';
+import { initShare, shareOrCopy } from './share.js';
 import { loadState as readState, saveState as writeState } from './storage.js';
 import { money, n, triggerHaptic } from './utils.js';
-import { els, updateUsdToBuyDisplay, setStatus, clearStatus, showRateError, clearRateError, setLoadingRates, showToast, renderEmpty, renderRates, renderResult, renderBcvDate, renderUsdAmountValidation, openSettings, closeSettings, openBreakdown, closeBreakdown, openSupport, closeSupport, openQr, closeQr, lockBodyScroll, unlockBodyScroll } from './ui.js';
+import { els, updateUsdToBuyDisplay, setStatus, clearStatus, showToast, renderEmpty, renderRates, renderResult, renderBcvDate, renderUsdAmountValidation, openBreakdown, closeBreakdown, openSupport, closeSupport, openQr, closeQr, lockBodyScroll, unlockBodyScroll } from './ui.js';
 
-let ratesLastUpdated = null;
-let ratesRequestInFlight = false;
-let activeBcvRecord = null;
-let activeP2pRecord = null;
-let lastAutomaticP2pRecord = null;
-let lastAutomaticBcvRecord = null;
 let bankProfileState = null;
 let manualCardFee = '1.5';
 let temporaryCardFee = null;
@@ -125,94 +121,9 @@ const bankProfileEls = {
   description: document.querySelector('#bankProfilesPanel .modal-description')
 };
 
-function parseLastUpdate(str) {
-  if (!str) return null;
-  const parts = str.split(' · ');
-  if (!parts[0]) return null;
-  const dateTimeStr = parts[0];
-  
-  let cleaned = dateTimeStr.replace(/\s+/g, ' ').trim();
-  cleaned = cleaned.replace(/p\.\s*m\./i, 'PM').replace(/a\.\s*m\./i, 'AM');
-  
-  const commaIdx = cleaned.indexOf(',');
-  let datePart = '';
-  let timePart = '';
-  if (commaIdx !== -1) {
-    datePart = cleaned.substring(0, commaIdx).trim();
-    timePart = cleaned.substring(commaIdx + 1).trim();
-  } else {
-    const spaceParts = cleaned.split(' ');
-    datePart = spaceParts[0] || '';
-    timePart = spaceParts.slice(1).join(' ') || '';
-  }
-  
-  const dateSplit = datePart.split('/');
-  if (dateSplit.length < 3) return null;
-  let day = parseInt(dateSplit[0], 10);
-  let month = parseInt(dateSplit[1], 10) - 1;
-  let year = parseInt(dateSplit[2], 10);
-  if (year < 100) year += 2000;
-  
-  let isPM = false;
-  let isAM = false;
-  if (timePart.toUpperCase().includes('PM')) {
-    isPM = true;
-    timePart = timePart.replace(/pm/i, '').trim();
-  } else if (timePart.toUpperCase().includes('AM')) {
-    isAM = true;
-    timePart = timePart.replace(/am/i, '').trim();
-  }
-  
-  const timeSplit = timePart.split(':');
-  if (timeSplit.length < 2) return null;
-  let hour = parseInt(timeSplit[0], 10);
-  let minute = parseInt(timeSplit[1], 10);
-  
-  if (isPM && hour < 12) hour += 12;
-  if (isAM && hour === 12) hour = 0;
-  
-  const parsedDate = new Date(year, month, day, hour, minute, 0);
-  return isNaN(parsedDate.getTime()) ? null : parsedDate;
-}
-
-function formatRelativeTime(date) {
-  if (!date) return 'Sin actualizar';
-  const diffMs = new Date() - date;
-  const diffSec = Math.max(0, Math.floor(diffMs / 1000));
-  
-  if (diffSec < 60) {
-    return `Actualizado hace ${diffSec} s`;
-  }
-  const diffMin = Math.floor(diffSec / 60);
-  if (diffMin < 60) {
-    return `Actualizado hace ${diffMin} min`;
-  }
-  const diffHour = Math.floor(diffMin / 60);
-  if (diffHour < 24) {
-    return `Actualizado hace ${diffHour} h`;
-  }
-  const diffDays = Math.floor(diffHour / 24);
-  return `Actualizado hace ${diffDays} d`;
-}
-
-function updateRelativeTime() {
-  if (!ratesLastUpdated) {
-    els.lastUpdate.textContent = 'Sin actualizar';
-    if (els.bottomTimestamp) els.bottomTimestamp.textContent = '--';
-    return;
-  }
-  
-  const relativeText = formatRelativeTime(ratesLastUpdated);
-  const absoluteStr = els.lastUpdate.dataset.absolute || '';
-  
-  els.lastUpdate.textContent = relativeText;
-  els.lastUpdate.title = absoluteStr;
-  
-  if (els.bottomTimestamp) {
-    els.bottomTimestamp.textContent = relativeText;
-    els.bottomTimestamp.title = absoluteStr;
-  }
-}
+const ratesController = createRatesController({ calculate, saveState });
+const loadRates = showSuccessToast => ratesController.loadRates(showSuccessToast);
+const updateRelativeTime = () => ratesController.updateRelativeTime();
 
 function formatProfileFee(fee) {
   return `${new Intl.NumberFormat('es-VE', { maximumFractionDigits: 2 }).format(fee)}%`;
@@ -1232,9 +1143,7 @@ function getState() {
     cardFee: els.cardFee.value,
     bpayFee: els.bpayFee.value,
     autoRates: els.autoRates.checked,
-    bcvRecord: activeBcvRecord,
-    p2pRecord: activeP2pRecord,
-    lastUpdate: els.lastUpdate.dataset.absolute || els.lastUpdate.textContent
+    ...ratesController.getStoredState()
   };
 }
 
@@ -1255,20 +1164,7 @@ function loadState() {
   if (Object.prototype.hasOwnProperty.call(data, 'cardFee')) els.cardFee.value = data.cardFee;
   if (Object.prototype.hasOwnProperty.call(data, 'bpayFee')) els.bpayFee.value = data.bpayFee;
   if (typeof data.autoRates === 'boolean') els.autoRates.checked = data.autoRates;
-  if (data.bcvRecord && typeof data.bcvRecord === 'object') {
-    activeBcvRecord = data.bcvRecord;
-    lastAutomaticBcvRecord = data.bcvRecord;
-    renderBcvDate(activeBcvRecord);
-  }
-  if (data.p2pRecord && typeof data.p2pRecord === 'object') {
-    activeP2pRecord = data.p2pRecord;
-    lastAutomaticP2pRecord = data.p2pRecord;
-  }
-  if (data.lastUpdate) {
-    els.lastUpdate.textContent = data.lastUpdate;
-    els.lastUpdate.dataset.absolute = data.lastUpdate;
-    ratesLastUpdated = parseLastUpdate(data.lastUpdate);
-  }
+  ratesController.hydrate(data);
   return data;
 }
 
@@ -1299,78 +1195,13 @@ function resetDefaults() {
   setStatus('Valores base restaurados.', 'ok');
 }
 
-async function loadRates(showSuccessToast = false) {
-  if (ratesRequestInFlight) return;
-  ratesRequestInFlight = true;
-  triggerHaptic();
-  setLoadingRates(true);
-  try {
-    const result = await fetchRates({ cachedBcv: activeBcvRecord, cachedP2p: activeP2pRecord });
-    const bcvUpdated = result.bcv.ok && result.bcv.updated;
-    const p2pUpdated = result.p2p.ok && result.p2p.updated;
-
-    if (result.bcv.ok) {
-      activeBcvRecord = result.bcv.record;
-      lastAutomaticBcvRecord = result.bcv.record;
-    }
-    else activeBcvRecord = markBcvRecordCached(activeBcvRecord);
-    if (bcvUpdated) els.bcvRate.value = String(activeBcvRecord.rate);
-
-    if (result.p2p.ok) {
-      activeP2pRecord = result.p2p.record;
-      lastAutomaticP2pRecord = result.p2p.record;
-    } else {
-      activeP2pRecord = markP2pRecordCached(activeP2pRecord);
-    }
-    if (p2pUpdated) els.p2pRate.value = activeP2pRecord.rate.toFixed(4);
-
-    if (!bcvUpdated && !p2pUpdated) throw new Error('No rate was refreshed');
-    const updatedRecords = [bcvUpdated ? activeBcvRecord : null, p2pUpdated ? activeP2pRecord : null]
-      .filter(Boolean);
-    ratesLastUpdated = new Date(Math.max(...updatedRecords.map(record => Date.parse(record.fetchedAt))));
-    const timeStr = ratesLastUpdated.toLocaleString('es-VE', {
-      dateStyle: 'short',
-      timeStyle: 'short',
-      timeZone: 'America/Caracas'
-    });
-    const refreshLabel = bcvUpdated && p2pUpdated
-      ? `${activeBcvRecord.source === 'bcv.today' ? 'BCV Today' : 'BCV respaldo'} + ${activeP2pRecord.source === 'binance-p2p' ? 'Binance P2P' : 'P2P respaldo'}`
-      : (bcvUpdated ? 'BCV actualizada · P2P conservada' : 'P2P actualizada · BCV conservada');
-    els.lastUpdate.dataset.absolute = `${timeStr} · ${refreshLabel}`;
-    updateRelativeTime();
-    renderBcvDate(activeBcvRecord);
-    clearRateError();
-    const usedFallback = activeBcvRecord?.status === 'fallback' || activeP2pRecord?.status === 'fallback';
-    if (showSuccessToast === true || !bcvUpdated || !p2pUpdated || usedFallback) {
-      if (bcvUpdated && p2pUpdated) {
-        showToast(usedFallback ? 'Tasas actualizadas con una fuente de respaldo.' : 'Tasas actualizadas: BCV y Binance P2P.');
-      } else {
-        showToast(bcvUpdated ? 'BCV actualizada. P2P conservada.' : 'P2P actualizada. BCV conservada.');
-      }
-    }
-    calculate();
-    saveState(false);
-  } catch (err) {
-    activeBcvRecord = markBcvRecordCached(activeBcvRecord);
-    activeP2pRecord = markP2pRecordCached(activeP2pRecord);
-    renderBcvDate(activeBcvRecord);
-    showToast('No se pudieron actualizar las tasas. Conservando valores guardados.', 'err');
-    showRateError(() => loadRates(true));
-  } finally {
-    ratesRequestInFlight = false;
-    setLoadingRates(false);
-    updateRelativeTime();
-    calculate();
-  }
-}
-
 function calculate() {
   const amountValidation = validateRequestedUsd(els.usdToBuy.value);
   const bcv = n(els.bcvRate.value);
   const bank = currentBankRate(bcv, els.bankMargin.value);
   const p2p = n(els.p2pRate.value);
 
-  renderRates({ bcv, bank, p2p, p2pRecord: activeP2pRecord });
+  renderRates({ bcv, bank, p2p, p2pRecord: ratesController.getActiveP2pRecord() });
   renderBcvRateMode();
   renderP2pRateMode();
   renderUsdAmountValidation(amountValidation.error);
@@ -1394,86 +1225,11 @@ function calculate() {
   return result;
 }
 
-function buildShareText(r) {
-  const amount = money(r.usdUsed, 2);
-  const bsNeeded = money(r.vesNeeded, 2);
-  const bpayAmount = money(r.safeGateway.bpayInputAmount, 2);
-  const finalUsdt = money(r.usdtFinal, 2);
-  const profitUsd = (r.profitUsdt >= 0 ? '+' : '') + money(r.profitUsdt, 2);
-  const roi = (r.roi >= 0 ? '+' : '') + money(r.roi, 2);
-  const bcv = money(r.bcv, 2);
-  const bankRate = money(r.bank, 2);
-  const p2p = money(r.p2p, 2);
+function getShareBankDescription() {
   const activeProfile = getEffectiveSelectedBankProfile(bankProfileState, manualCardFee, temporaryCardFee);
-  const bankDescription = activeProfile
+  return activeProfile
     ? [activeProfile.name, activeProfile.cardType, formatProfileFee(activeProfile.fee)].filter(Boolean).join(' · ')
     : `Comisión ${formatProfileFee(manualCardFee)}`;
-
-  return `CalcuFlow — Banco → USDT
-
-Compra: ${amount} USD
-Banco: ${bankDescription}
-
-BCV: ${bcv}
-Banco: ${bankRate}
-P2P: ${p2p}
-
-Bs necesarios: ${bsNeeded} Bs
-Monto en BPay: ${bpayAmount} USD
-USDT finales: ${finalUsdt} USDT
-Ganancia estimada: ${profitUsd} USD
-Retorno: ${roi}%
-
-https://calcu-flow.vercel.app`;
-}
-
-function shareOrCopy(btn) {
-  triggerHaptic('light');
-  const r = calculate();
-  if (!r) {
-    const errorMsg = navigator.share ? 'Completa los datos antes de compartir.' : 'Completa los datos antes de copiar.';
-    showToast(errorMsg, 'warn');
-    return;
-  }
-  const text = buildShareText(r);
-
-  if (navigator.share) {
-    navigator.share({
-      title: 'CalcuFlow',
-      text: text
-    })
-    .then(() => {
-      triggerHaptic('success');
-      showToast('Cálculo compartido');
-    })
-    .catch((err) => {
-      if (err.name !== 'AbortError') {
-        showToast('No se pudo compartir el cálculo', 'err');
-      }
-    });
-  } else {
-    navigator.clipboard.writeText(text)
-      .then(() => {
-        triggerHaptic('success');
-        showToast('Resumen copiado al portapapeles');
-        flashCopyBtn(btn);
-      })
-      .catch(() => showToast('No se pudo compartir el cálculo', 'err'));
-  }
-}
-
-function initShare() {
-  if (navigator.share) {
-    const copyBtn = els.copyBtnSettings;
-    if (copyBtn) {
-      copyBtn.title = "Compartir resumen";
-      copyBtn.setAttribute("aria-label", "Compartir resumen");
-      const icon = copyBtn.querySelector('.material-symbols-rounded');
-      if (icon) {
-        icon.textContent = 'share';
-      }
-    }
-  }
 }
 
 function clearOperation() {
@@ -1493,8 +1249,6 @@ function clearOperation() {
     showToast('Cálculo limpiado');
   }, 50);
 }
-
-const modalFocusOrigins = new WeakMap();
 
 const bsHelperEls = {
   trigger: document.getElementById('openBsHelperBtn'),
@@ -1531,55 +1285,6 @@ const bcvEditorEls = {
   apply: document.getElementById('applyBcvRateBtn'),
   indicator: document.getElementById('bcvManualIndicator')
 };
-
-function openManagedModal(panel, trigger, openFn, initialFocus, returnFocus = null, focusDelay = 0) {
-  const origin = returnFocus || (document.activeElement instanceof HTMLElement ? document.activeElement : trigger);
-  modalFocusOrigins.set(panel, origin);
-  openFn();
-  trigger.setAttribute('aria-expanded', 'true');
-  const focusTarget = initialFocus || panel.querySelector('.modal-close');
-  const focusPanel = () => {
-    if (panel.classList.contains('open')) focusTarget?.focus();
-  };
-  if (focusDelay > 0) setTimeout(focusPanel, focusDelay);
-  else requestAnimationFrame(focusPanel);
-}
-
-function closeManagedModal(panel, trigger, closeFn) {
-  if (!panel.classList.contains('open') || panel.classList.contains('closing')) return;
-  closeFn();
-  trigger.setAttribute('aria-expanded', 'false');
-  const duration = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 260;
-  setTimeout(() => {
-    const origin = modalFocusOrigins.get(panel);
-    if (origin && document.contains(origin)) origin.focus();
-    modalFocusOrigins.delete(panel);
-  }, duration);
-}
-
-function trapModalFocus(event) {
-  if (event.key !== 'Tab') return;
-  const panel = document.querySelector('.modal-shell.open, .install-prompt.show');
-  if (!panel) return;
-
-  const focusable = Array.from(panel.querySelectorAll(
-    'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
-  )).filter(element => element.offsetParent !== null);
-  if (!focusable.length) return;
-
-  const first = focusable[0];
-  const last = focusable[focusable.length - 1];
-  if (!panel.contains(document.activeElement)) {
-    event.preventDefault();
-    (event.shiftKey ? last : first).focus();
-  } else if (event.shiftKey && document.activeElement === first) {
-    event.preventDefault();
-    last.focus();
-  } else if (!event.shiftKey && document.activeElement === last) {
-    event.preventDefault();
-    first.focus();
-  }
-}
 
 let bsHelperTouched = false;
 
@@ -1717,7 +1422,7 @@ function renderP2pEditorValidation(showError = false) {
 
 function renderP2pRateMode() {
   const displayedRate = n(els.p2pRate.value);
-  const automaticRate = n(activeP2pRecord?.rate);
+  const automaticRate = n(ratesController.getActiveP2pRecord()?.rate);
   const isManual = displayedRate > 0 && (!automaticRate || Math.abs(displayedRate - automaticRate) > 0.000001);
   p2pEditorEls.indicator.hidden = !isManual;
   p2pEditorEls.trigger.classList.toggle('is-manual', isManual);
@@ -1769,16 +1474,16 @@ async function restoreP2pAutomaticRate() {
   p2pEditorEls.apply.disabled = true;
   setP2pEditorMessage('Buscando la tasa P2P actual…');
 
-  if (!lastAutomaticP2pRecord) await loadRates(true);
+  if (!ratesController.getLastAutomaticP2pRecord()) await loadRates(true);
 
   p2pEditorEls.restore.disabled = false;
-  if (!lastAutomaticP2pRecord) {
+  if (!ratesController.getLastAutomaticP2pRecord()) {
     renderP2pEditorValidation();
     setP2pEditorMessage('No se pudo recuperar una tasa P2P automática.', 'error');
     return;
   }
 
-  activeP2pRecord = lastAutomaticP2pRecord;
+  const activeP2pRecord = ratesController.restoreAutomaticP2p();
   els.p2pRate.value = Number(activeP2pRecord.rate).toFixed(4);
   calculate();
   saveState(false);
@@ -1805,7 +1510,7 @@ function renderBcvEditorValidation(showError = false) {
 
 function renderBcvRateMode() {
   const displayedRate = n(els.bcvRate.value);
-  const automaticRate = n(activeBcvRecord?.rate);
+  const automaticRate = n(ratesController.getActiveBcvRecord()?.rate);
   const isManual = displayedRate > 0 && (!automaticRate || Math.abs(displayedRate - automaticRate) > 0.000001);
   bcvEditorEls.indicator.hidden = !isManual;
   bcvEditorEls.trigger.classList.toggle('is-manual', isManual);
@@ -1857,16 +1562,16 @@ async function restoreBcvAutomaticRate() {
   bcvEditorEls.apply.disabled = true;
   setBcvEditorMessage('Buscando la tasa BCV actual…');
 
-  if (!lastAutomaticBcvRecord) await loadRates(true);
+  if (!ratesController.getLastAutomaticBcvRecord()) await loadRates(true);
 
   bcvEditorEls.restore.disabled = false;
-  if (!lastAutomaticBcvRecord) {
+  if (!ratesController.getLastAutomaticBcvRecord()) {
     renderBcvEditorValidation();
     setBcvEditorMessage('No se pudo recuperar una tasa BCV automática.', 'error');
     return;
   }
 
-  activeBcvRecord = lastAutomaticBcvRecord;
+  const activeBcvRecord = ratesController.restoreAutomaticBcv();
   els.bcvRate.value = String(activeBcvRecord.rate);
   renderBcvDate(activeBcvRecord);
   calculate();
@@ -1882,13 +1587,10 @@ function bindEvents() {
         els[key].value = sanitizeRequestedUsdInput(els[key].value);
       }
       if (key === 'bcvRate') {
-        if (activeBcvRecord) lastAutomaticBcvRecord = activeBcvRecord;
-        activeBcvRecord = null;
-        renderBcvDate(null);
+        ratesController.useManualBcv();
       }
       if (key === 'p2pRate') {
-        if (activeP2pRecord) lastAutomaticP2pRecord = activeP2pRecord;
-        activeP2pRecord = null;
+        ratesController.useManualP2p();
       }
       if (key === 'cardFee') syncActiveProfileFromCardFee();
       calculate();
@@ -1916,17 +1618,24 @@ function bindEvents() {
   els.loadRatesBtn.addEventListener('click', () => loadRates(true));
   els.loadRatesBtnMobile.addEventListener('click', () => loadRates(true));
   els.loadRatesBtnSettings.addEventListener('click', () => loadRates(true));
-  els.shareBtn.addEventListener('click', () => shareOrCopy(els.shareBtn));
-  els.shareBtnMobile.addEventListener('click', () => shareOrCopy(els.shareBtnMobile));
-  els.copyBtnSettings.addEventListener('click', () => shareOrCopy(els.copyBtnSettings));
+  const shareCurrentCalculation = button => shareOrCopy({
+    button,
+    calculate,
+    getBankDescription: getShareBankDescription,
+    flashCopyButton: flashCopyBtn
+  });
+  els.shareBtn.addEventListener('click', () => shareCurrentCalculation(els.shareBtn));
+  els.shareBtnMobile.addEventListener('click', () => shareCurrentCalculation(els.shareBtnMobile));
+  els.copyBtnSettings.addEventListener('click', () => shareCurrentCalculation(els.copyBtnSettings));
   els.clearBtn.addEventListener('click', clearOperation);
   els.clearBtnTop.addEventListener('click', clearOperation);
   els.clearBtnMobile.addEventListener('click', clearOperation);
   els.resetDefaultsBtn.addEventListener('click', resetDefaults);
-  const showSettings = () => {
-    openManagedModal(els.settingsPanel, els.openSettingsBtn, openSettings, els.closeSettingsBtn);
-  };
-  const dismissSettings = () => closeManagedModal(els.settingsPanel, els.openSettingsBtn, closeSettings);
+  const { dismiss: dismissSettings } = createSettingsController({
+    elements: els,
+    manageButton: bankProfileEls.settingsManage,
+    onManageBankProfiles: () => showBankProfiles('manage', { returnFocus: els.openSettingsBtn })
+  });
   const showBreakdown = () => {
     openManagedModal(els.breakdownPanel, els.openBreakdownBtn, openBreakdown, els.closeBreakdownBtn);
   };
@@ -1938,42 +1647,13 @@ function bindEvents() {
     document.getElementById('openCommunityBtn'),
     document.getElementById('openCommunitySettingsBtn')
   ].filter(Boolean);
-  let activeCommunityTrigger = communityTriggers[0] || null;
-  let settingsObscuredByCommunity = false;
-  const showCommunity = trigger => {
-    activeCommunityTrigger = trigger;
-    settingsObscuredByCommunity = trigger.id === 'openCommunitySettingsBtn'
-      && els.settingsPanel.classList.contains('open');
-    if (settingsObscuredByCommunity) {
-      els.settingsPanel.setAttribute('aria-hidden', 'true');
-      els.settingsPanel.setAttribute('inert', '');
-    }
-    openManagedModal(els.qrPanel, trigger, openQr, els.closeQrBtn);
-  };
-  const dismissCommunity = () => {
-    if (!activeCommunityTrigger || !els.qrPanel.classList.contains('open')
-      || els.qrPanel.classList.contains('closing')) return;
-    if (settingsObscuredByCommunity) {
-      const restoreDelay = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 250;
-      setTimeout(() => {
-        els.settingsPanel.setAttribute('aria-hidden', 'false');
-        els.settingsPanel.removeAttribute('inert');
-      }, restoreDelay);
-    }
-    closeManagedModal(els.qrPanel, activeCommunityTrigger, closeQr);
-    settingsObscuredByCommunity = false;
-  };
-
-  els.openSettingsBtn.addEventListener('click', showSettings);
-  els.closeSettingsBtn.addEventListener('click', dismissSettings);
-  els.settingsPanel.addEventListener('click', e => { if (e.target === els.settingsPanel) dismissSettings(); });
-  communityTriggers.forEach(trigger => {
-    trigger.addEventListener('click', () => showCommunity(trigger));
-  });
-  bankProfileEls.settingsManage.addEventListener('click', () => {
-    dismissSettings();
-    const duration = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 270;
-    setTimeout(() => showBankProfiles('manage', { returnFocus: els.openSettingsBtn }), duration);
+  const { dismiss: dismissCommunity } = createCommunityModalController({
+    panel: els.qrPanel,
+    closeButton: els.closeQrBtn,
+    settingsPanel: els.settingsPanel,
+    triggers: communityTriggers,
+    openModal: openQr,
+    closeModal: closeQr
   });
   els.openBreakdownBtn.addEventListener('click', showBreakdown);
   els.closeBreakdownBtn.addEventListener('click', dismissBreakdown);
@@ -2111,15 +1791,6 @@ function bindEvents() {
         }
       });
     }
-  }
-
-  if (els.closeQrBtn) {
-    els.closeQrBtn.addEventListener('click', dismissCommunity);
-  }
-  if (els.qrPanel) {
-    els.qrPanel.addEventListener('click', (e) => {
-      if (e.target === els.qrPanel) dismissCommunity();
-    });
   }
 
 }
@@ -2408,7 +2079,7 @@ initChangelog({
   unlockScroll: unlockBodyScroll
 });
 initTheme();
-initShare();
+initShare(els.copyBtnSettings);
 bindEvents();
 calculate();
 setupKeyboardUX();
@@ -2420,63 +2091,3 @@ registerServiceWorker();
 window.addEventListener('load', () => {
   if (els.autoRates.checked) loadRates(false).catch(() => {});
 });
-
-// ─── Theme Management ────────────────────────────────────────────────────────
-function initTheme() {
-  const currentTheme = localStorage.getItem('theme') || 'system';
-  applyTheme(currentTheme);
-  updateThemeUI(currentTheme);
-
-  // Bind segmented buttons click
-  const container = document.getElementById('themeSelector');
-  if (container) {
-    container.querySelectorAll('.segment-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const val = btn.dataset.themeVal;
-        applyTheme(val);
-        updateThemeUI(val);
-        localStorage.setItem('theme', val);
-      });
-    });
-  }
-
-  // Listen for system changes when theme is system
-  window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
-    if ((localStorage.getItem("theme") || "system") === "system") {
-      applyTheme("system");
-    }
-  });
-}
-
-function applyTheme(theme) {
-  const systemIsDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-  if (theme === "system") {
-    document.documentElement.dataset.theme = systemIsDark ? "dark" : "light";
-  } else if (theme === "dark") {
-    document.documentElement.dataset.theme = "dark";
-  } else if (theme === "light") {
-    document.documentElement.dataset.theme = "light";
-  }
-  updateStatusBarColor();
-}
-
-function updateThemeUI(theme) {
-  const container = document.getElementById('themeSelector');
-  if (!container) return;
-  container.querySelectorAll('.segment-btn').forEach(btn => {
-    const isActive = btn.dataset.themeVal === theme;
-    btn.setAttribute('aria-pressed', String(isActive));
-    if (isActive) {
-      btn.classList.add('active');
-    } else {
-      btn.classList.remove('active');
-    }
-  });
-}
-
-function updateStatusBarColor() {
-  const metaThemeColor = document.querySelector('meta[name="theme-color"]');
-  if (!metaThemeColor) return;
-  const isLight = document.documentElement.dataset.theme === 'light';
-  metaThemeColor.setAttribute('content', isLight ? '#F5F7FA' : '#0F1115');
-}
