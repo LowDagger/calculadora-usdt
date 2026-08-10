@@ -1,6 +1,6 @@
 // ─── Version ──────────────────────────────────────────────────────────────────
 // Bump APP_VERSION on every new deployment to bust the old cache automatically.
-const APP_VERSION  = '52';
+const APP_VERSION  = '53';
 const CACHE_NAME   = `calcuflow-v${APP_VERSION}`;
 
 // ─── Pre-cache manifest ───────────────────────────────────────────────────────
@@ -18,6 +18,7 @@ const PRECACHE_ASSETS = [
   '/js/calculator.js',
   '/js/changelog.js',
   '/js/modal-controller.js',
+  '/js/notifications.js',
   '/js/rates-controller.js',
   '/js/settings-controller.js',
   '/js/share.js',
@@ -123,4 +124,57 @@ self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SKIP_WAITING') {
     self.skipWaiting();
   }
+});
+
+// ─── Web Push ────────────────────────────────────────────────────────────────
+function safeNotificationUrl(value) {
+  const fallback = new URL('/', self.location.origin);
+  if (typeof value !== 'string' || value.length > 2048) return fallback.href;
+  try {
+    const candidate = new URL(value, self.location.origin);
+    return candidate.origin === self.location.origin ? candidate.href : fallback.href;
+  } catch {
+    return fallback.href;
+  }
+}
+
+function notificationText(value, fallback, maximumLength) {
+  return typeof value === 'string' && value.trim()
+    ? value.trim().slice(0, maximumLength)
+    : fallback;
+}
+
+self.addEventListener('push', (event) => {
+  let payload = {};
+  try {
+    payload = event.data?.json() || {};
+  } catch {
+    payload = {};
+  }
+
+  const title = notificationText(payload.title, 'CalcuFlow', 100);
+  const body = notificationText(payload.body, '', 300);
+  event.waitUntil(self.registration.showNotification(title, {
+    body,
+    icon: '/assets/icon.svg',
+    data: { url: safeNotificationUrl(payload.url) }
+  }));
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification?.close();
+  const targetUrl = safeNotificationUrl(event.notification?.data?.url);
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
+      const existingClient = windowClients.find((client) => {
+        try {
+          return new URL(client.url).origin === self.location.origin;
+        } catch {
+          return false;
+        }
+      });
+      if (existingClient?.focus) return existingClient.focus();
+      return self.clients.openWindow(targetUrl);
+    })
+  );
 });

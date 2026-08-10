@@ -44,6 +44,59 @@ aunque el otro falle, y cada registro conserva su propia fecha y fuente.
 
 ---
 
+## Notificaciones Web Push (Fase 1)
+
+Esta fase implementa únicamente el alta y la baja anónimas de Web Push. No crea
+alertas por tasa, umbrales, horarios ni resúmenes. El navegador nunca solicita
+permiso al cargar la página: la solicitud comienza únicamente cuando la persona
+pulsa **Activar notificaciones** en Configuración.
+
+Flujo:
+
+1. La interfaz detecta `ServiceWorker`, `PushManager` y `Notification`.
+2. Después de la acción explícita, `GET /api/push/config` entrega solo la clave
+   VAPID pública.
+3. El navegador crea una suscripción con `userVisibleOnly: true`.
+4. `POST /api/push/subscribe` valida y guarda `endpoint`, `p256dh` y `auth` en
+   Supabase mediante una Function same-origin.
+5. `DELETE /api/push/unsubscribe` elimina el registro antes de desactivar la
+   suscripción local.
+
+Los endpoints y las claves de cifrado se consideran datos privados. No se
+guardan nombres, correos, identidades, montos, cálculos, saldos ni tasas. La
+clave `SUPABASE_SERVICE_ROLE_KEY` existe solo en las Functions; el frontend no
+recibe credenciales de Supabase. La tabla tiene RLS activo y no concede acceso a
+los roles `anon` o `authenticated`.
+
+### Preparar Supabase y Vercel
+
+1. Crea o selecciona un proyecto de Supabase.
+2. Ejecuta
+   `supabase/migrations/20260810000000_create_push_subscriptions.sql` en el SQL
+   Editor. La migración crea `public.push_subscriptions`, el índice de registros
+   activos, la restricción única de `endpoint` y las restricciones de formato.
+3. Genera un par VAPID con una herramienta Web Push confiable y conserva la
+   clave privada fuera del repositorio.
+4. Configura en Vercel, como mínimo para esta fase:
+
+   - `SUPABASE_URL`: URL HTTPS del proyecto.
+   - `SUPABASE_SERVICE_ROLE_KEY`: credencial secreta disponible solo para las
+     Functions.
+   - `VAPID_PUBLIC_KEY`: clave pública VAPID P-256 en Base64URL.
+
+5. Para pruebas locales con `vercel dev`, copia `.env.example` a `.env.local` y
+   completa las tres variables anteriores. `.env.local` está ignorado por Git.
+
+`VAPID_PRIVATE_KEY` y `VAPID_SUBJECT` aparecen reservadas en `.env.example` para
+la futura Function de envío. No se leen ni son necesarias en esta Fase 1.
+
+Después de configurar el entorno, prueba manualmente activar y desactivar desde
+un origen seguro (`https://` o `localhost`) y confirma que la fila se crea y se
+elimina en Supabase. El envío real de una notificación requiere todavía un
+emisor server-side de una fase posterior.
+
+---
+
 ## Probar localmente
 
 ```bash
@@ -53,20 +106,21 @@ npx.cmd --yes vercel@latest dev --listen 5500
 
 Abre: <http://localhost:5500>
 
-No se necesita ninguna variable de entorno. `python -m http.server 5500` o
+Las tasas no necesitan variables de entorno. La suscripción Web Push sí necesita
+las tres variables de Fase 1 descritas arriba. `python -m http.server 5500` o
 `npx.cmd serve -p 5500 .` siguen siendo útiles para revisar la interfaz/offline,
-pero no ejecutan `/api/rates`.
+pero no ejecutan `/api/rates` ni `/api/push/*`.
 
 ---
 
 ## Desplegar en Vercel
 
-La interfaz es estática y Vercel detecta automáticamente la Function bajo
-`api/`; no requiere configuración adicional:
+La interfaz es estática y Vercel detecta automáticamente las Functions bajo
+`api/`:
 
 1. Conecta el repositorio
 2. Vercel detecta automáticamente que es un sitio estático
-3. No agregar variables de entorno (no se necesitan)
+3. Agrega las tres variables de entorno requeridas para Web Push
 
 Producción: https://calcu-flow.vercel.app
 
@@ -77,6 +131,7 @@ Producción: https://calcu-flow.vercel.app
 ```
 calculadora-usdt/
 ├── api/
+│   ├── push/             # Configuración pública y persistencia Web Push
 │   ├── rate-providers.mjs # Proveedores, validación y mediana P2P
 │   └── rates.mjs          # Vercel Function same-origin
 ├── assets/
@@ -88,6 +143,7 @@ calculadora-usdt/
 │   ├── bcv-rates.js    # Selección y fallbacks de BCV Today
 │   ├── app.js          # Lógica principal
 │   ├── calculator.js   # Fórmulas financieras
+│   ├── notifications.js # Capacidad y suscripción Web Push
 │   ├── storage.js      # localStorage
 │   ├── ui.js           # Renderizado DOM
 │   └── utils.js        # Helpers (n, money, $)
@@ -109,3 +165,8 @@ calculadora-usdt/
 - [ ] Cálculos actualizan al cambiar el monto
 - [ ] Un fallo parcial conserva solo la tasa que no pudo actualizarse
 - [ ] `/api/` no aparece en el caché estático del service worker
+- [ ] Configuración muestra No compatibles / Desactivadas / Bloqueadas / Activadas
+- [ ] La carga inicial no solicita permiso de notificaciones
+- [ ] Activar crea una fila anónima en `push_subscriptions`
+- [ ] Desactivar elimina la fila y la suscripción del navegador
+- [ ] Un clic en una notificación abre o enfoca solo CalcuFlow

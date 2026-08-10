@@ -2640,6 +2640,54 @@ html[data-theme="light"] .step.step-highlight {
   width: 100%;
 }
 
+.notification-settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.notification-settings-copy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.notification-settings-copy strong {
+  color: var(--text);
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.notification-settings-copy span {
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.notification-action {
+  flex: 0 0 auto;
+  min-height: 38px;
+}
+
+.notification-error {
+  margin: 0;
+}
+
+@media (max-width: 520px) {
+  .notification-settings-row {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .notification-action {
+    width: 100%;
+  }
+}
+
 @media (max-width: 860px) and (max-height: 560px) {
   .bs-helper-card,
   .p2p-editor-card {

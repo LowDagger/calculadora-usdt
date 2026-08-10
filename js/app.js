@@ -31,6 +31,7 @@ import { renderBankLogo } from './bank-logo.js';
 import { processBankLogo } from './bank-logo-processing.js';
 import { initChangelog } from './changelog.js';
 import { closeManagedModal, createCommunityModalController, openManagedModal, trapModalFocus } from './modal-controller.js';
+import { createNotificationsController } from './notifications.js';
 import { createRatesController } from './rates-controller.js';
 import { applyTheme, createSettingsController, initTheme, updateThemeUI } from './settings-controller.js';
 import { initShare, shareOrCopy } from './share.js';
@@ -124,6 +125,11 @@ const bankProfileEls = {
 const ratesController = createRatesController({ calculate, saveState });
 const loadRates = showSuccessToast => ratesController.loadRates(showSuccessToast);
 const updateRelativeTime = () => ratesController.updateRelativeTime();
+const notificationsController = createNotificationsController({
+  button: document.getElementById('notificationToggleBtn'),
+  status: document.getElementById('notificationState'),
+  error: document.getElementById('notificationError')
+});
 
 function formatProfileFee(fee) {
   return `${new Intl.NumberFormat('es-VE', { maximumFractionDigits: 2 }).format(fee)}%`;
@@ -2080,6 +2086,7 @@ initChangelog({
 });
 initTheme();
 initShare(els.copyBtnSettings);
+notificationsController.init();
 bindEvents();
 calculate();
 setupKeyboardUX();
