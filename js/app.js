@@ -1865,8 +1865,6 @@ function registerServiceWorker() {
       setTimeout(() => window.location.reload(), 800);
     });
 
-    // ── Periodically check for updates (every 60 s) ──
-    setInterval(() => reg.update().catch(() => {}), 60_000);
   });
 }
 
