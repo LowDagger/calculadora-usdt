@@ -94,7 +94,7 @@ test('notification clicks focus an existing CalcuFlow window when possible', asy
 });
 
 test('push additions preserve the cache strategy and keep API requests out of cache', () => {
-  assert.match(source, /const APP_VERSION\s*=\s*'53'/);
+  assert.match(source, /const APP_VERSION\s*=\s*'54'/);
   assert.match(source, /'\/js\/notifications\.js'/);
   assert.match(source, /event\.request\.method !== 'GET'/);
   assert.match(source, /requestUrl\.origin !== self\.location\.origin/);
