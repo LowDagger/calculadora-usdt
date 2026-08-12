@@ -1,6 +1,6 @@
 // ─── Version ──────────────────────────────────────────────────────────────────
 // Bump APP_VERSION on every new deployment to bust the old cache automatically.
-const APP_VERSION  = '53';
+const APP_VERSION  = '54';
 const CACHE_NAME   = `calcuflow-v${APP_VERSION}`;
 
 // ─── Pre-cache manifest ───────────────────────────────────────────────────────
@@ -34,6 +34,7 @@ const PRECACHE_ASSETS = [
   '/assets/banks/banesco-provisional.png',
   '/assets/banks/bnc.png',
 ];
+const PRECACHE_PATHS = new Set(PRECACHE_ASSETS);
 
 // ─── Install ──────────────────────────────────────────────────────────────────
 // Pre-cache all assets and immediately take control (no waiting for old tabs).
@@ -64,15 +65,13 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// ─── Fetch – Stale-While-Revalidate ──────────────────────────────────────────
+// ─── Fetch strategies ─────────────────────────────────────────────────
 // Strategy:
 //  • Non-GET or cross-origin → pass through to the network, no caching.
 //  • Navigation (HTML pages) → network-first; fall back to cached /index.html
 //    so the app remains usable offline.
-//  • Static assets (JS/CSS/images/etc.) → Stale-While-Revalidate:
-//      1. Return the cached copy immediately (fast).
-//      2. Fetch a fresh copy in the background and update the cache.
-//      3. If nothing is cached yet, wait for the network response.
+//  • Precached static assets → cache-first; APP_VERSION provides freshness.
+//  • Other static assets → stale-while-revalidate (existing behavior).
 self.addEventListener('fetch', (event) => {
   // Only handle same-origin GET requests
   if (event.request.method !== 'GET') return;
@@ -95,7 +94,19 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // ── Static assets – Stale-While-Revalidate ──
+  // ── Known precached assets – Cache-First ──
+  if (PRECACHE_PATHS.has(requestUrl.pathname)) {
+    event.respondWith(
+      caches.open(CACHE_NAME).then((cache) =>
+        cache.match(event.request, { ignoreSearch: true }).then((cachedResponse) =>
+          cachedResponse || fetch(event.request)
+        )
+      )
+    );
+    return;
+  }
+
+  // ── Other static assets – Stale-While-Revalidate ──
   event.respondWith(
     caches.open(CACHE_NAME).then((cache) =>
       cache.match(event.request, { ignoreSearch: true }).then((cachedResponse) => {
