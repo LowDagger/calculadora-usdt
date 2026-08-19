@@ -5,6 +5,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="theme-color" content="#0F1115" />
+  <meta name="google-site-verification" content="hNvrLvBMxG54wooUGqneiMuDPcZbeCYgUtPFlBQYtZ4" />
   <title>CalcuFlow — Banco → USDT</title>
   <link rel="canonical" href="https://calcu-flow.vercel.app/" />
   <script>
@@ -348,8 +349,38 @@
 
 
 
-    <footer>Herramienta personal. Los Bs necesarios son fijos según BCV + banco. La ganancia, USDT finales y venta P2P
-      son estimaciones según la tasa P2P actual.</footer>
+    <footer class="app-footer">
+      <p>Herramienta personal. Los Bs necesarios son fijos según BCV + banco. La ganancia, USDT finales y venta P2P
+        son estimaciones según la tasa P2P actual.</p>
+      <button class="bicycle-easter-egg-trigger" id="bicycleEasterEggTrigger" type="button"
+        aria-label="Activar sorpresa: Hecho para los que aún pedalean" aria-controls="bicycleRideLayer">
+        <svg class="bicycle-footer-icon" viewBox="0 0 32 20" aria-hidden="true" focusable="false">
+          <circle cx="6" cy="14" r="5" />
+          <circle cx="26" cy="14" r="5" />
+          <path d="M6 14h7l4-8m-7 0h7l3 8h6M13 14l-3-8m7 0 3-3m-5 0h5" />
+        </svg>
+        <span>Hecho para los que aún pedalean</span>
+      </button>
+    </footer>
+  </div>
+
+  <div class="bicycle-ride-layer" id="bicycleRideLayer" aria-hidden="true" hidden>
+    <div class="bicycle-ride" id="bicycleRide">
+      <span class="bicycle-ride-caption" id="bicycleRideCaption"></span>
+      <div class="bicycle-ride-body">
+        <svg viewBox="0 0 84 48" aria-hidden="true" focusable="false">
+          <g class="bicycle-wheel bicycle-wheel--left">
+            <circle cx="20" cy="34" r="12" />
+            <path d="M20 22v24M8 34h24M11.5 25.5l17 17M28.5 25.5l-17 17" />
+          </g>
+          <g class="bicycle-wheel bicycle-wheel--right">
+            <circle cx="64" cy="34" r="12" />
+            <path d="M64 22v24M52 34h24M55.5 25.5l17 17M72.5 25.5l-17 17" />
+          </g>
+          <path class="bicycle-frame" d="M20 34l14-18 12 18H20l10-13h21l13 13M34 16h12m-16 5-4-8m-4 0h9m20 8 5-8m-2 0h7" />
+        </svg>
+      </div>
+    </div>
   </div>
 
   <section class="modal-shell breakdown-panel bs-helper-sheet" id="bsHelperPanel" role="dialog" aria-modal="true"

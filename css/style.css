@@ -2931,6 +2931,182 @@ footer {
   padding: 10px 6px;
 }
 
+.app-footer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.bicycle-easter-egg-trigger {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--muted);
+  font: 500 0.7rem/1.3 var(--font);
+  opacity: 0.72;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: color var(--dur-hover) ease, opacity var(--dur-hover) ease, background-color var(--dur-hover) ease;
+}
+
+.bicycle-footer-icon {
+  width: 24px;
+  height: 15px;
+  flex: 0 0 auto;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .bicycle-easter-egg-trigger:hover {
+    color: var(--text);
+    opacity: 0.9;
+    background: var(--surface-hover);
+  }
+}
+
+.bicycle-easter-egg-trigger:active {
+  opacity: 1;
+}
+
+.bicycle-easter-egg-trigger:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+  opacity: 1;
+}
+
+.bicycle-ride-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  overflow: hidden;
+  pointer-events: none;
+  contain: layout paint;
+}
+
+.bicycle-ride {
+  position: absolute;
+  left: 0;
+  bottom: calc(18px + env(safe-area-inset-bottom));
+  width: 92px;
+  color: var(--primary);
+  opacity: 0;
+  will-change: transform, opacity;
+}
+
+.bicycle-ride-layer.is-riding .bicycle-ride {
+  animation: bicycle-ride-across 2.9s cubic-bezier(0.35, 0, 0.65, 1) forwards;
+}
+
+.bicycle-ride-caption {
+  position: absolute;
+  left: 50%;
+  bottom: 49px;
+  padding: 4px 7px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow);
+  font: 600 0.62rem/1.2 var(--font);
+  white-space: nowrap;
+  transform: translateX(-50%);
+}
+
+.bicycle-ride-body {
+  width: 84px;
+  height: 48px;
+  animation: bicycle-body-bounce 320ms ease-in-out infinite alternate;
+}
+
+.bicycle-ride-body svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.bicycle-wheel {
+  transform-box: view-box;
+  animation: bicycle-wheel-spin 380ms linear infinite;
+}
+
+.bicycle-wheel--left {
+  transform-origin: 20px 34px;
+}
+
+.bicycle-wheel--right {
+  transform-origin: 64px 34px;
+}
+
+.bicycle-frame {
+  stroke-width: 2.4;
+}
+
+@keyframes bicycle-ride-across {
+  0% {
+    opacity: 0;
+    transform: translate3d(-120%, 0, 0);
+  }
+  8%, 92% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(calc(100vw + 20%), 0, 0);
+  }
+}
+
+@keyframes bicycle-wheel-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes bicycle-body-bounce {
+  to {
+    transform: translate3d(0, -1px, 0);
+  }
+}
+
+@keyframes bicycle-reduced-fade {
+  0%, 100% {
+    opacity: 0;
+    transform: translate3d(-50%, 3px, 0) scale(0.98);
+  }
+  30%, 70% {
+    opacity: 1;
+    transform: translate3d(-50%, 0, 0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bicycle-ride-layer.is-riding .bicycle-ride {
+    left: 50%;
+    animation: bicycle-reduced-fade 500ms ease-out forwards !important;
+  }
+
+  .bicycle-ride-body,
+  .bicycle-wheel {
+    animation: none !important;
+  }
+}
+
 /* Responsiveness helper for larger viewports */
 @media (min-width: 480px) {
   body {

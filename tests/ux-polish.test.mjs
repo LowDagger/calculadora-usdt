@@ -13,6 +13,23 @@ const share = readFileSync(new URL('../js/share.js', import.meta.url), 'utf8');
 const serviceWorker = readFileSync(new URL('../service-worker.js', import.meta.url), 'utf8');
 const settingsHtml = html.match(/<section class="modal-shell settings-panel"[\s\S]*?<\/section>/)?.[0] || '';
 
+test('adds an accessible, non-blocking bicycle Easter egg with reduced-motion fallback', () => {
+  assert.match(html, /<footer class="app-footer">[\s\S]*?<button[^>]*id="bicycleEasterEggTrigger"[^>]*type="button"[^>]*aria-label="Activar sorpresa: Hecho para los que aún pedalean"[^>]*aria-controls="bicycleRideLayer"/);
+  assert.match(html, /class="bicycle-footer-icon"[\s\S]*?<span>Hecho para los que aún pedalean<\/span>/);
+  assert.match(html, /id="bicycleRideLayer" aria-hidden="true" hidden[\s\S]*?class="bicycle-wheel bicycle-wheel--left"[\s\S]*?class="bicycle-wheel bicycle-wheel--right"/);
+  assert.match(css, /\.bicycle-easter-egg-trigger\s*\{[\s\S]*?min-height:\s*44px/);
+  assert.match(css, /\.bicycle-easter-egg-trigger:focus-visible\s*\{/);
+  assert.match(css, /\.bicycle-ride-layer\s*\{[\s\S]*?position:\s*fixed[\s\S]*?overflow:\s*hidden[\s\S]*?pointer-events:\s*none/);
+  assert.match(css, /animation:\s*bicycle-ride-across 2\.9s/);
+  assert.match(css, /\.bicycle-wheel\s*\{[\s\S]*?animation:\s*bicycle-wheel-spin 380ms linear infinite/);
+  assert.match(css, /@keyframes bicycle-wheel-spin\s*\{[\s\S]*?transform:\s*rotate\(360deg\)/);
+  assert.match(css, /animation:\s*bicycle-body-bounce 320ms[\s\S]*?translate3d\(0, -1px, 0\)/);
+  assert.match(css, /@media \(prefers-reduced-motion: reduce\)[\s\S]*?animation:\s*bicycle-reduced-fade 500ms[\s\S]*?\.bicycle-wheel[\s\S]*?animation:\s*none/);
+  assert.match(app, /if \(isRiding\) return;/);
+  assert.match(app, /event\.target === ride[\s\S]*?finishRide\(\)/);
+  assert.match(app, /layer\.classList\.remove\('is-riding'\)[\s\S]*?layer\.hidden = true/);
+  assert.match(app, /reducedMotion \? 700 : 3300/);
+});
 test('adds compact hierarchy labels without changing calculation terminology', () => {
   assert.match(html, /<h2 class="section-label">Tasas de referencia<\/h2>[\s\S]*?class="rates-grid"/);
   assert.match(html, /<div class="kpi-grid">/);
@@ -60,7 +77,7 @@ test('marks result-card symbols as decorative and bumps the PWA cache', () => {
   assert.match(ui, /btn\.setAttribute\('aria-pressed', String\(isActive\)\)/);
   assert.match(settingsController, /btn\.setAttribute\('aria-pressed', String\(isActive\)\)/);
   assert.match(html, /data-theme-val="system" aria-pressed="true"/);
-  assert.match(serviceWorker, /const APP_VERSION\s+= '53';/);
+  assert.match(serviceWorker, /const APP_VERSION\s+= '55';/);
   assert.match(serviceWorker, /'\/js\/bcv-rates\.js'/);
   for (const moduleName of ['modal-controller', 'rates-controller', 'settings-controller', 'share']) {
     assert.match(serviceWorker, new RegExp(`'/js/${moduleName}\\.js'`));

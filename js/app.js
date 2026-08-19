@@ -2068,6 +2068,49 @@ function initInstallPrompt() {
   }
 }
 
+function initBicycleEasterEgg() {
+  const trigger = document.getElementById('bicycleEasterEggTrigger');
+  const layer = document.getElementById('bicycleRideLayer');
+  const ride = document.getElementById('bicycleRide');
+  const caption = document.getElementById('bicycleRideCaption');
+  if (!trigger || !layer || !ride || !caption) return;
+
+  const messages = [
+    'Modo bicicletero activado',
+    'Todavía rueda.',
+    'Otra vuelta más.',
+    'Compra → rueda → USDT',
+    'Bicicletero detectado',
+    'La bicicleta sigue viva'
+  ];
+  let isRiding = false;
+  let cleanupTimer;
+
+  const finishRide = () => {
+    if (!isRiding) return;
+    isRiding = false;
+    clearTimeout(cleanupTimer);
+    layer.classList.remove('is-riding');
+    layer.hidden = true;
+  };
+
+  ride.addEventListener('animationend', event => {
+    if (event.target === ride) finishRide();
+  });
+
+  trigger.addEventListener('click', () => {
+    if (isRiding) return;
+    isRiding = true;
+    caption.textContent = messages[Math.floor(Math.random() * messages.length)];
+    layer.hidden = false;
+    layer.classList.add('is-riding');
+    triggerHaptic('light');
+
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    cleanupTimer = setTimeout(finishRide, reducedMotion ? 700 : 3300);
+  });
+}
+
 
 
 const storedAppState = loadState();
@@ -2079,6 +2122,7 @@ initChangelog({
 initTheme();
 initShare(els.copyBtnSettings);
 bindEvents();
+initBicycleEasterEgg();
 calculate();
 setupKeyboardUX();
 initInstallPrompt();
