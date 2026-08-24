@@ -120,10 +120,10 @@ export const DEFAULT_BANK_PROFILES = Object.freeze([
     id: 'bdt',
     name: 'Banco Digital de los Trabajadores',
     cardType: '',
-    defaultFee: 0,
+    defaultFee: 2.5,
     initials: 'BDT',
     iconKey: 'bdt',
-    defaultStatus: 'Pendiente de confirmar'
+    defaultStatus: 'Comisión reportada'
   })
 ]);
 
