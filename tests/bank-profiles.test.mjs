@@ -46,7 +46,7 @@ const EXPECTED_PRESETS = {
   'banesco-fisica': 1.5,
   'banesco-virtual': 2.5,
   bnc: 1.5,
-  bdt: 0
+  bdt: 2.5
 };
 
 function memoryStorage(initial = {}, { quotaError = false } = {}) {
@@ -85,10 +85,10 @@ test('includes every immutable initial bank profile and reported percentage', ()
 
   const bdtDefault = DEFAULT_BANK_PROFILES.find(profile => profile.id === 'bdt');
   assert.equal(bdtDefault.name, 'Banco Digital de los Trabajadores');
-  assert.equal(bdtDefault.defaultFee, 0);
+  assert.equal(bdtDefault.defaultFee, 2.5);
   assert.equal(bdtDefault.initials, 'BDT');
   assert.equal(bdtDefault.iconKey, 'bdt');
-  assert.equal(bdtDefault.defaultStatus, 'Pendiente de confirmar');
+  assert.equal(bdtDefault.defaultStatus, 'Comisión reportada');
 
   const bbvaProfile = getBankProfile({}, 'bbva-provincial');
   assert.equal(bbvaProfile.fee, 1.5);
@@ -96,12 +96,12 @@ test('includes every immutable initial bank profile and reported percentage', ()
   assert.equal(bbvaProfile.name, 'BBVA Provincial');
 
   const bdtProfile = getBankProfile({}, 'bdt');
-  assert.equal(bdtProfile.fee, 0);
-  assert.equal(bdtProfile.defaultFee, 0);
+  assert.equal(bdtProfile.fee, 2.5);
+  assert.equal(bdtProfile.defaultFee, 2.5);
   assert.equal(bdtProfile.name, 'Banco Digital de los Trabajadores');
   assert.equal(bdtProfile.cardType, '');
   assert.equal(bdtProfile.icon, '/assets/banks/bdt.png');
-  assert.equal(bdtProfile.status, 'Pendiente de confirmar');
+  assert.equal(bdtProfile.status, 'Comisión reportada');
 
   assert.equal(getBankProfile({}, 'bdv-virtual').status, 'Pendiente de confirmar');
   assert.ok(profiles.every(profile => profile.icon?.startsWith('/assets/banks/')));
