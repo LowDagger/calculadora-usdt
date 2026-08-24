@@ -112,7 +112,6 @@ body {
    editable and intentionally copyable content retain normal selection. */
 .topbar,
 .quick-row,
-.changelog-announcement,
 .bank-profile-field,
 .bs-helper-trigger,
 .rates-grid,
@@ -2197,9 +2196,6 @@ html[data-theme="light"] .kpi-loss {
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
-  .changelog-announcement {
-    transition: none;
-  }
   .modal-shell.open {
     animation: fade-in 150ms ease-out forwards !important;
   }
@@ -3172,23 +3168,6 @@ footer {
     min-height: 50px;
   }
 
-  .changelog-announcement {
-    padding: 7px 8px;
-    gap: 6px;
-  }
-
-  .changelog-announcement-status {
-    gap: 6px;
-  }
-
-  .changelog-announcement-copy {
-    font-size: 0.63rem;
-  }
-
-  .changelog-announcement-action {
-    padding-inline: 8px;
-  }
-
   footer {
     padding-block: 8px;
   }
@@ -3587,124 +3566,6 @@ html[data-theme="light"] .skeleton-shimmer::after {
 }
 
 /* ── Community Support Section ────────────────────────────────────────── */
-.changelog-announcement {
-  width: 100%;
-  min-width: 0;
-  min-height: 44px;
-  padding: 8px 9px 8px 10px;
-  border: 1px solid var(--border);
-  border-radius: 11px;
-  background: var(--surface);
-  color: var(--text);
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 10px;
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-  transition: background-color var(--dur-state) ease, border-color var(--dur-state) ease, transform var(--dur-press) ease;
-}
-
-.changelog-announcement-status {
-  min-width: 0;
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-}
-
-.changelog-announcement-dot {
-  width: 7px;
-  height: 7px;
-  flex: 0 0 auto;
-  border-radius: 50%;
-  background: var(--primary);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 14%, transparent);
-}
-
-.changelog-announcement-copy {
-  min-width: 0;
-  font-size: 0.68rem;
-  font-weight: 700;
-  line-height: 1.25;
-  display: grid;
-  gap: 2px;
-}
-
-.changelog-announcement-label {
-  color: var(--primary);
-  font-size: 0.56rem;
-  font-weight: 900;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.changelog-announcement-copy > span:last-child {
-  color: var(--muted);
-  font-weight: 600;
-}
-
-.changelog-announcement-actions {
-  display: inline-flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 6px;
-}
-
-.changelog-announcement-action,
-.changelog-announcement-dismiss {
-  min-width: 44px;
-  min-height: 44px;
-  border: 1px solid color-mix(in srgb, var(--primary) 42%, var(--border));
-  border-radius: 9px;
-  background: var(--primary);
-  color: var(--primary-on);
-  font: inherit;
-  font-size: 0.65rem;
-  font-weight: 800;
-  cursor: pointer;
-}
-
-.changelog-announcement-action {
-  padding: 6px 9px;
-}
-
-.changelog-announcement-action--secondary,
-.changelog-announcement-dismiss {
-  background: var(--bg-soft);
-  color: var(--primary);
-}
-
-.changelog-announcement-dismiss {
-  width: 34px;
-  padding: 0;
-}
-
-.changelog-announcement-dismiss .material-symbols-rounded {
-  font-size: 1rem;
-}
-
-@media (hover: hover) and (pointer: fine) {
-  .changelog-announcement:hover {
-    border-color: color-mix(in srgb, var(--primary) 38%, var(--border));
-    background: var(--surface-hover);
-    transform: translateY(-1px);
-  }
-}
-
-.changelog-announcement:active {
-  border-color: color-mix(in srgb, var(--primary) 48%, var(--border));
-  background: color-mix(in srgb, var(--primary-bg) 48%, var(--surface));
-  transform: scale(0.98);
-}
-
-.changelog-announcement-action:focus-visible,
-.changelog-announcement-dismiss:focus-visible {
-  outline: 2px solid var(--primary);
-  outline-offset: 2px;
-}
-
 .support-section {
   background: transparent;
   border: 0;
@@ -3773,25 +3634,6 @@ html[data-theme="light"] .skeleton-shimmer::after {
 .changelog-trigger-end .material-symbols-rounded {
   color: var(--muted);
   font-size: 1.05rem;
-}
-
-.changelog-badge {
-  width: 14px;
-  height: 14px;
-  display: grid;
-  place-items: center;
-}
-
-.changelog-badge-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--primary);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 14%, transparent);
-}
-
-.changelog-badge[hidden] {
-  display: none;
 }
 
 @media (hover: hover) and (pointer: fine) {
@@ -3904,54 +3746,4 @@ html[data-theme="light"] .skeleton-shimmer::after {
   .qr-image-link {
     max-width: 280px;
   }
-}
-
-.changelog-content {
-  gap: 16px;
-}
-
-.changelog-release {
-  padding: 14px;
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  background: var(--bg-soft);
-}
-
-.changelog-release h3 {
-  margin: 0 0 9px;
-  color: var(--text);
-  font-size: 0.9rem;
-}
-
-.changelog-release ul {
-  margin: 0;
-  padding-left: 18px;
-  color: var(--muted);
-  font-size: 0.72rem;
-  line-height: 1.55;
-}
-
-.changelog-telegram-copy {
-  margin: 0;
-  color: var(--muted);
-  font-size: 0.72rem;
-  line-height: 1.5;
-}
-
-.changelog-telegram-link {
-  min-height: 44px;
-  width: fit-content;
-  padding: 8px 2px;
-  color: var(--primary);
-  display: inline-flex;
-  align-items: center;
-  font-size: 0.7rem;
-  font-weight: 700;
-  text-underline-offset: 3px;
-}
-
-.changelog-telegram-link:focus-visible {
-  border-radius: 4px;
-  outline: 2px solid var(--primary);
-  outline-offset: 2px;
 }
