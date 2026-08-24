@@ -40,12 +40,13 @@ import { calculateValues } from '../js/calculator.js';
 const EXPECTED_PRESETS = {
   'bdv-fisica': 1.5,
   'bdv-virtual': 2.5,
-  'bbva-provincial': 0,
+  'bbva-provincial': 1.5,
   'banco-tesoro': 2.5,
   bancamiga: 5,
   'banesco-fisica': 1.5,
   'banesco-virtual': 2.5,
-  bnc: 1.5
+  bnc: 1.5,
+  bdt: 0
 };
 
 function memoryStorage(initial = {}, { quotaError = false } = {}) {
@@ -70,14 +71,38 @@ function memoryStorage(initial = {}, { quotaError = false } = {}) {
 
 test('includes every immutable initial bank profile and reported percentage', () => {
   assert.equal(BANK_PROFILE_STATE_VERSION, 4);
-  assert.equal(DEFAULT_BANK_PROFILES.length, 8);
+  assert.equal(DEFAULT_BANK_PROFILES.length, 9);
   assert.deepEqual(
     Object.fromEntries(DEFAULT_BANK_PROFILES.map(profile => [profile.id, profile.defaultFee])),
     EXPECTED_PRESETS
   );
 
   const profiles = getBankProfiles({});
-  assert.equal(getBankProfile({}, 'bbva-provincial').fee, 0);
+  const bbvaDefault = DEFAULT_BANK_PROFILES.find(profile => profile.id === 'bbva-provincial');
+  assert.equal(bbvaDefault.defaultFee, 1.5);
+  assert.equal(bbvaDefault.initials, 'BBVA');
+  assert.equal(bbvaDefault.iconKey, 'bbva');
+
+  const bdtDefault = DEFAULT_BANK_PROFILES.find(profile => profile.id === 'bdt');
+  assert.equal(bdtDefault.name, 'Banco Digital de los Trabajadores');
+  assert.equal(bdtDefault.defaultFee, 0);
+  assert.equal(bdtDefault.initials, 'BDT');
+  assert.equal(bdtDefault.iconKey, 'bdt');
+  assert.equal(bdtDefault.defaultStatus, 'Pendiente de confirmar');
+
+  const bbvaProfile = getBankProfile({}, 'bbva-provincial');
+  assert.equal(bbvaProfile.fee, 1.5);
+  assert.equal(bbvaProfile.defaultFee, 1.5);
+  assert.equal(bbvaProfile.name, 'BBVA Provincial');
+
+  const bdtProfile = getBankProfile({}, 'bdt');
+  assert.equal(bdtProfile.fee, 0);
+  assert.equal(bdtProfile.defaultFee, 0);
+  assert.equal(bdtProfile.name, 'Banco Digital de los Trabajadores');
+  assert.equal(bdtProfile.cardType, '');
+  assert.equal(bdtProfile.icon, '/assets/banks/bdt.png');
+  assert.equal(bdtProfile.status, 'Pendiente de confirmar');
+
   assert.equal(getBankProfile({}, 'bdv-virtual').status, 'Pendiente de confirmar');
   assert.ok(profiles.every(profile => profile.icon?.startsWith('/assets/banks/')));
   assert.ok(profiles.every(profile => profile.iconScale > 0 && profile.iconScale <= 1));
@@ -89,7 +114,7 @@ test('uses one icon map for every preset and a neutral manual symbol', () => {
   const profiles = getBankProfiles({});
   const iconPaths = new Set(Object.values(BANK_ICONS).map(icon => icon.src).filter(Boolean));
 
-  assert.equal(iconPaths.size, 6);
+  assert.equal(iconPaths.size, 7);
   for (const iconPath of iconPaths) {
     assert.equal(existsSync(new URL(`..${iconPath}`, import.meta.url)), true, iconPath);
   }
@@ -105,7 +130,7 @@ test('groups multimodality banks while keeping single-modality banks direct', ()
   const bdv = groups.find(group => group.name === 'Banco de Venezuela');
   const banesco = groups.find(group => group.name === 'Banesco');
 
-  assert.equal(groups.length, 7);
+  assert.equal(groups.length, 8);
   assert.deepEqual(bdv.profiles.map(profile => profile.id), ['bdv-fisica', 'bdv-virtual']);
   assert.deepEqual(banesco.profiles.map(profile => profile.id), ['banesco-fisica', 'banesco-virtual']);
 });

@@ -33,6 +33,10 @@ export const BANK_ICONS = Object.freeze({
     scale: 0.80,
     darkFilter: 'brightness(0) invert(1)'
   }),
+  bdt: Object.freeze({
+    src: '/assets/banks/bdt.png',
+    scale: 0.82
+  }),
   manual: Object.freeze({
     symbol: 'account_balance',
     scale: 0.58
@@ -62,7 +66,7 @@ export const DEFAULT_BANK_PROFILES = Object.freeze([
     id: 'bbva-provincial',
     name: 'BBVA Provincial',
     cardType: '',
-    defaultFee: 0,
+    defaultFee: 1.5,
     initials: 'BBVA',
     iconKey: 'bbva',
     defaultStatus: 'Comisión reportada'
@@ -111,6 +115,15 @@ export const DEFAULT_BANK_PROFILES = Object.freeze([
     initials: 'BNC',
     iconKey: 'bnc',
     defaultStatus: 'Comisión reportada'
+  }),
+  Object.freeze({
+    id: 'bdt',
+    name: 'Banco Digital de los Trabajadores',
+    cardType: '',
+    defaultFee: 0,
+    initials: 'BDT',
+    iconKey: 'bdt',
+    defaultStatus: 'Pendiente de confirmar'
   })
 ]);
 
