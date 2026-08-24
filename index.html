@@ -128,27 +128,6 @@
       </div>
     </header>
 
-    <section class="changelog-announcement" id="openTopChangelogBtn" aria-labelledby="topChangelogSummary" hidden>
-      <div class="changelog-announcement-status">
-        <span class="changelog-announcement-dot" aria-hidden="true"></span>
-        <span class="changelog-announcement-copy">
-          <span class="changelog-announcement-label">Nuevo</span>
-          <strong id="topChangelogSummary">CalcuFlow más rápido y práctico</strong>
-          <span>Mejoramos las tasas, bancos, montos rápidos y varias formas de calcular.</span>
-        </span>
-      </div>
-      <div class="changelog-announcement-actions">
-        <button class="changelog-announcement-action" id="viewLatestAnnouncementBtn" type="button"
-          aria-controls="changelogPanel" aria-expanded="false">
-          Ver novedades
-        </button>
-        <button class="changelog-announcement-dismiss" id="dismissLatestAnnouncementBtn" type="button"
-          aria-label="Ocultar anuncio de novedades">
-          <span class="material-symbols-rounded" aria-hidden="true">close</span>
-        </button>
-      </div>
-    </section>
-
     <main class="layout" id="mainCalculator" tabindex="-1">
       <!-- Card 1: Calculator input card -->
       <section class="card calculator-card">
@@ -304,19 +283,6 @@
           </span>
         </span>
         <span class="changelog-trigger-end">
-          <span class="material-symbols-rounded" aria-hidden="true">chevron_right</span>
-        </span>
-      </button>
-      <button class="changelog-trigger" id="openChangelogBtn" type="button" aria-controls="changelogPanel"
-        aria-expanded="false">
-        <span class="changelog-trigger-copy">
-          <strong>Novedades</strong>
-          <span id="communityChangelogSummary">CalcuFlow más rápido y práctico</span>
-        </span>
-        <span class="changelog-trigger-end">
-          <span class="changelog-badge" id="changelogBadge" role="status" aria-label="Novedad sin leer">
-            <span class="changelog-badge-dot" aria-hidden="true"></span>
-          </span>
           <span class="material-symbols-rounded" aria-hidden="true">chevron_right</span>
         </span>
       </button>
@@ -739,31 +705,6 @@
           </svg>
           <span>Abrir en Telegram</span>
         </a>
-      </div>
-    </div>
-  </section>
-
-  <section class="modal-shell changelog-panel" id="changelogPanel" role="dialog" aria-modal="true"
-    aria-labelledby="changelogTitle" aria-describedby="changelogReleaseMeta" aria-hidden="true">
-    <div class="modal-panel modal-panel--medium changelog-card">
-      <div class="modal-handle sheet-grab-handle" aria-hidden="true"></div>
-      <div class="modal-header">
-        <div>
-          <h2 class="modal-title" id="changelogTitle">Novedades</h2>
-          <p class="modal-description subtitle" id="changelogReleaseMeta"></p>
-        </div>
-        <button class="modal-close icon-btn" id="closeChangelogBtn" type="button" title="Cerrar"
-          aria-label="Cerrar novedades"><span class="material-symbols-rounded" aria-hidden="true">close</span></button>
-      </div>
-
-      <div class="modal-content changelog-content">
-        <div class="changelog-release">
-          <h3 id="changelogReleaseTitle"></h3>
-          <ul id="changelogChanges"></ul>
-        </div>
-        <p class="changelog-telegram-copy" id="changelogTelegramText"></p>
-        <a class="changelog-telegram-link" id="changelogTelegramLink" href="https://t.me/CalcuFlow"
-          target="_blank" rel="noopener noreferrer">Compartir una idea en Telegram</a>
       </div>
     </div>
   </section>

@@ -29,7 +29,6 @@ import {
 } from './bank-profiles.js';
 import { renderBankLogo } from './bank-logo.js';
 import { processBankLogo } from './bank-logo-processing.js';
-import { initChangelog } from './changelog.js';
 import { closeManagedModal, createCommunityModalController, openManagedModal, trapModalFocus } from './modal-controller.js';
 import { createRatesController } from './rates-controller.js';
 import { applyTheme, createSettingsController, initTheme, updateThemeUI } from './settings-controller.js';
@@ -1799,25 +1798,24 @@ function bindEvents() {
  * Register the Service Worker and wire up the automatic update flow.
  *
  * Flow on a new deployment:
- *  1. Browser finds an updated service-worker.js and installs it.
- *  2. The new SW calls self.skipWaiting() during install, so it activates
- *     without waiting for old tabs to close.
- *  3. We detect the activation via `controllerchange`.
- *  4. We reload the page once (guarded by sessionStorage to prevent loops).
- *  5. A toast informs the user that the app just updated.
+ *  1. Browser checks service-worker.js (bypassing HTTP cache via updateViaCache: 'none').
+ *  2. The new SW installs and calls self.skipWaiting() or receives SKIP_WAITING.
+ *  3. The new SW activates, purges stale caches, and calls self.clients.claim().
+ *  4. controllerchange triggers a single reload (preventing loops via a boolean flag).
+ *  5. App checks for updates when becoming active/visible (mobile PWA resume).
  */
 function registerServiceWorker() {
   if (!('serviceWorker' in navigator)) return;
 
-  // Guard: only reload once per session to prevent infinite-reload loops.
-  const RELOAD_KEY = 'sw_reloading';
-
   window.addEventListener('load', async () => {
     let reg;
     try {
-      reg = await navigator.serviceWorker.register('/service-worker.js', { scope: '/' });
+      reg = await navigator.serviceWorker.register('/service-worker.js', {
+        scope: '/',
+        updateViaCache: 'none'
+      });
     } catch {
-      return; // SW not supported or blocked (e.g. private browsing on some browsers)
+      return; // SW not supported or blocked
     }
 
     // ── Helper: signal the waiting SW to skip waiting ──
@@ -1837,34 +1835,37 @@ function registerServiceWorker() {
       if (!newWorker) return;
 
       newWorker.addEventListener('statechange', () => {
-        // When the new worker finishes installing and is now waiting, activate it.
         if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
           activateWaiting(newWorker);
         }
       });
     });
 
-    // ── Reload once when the controller (active SW) changes ──
-    // Snapshot whether a controller already existed BEFORE binding this handler.
-    // On a first-ever install the SW claims the page with no prior controller —
-    // that is NOT an update and does NOT need a reload. Only reload when there
-    // was already an active controller (i.e. a genuine app update occurred).
-    const hadController = !!navigator.serviceWorker.controller;
+    // ── Reload once when a new controller takes control ──
+    let refreshing = false;
+    const hadController = Boolean(navigator.serviceWorker.controller);
 
     navigator.serviceWorker.addEventListener('controllerchange', () => {
-      // First-install claim: skip the reload entirely.
-      if (!hadController) return;
-
-      if (sessionStorage.getItem(RELOAD_KEY)) {
-        sessionStorage.removeItem(RELOAD_KEY);
-        return; // already reloaded once – do nothing to avoid loops
-      }
-      sessionStorage.setItem(RELOAD_KEY, '1');
+      if (!hadController || refreshing) return;
+      refreshing = true;
       showToast('Nueva versión instalada. Actualizando…', 'ok', 3000);
-      // Small delay lets the toast render before the page reloads
-      setTimeout(() => window.location.reload(), 800);
+      setTimeout(() => window.location.reload(), 400);
     });
 
+    // ── Check for updates on visibility/focus for mobile PWAs ──
+    const checkForUpdates = () => {
+      if (navigator.onLine && reg) {
+        reg.update().catch(() => {});
+      }
+    };
+
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        checkForUpdates();
+      }
+    });
+
+    window.addEventListener('focus', checkForUpdates);
   });
 }
 
@@ -2115,10 +2116,6 @@ function initBicycleEasterEgg() {
 
 const storedAppState = loadState();
 initBankProfiles(storedAppState);
-initChangelog({
-  lockScroll: lockBodyScroll,
-  unlockScroll: unlockBodyScroll
-});
 initTheme();
 initShare(els.copyBtnSettings);
 bindEvents();

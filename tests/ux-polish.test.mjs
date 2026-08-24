@@ -77,7 +77,7 @@ test('marks result-card symbols as decorative and bumps the PWA cache', () => {
   assert.match(ui, /btn\.setAttribute\('aria-pressed', String\(isActive\)\)/);
   assert.match(settingsController, /btn\.setAttribute\('aria-pressed', String\(isActive\)\)/);
   assert.match(html, /data-theme-val="system" aria-pressed="true"/);
-  assert.match(serviceWorker, /const APP_VERSION\s+= '56';/);
+  assert.match(serviceWorker, /const APP_VERSION\s+= '57';/);
   assert.match(serviceWorker, /'\/js\/bcv-rates\.js'/);
   for (const moduleName of ['modal-controller', 'rates-controller', 'settings-controller', 'share']) {
     assert.match(serviceWorker, new RegExp(`'/js/${moduleName}\\.js'`));
@@ -148,7 +148,8 @@ test('keeps the compact mobile header accessible without duplicate ids', () => {
 
 test('consolidates Community actions into one accessible Telegram modal', () => {
   const communityHtml = html.match(/<div class="support-section">[\s\S]*?<\/div>/)?.[0] || '';
-  assert.match(communityHtml, />Unirme al grupo<[\s\S]*?>t\.me\/CalcuFlow<[\s\S]*?>Novedades<[\s\S]*?>Apoyar el proyecto</);
+  assert.match(communityHtml, />Unirme al grupo<[\s\S]*?>t\.me\/CalcuFlow<[\s\S]*?>Apoyar el proyecto</);
+  assert.doesNotMatch(communityHtml, />Novedades</);
   assert.doesNotMatch(communityHtml, />Código QR de Telegram</);
   assert.match(html, /id="openCommunityHeaderBtn"[^>]*aria-controls="qrPanel"/);
   assert.match(html, /id="openCommunityBtn"[^>]*aria-controls="qrPanel"/);
@@ -161,7 +162,7 @@ test('consolidates Community actions into one accessible Telegram modal', () => 
   assert.match(html, /<img[^>]*src="assets\/telegram-qr\.webp"[^>]*alt="Código QR del grupo de Telegram de CalcuFlow"[^>]*width="700"[^>]*height="700"[^>]*loading="lazy"[^>]*decoding="async"[^>]*\/?>/);
   assert.match(html, /class="bank-profile-action bank-profile-action--primary community-primary-action"[\s\S]*?href="https:\/\/t\.me\/CalcuFlow"[\s\S]*?class="community-telegram-icon"[\s\S]*?<span>Abrir en Telegram<\/span>/);
   assert.match(serviceWorker, /'\/assets\/telegram-qr\.webp'/);
-  assert.equal((html.match(/href="https:\/\/t\.me\/CalcuFlow"/g) || []).length, 4);
+  assert.equal((html.match(/href="https:\/\/t\.me\/CalcuFlow"/g) || []).length, 3);
   assert.doesNotMatch([html, app, ui, modalController].join('\n'), /https:\/\/telegram\.me\/CalcuFlow/);
   assert.match(app, /const communityTriggers = \[[\s\S]*?openCommunityHeaderBtn[\s\S]*?openCommunityBtn[\s\S]*?openCommunitySettingsBtn/);
   assert.match(app, /createCommunityModalController\(\{[\s\S]*?panel: els\.qrPanel[\s\S]*?openModal: openQr[\s\S]*?closeModal: closeQr/);
@@ -177,8 +178,6 @@ test('consolidates Community actions into one accessible Telegram modal', () => 
   assert.equal((openQrBlock.match(/triggerHaptic\('light'\)/g) || []).length, 1);
   assert.match(openQrBlock, /lockBodyScroll\(\)/);
   assert.match(css, /\.qr-panel\s*\{[\s\S]*?z-index:\s*110/);
-  assert.match(html, /id="changelogBadge" role="status" aria-label="Novedad sin leer"[\s\S]*?class="changelog-badge-dot"/);
-  assert.match(css, /\.changelog-badge-dot\s*\{[\s\S]*?width:\s*7px[\s\S]*?height:\s*7px/);
   assert.match(css, /footer\s*\{[\s\S]*?font-size:\s*0\.6rem[\s\S]*?line-height:\s*1\.35/);
 });
 

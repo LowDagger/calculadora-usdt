@@ -29,7 +29,7 @@ function createWorker({ cachedResponse, networkResponse } = {}) {
     caches: {
       open: async () => cache,
       match: async () => cachedResponse,
-      keys: async () => ['calcuflow-v55', 'calcuflow-v56'],
+      keys: async () => ['calcuflow-v56', 'calcuflow-v57'],
       delete: async (name) => { deletedCaches.push(name); return true; }
     },
     fetch: async () => {
@@ -55,9 +55,12 @@ async function dispatchFetch(worker, swRequest) {
   return responsePromise || null;
 }
 
-test('service-worker registration does not poll for updates', () => {
-  assert.doesNotMatch(appSource, /reg\.update\s*\(/);
+test('service-worker registration configures bypass-cache and checks on visibility without timer polling', () => {
+  assert.match(appSource, /updateViaCache:\s*'none'/);
+  assert.match(appSource, /visibilitychange/);
+  assert.match(appSource, /reg\.update\s*\(/);
   assert.doesNotMatch(appSource, /60_000/);
+  assert.doesNotMatch(appSource, /setInterval\([^)]*reg\.update/);
 });
 
 test('known precached static assets are cache-first without a background fetch', async () => {
@@ -92,5 +95,5 @@ test('activation deletes old versioned caches and retains the current cache', as
   worker.listeners.activate({ waitUntil: (promise) => { activation = promise; } });
   await activation;
 
-  assert.deepEqual(worker.deletedCaches, ['calcuflow-v55']);
+  assert.deepEqual(worker.deletedCaches, ['calcuflow-v56']);
 });
