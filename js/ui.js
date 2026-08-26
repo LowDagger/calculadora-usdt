@@ -23,6 +23,13 @@ export const els = {
   closeSupportBtn: $('closeSupportBtn'),
   qrPanel: $('qrPanel'),
   closeQrBtn: $('closeQrBtn'),
+  sharePanel: $('sharePanel'),
+  closeShareBtn: $('closeShareBtn'),
+  sharePreviewCanvas: $('sharePreviewCanvas'),
+  sharePreviewWrap: $('sharePreviewWrap'),
+  shareImageBtn: $('shareImageBtn'),
+  copySummaryBtn: $('copySummaryBtn'),
+  saveImageBtn: $('saveImageBtn'),
   brechaView: $('brechaView'),
   bcvEffectiveDate: $('bcvEffectiveDate'),
   p2pUpdateTime: $('p2pUpdateTime'),
@@ -439,6 +446,33 @@ export function closeBreakdown() {
     panel.setAttribute('aria-hidden', 'true');
     if (els.openBreakdownBtn) {
       els.openBreakdownBtn.setAttribute('aria-expanded', 'false');
+    }
+    unlockBodyScroll();
+  }, duration);
+}
+
+export function openShare() {
+  els.sharePanel.classList.remove('closing');
+  els.sharePanel.classList.add('open');
+  els.sharePanel.setAttribute('aria-hidden', 'false');
+  if (els.shareBtn) {
+    els.shareBtn.setAttribute('aria-expanded', 'true');
+  }
+  triggerHaptic('light');
+  lockBodyScroll();
+}
+
+export function closeShare() {
+  const panel = els.sharePanel;
+  if (!panel.classList.contains('open')) return;
+  panel.classList.add('closing');
+  triggerHaptic('light');
+  const duration = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 250;
+  setTimeout(() => {
+    panel.classList.remove('open', 'closing');
+    panel.setAttribute('aria-hidden', 'true');
+    if (els.shareBtn) {
+      els.shareBtn.setAttribute('aria-expanded', 'false');
     }
     unlockBodyScroll();
   }, duration);

@@ -29,7 +29,7 @@ function createWorker({ cachedResponse, networkResponse } = {}) {
     caches: {
       open: async () => cache,
       match: async () => cachedResponse,
-      keys: async () => ['calcuflow-v58', 'calcuflow-v59'],
+      keys: async () => ['calcuflow-v59', 'calcuflow-v60'],
       delete: async (name) => { deletedCaches.push(name); return true; }
     },
     fetch: async () => {
@@ -95,5 +95,5 @@ test('activation deletes old versioned caches and retains the current cache', as
   worker.listeners.activate({ waitUntil: (promise) => { activation = promise; } });
   await activation;
 
-  assert.deepEqual(worker.deletedCaches, ['calcuflow-v58']);
+  assert.deepEqual(worker.deletedCaches, ['calcuflow-v59']);
 });

@@ -32,12 +32,13 @@ import { processBankLogo } from './bank-logo-processing.js';
 import { closeManagedModal, createCommunityModalController, openManagedModal, trapModalFocus } from './modal-controller.js';
 import { createRatesController } from './rates-controller.js';
 import { applyTheme, createSettingsController, initTheme, updateThemeUI } from './settings-controller.js';
-import { initShare, shareOrCopy } from './share.js';
+import { createShareController, initShare, shareOrCopy } from './share.js';
 import { loadState as readState, saveState as writeState } from './storage.js';
 import { money, n, triggerHaptic } from './utils.js';
-import { els, updateUsdToBuyDisplay, setStatus, clearStatus, showToast, renderEmpty, renderRates, renderResult, renderBcvDate, renderUsdAmountValidation, openBreakdown, closeBreakdown, openSupport, closeSupport, openQr, closeQr, lockBodyScroll, unlockBodyScroll } from './ui.js';
+import { els, updateUsdToBuyDisplay, setStatus, clearStatus, showToast, renderEmpty, renderRates, renderResult, renderBcvDate, renderUsdAmountValidation, openBreakdown, closeBreakdown, openSupport, closeSupport, openQr, closeQr, openShare, closeShare, lockBodyScroll, unlockBodyScroll } from './ui.js';
 
 let bankProfileState = null;
+let shareController = null;
 let manualCardFee = '1.5';
 let temporaryCardFee = null;
 let manualFeeConfigured = false;
@@ -1217,11 +1218,19 @@ function calculate() {
     clearStatus();
   }
 
+  if (els.sharePanel?.classList.contains('open')) {
+    shareController?.updatePreview();
+  }
+
   return result;
 }
 
+function getShareBankProfile() {
+  return getEffectiveSelectedBankProfile(bankProfileState, manualCardFee, temporaryCardFee);
+}
+
 function getShareBankDescription() {
-  const activeProfile = getEffectiveSelectedBankProfile(bankProfileState, manualCardFee, temporaryCardFee);
+  const activeProfile = getShareBankProfile();
   return activeProfile
     ? [activeProfile.name, activeProfile.cardType, formatProfileFee(activeProfile.fee)].filter(Boolean).join(' · ')
     : `Comisión ${formatProfileFee(manualCardFee)}`;
@@ -1613,15 +1622,28 @@ function bindEvents() {
   els.loadRatesBtn.addEventListener('click', () => loadRates(true));
   els.loadRatesBtnMobile.addEventListener('click', () => loadRates(true));
   els.loadRatesBtnSettings.addEventListener('click', () => loadRates(true));
-  const shareCurrentCalculation = button => shareOrCopy({
-    button,
+  shareController = createShareController({
+    panel: els.sharePanel,
+    closeButton: els.closeShareBtn,
+    previewCanvas: els.sharePreviewCanvas,
+    shareImageBtn: els.shareImageBtn,
+    copySummaryBtn: els.copySummaryBtn,
+    saveImageBtn: els.saveImageBtn,
     calculate,
     getBankDescription: getShareBankDescription,
-    flashCopyButton: flashCopyBtn
+    getBankProfile: getShareBankProfile,
+    openModal: () => openManagedModal(els.sharePanel, els.shareBtn, openShare, els.closeShareBtn),
+    closeModal: () => closeManagedModal(els.sharePanel, els.shareBtn, closeShare),
+    flashButton: flashCopyBtn
   });
-  els.shareBtn.addEventListener('click', () => shareCurrentCalculation(els.shareBtn));
-  els.shareBtnMobile.addEventListener('click', () => shareCurrentCalculation(els.shareBtnMobile));
-  els.copyBtnSettings.addEventListener('click', () => shareCurrentCalculation(els.copyBtnSettings));
+  const showShare = trigger => shareController.open(trigger);
+  const dismissShare = () => shareController.dismiss();
+
+  els.shareBtn.addEventListener('click', () => showShare(els.shareBtn));
+  els.shareBtnMobile.addEventListener('click', () => showShare(els.shareBtnMobile));
+  els.copyBtnSettings.addEventListener('click', () => showShare(els.copyBtnSettings));
+  els.closeShareBtn.addEventListener('click', dismissShare);
+  els.sharePanel.addEventListener('click', e => { if (e.target === els.sharePanel) dismissShare(); });
   els.clearBtn.addEventListener('click', clearOperation);
   els.clearBtnTop.addEventListener('click', clearOperation);
   els.clearBtnMobile.addEventListener('click', clearOperation);
@@ -1733,6 +1755,7 @@ function bindEvents() {
       else if (els.settingsPanel.classList.contains('open')) dismissSettings();
       else if (els.breakdownPanel.classList.contains('open')) dismissBreakdown();
       else if (els.supportPanel.classList.contains('open')) dismissSupport();
+      else if (els.sharePanel.classList.contains('open')) dismissShare();
       else if (installPrompt?.classList.contains('show')) hideInstallPrompt();
     }
   });

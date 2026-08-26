@@ -125,7 +125,8 @@
           </svg>
         </button>
         <button class="icon-btn" id="shareBtn" type="button" title="Compartir cálculo"
-          aria-label="Compartir cálculo"><span class="material-symbols-rounded" aria-hidden="true">share</span></button>
+          aria-label="Compartir cálculo" aria-controls="sharePanel" aria-expanded="false"
+          aria-haspopup="dialog"><span class="material-symbols-rounded" aria-hidden="true">share</span></button>
         <button class="icon-btn" id="openSettingsBtn" type="button" title="Configuración" aria-label="Configuración"
           aria-controls="settingsPanel" aria-expanded="false"><span
             class="material-symbols-rounded" aria-hidden="true">tune</span></button>
@@ -685,6 +686,44 @@
           </p>
         </div>
       </div>
+  </section>
+
+  <section class="modal-shell share-panel" id="sharePanel" role="dialog" aria-modal="true"
+    aria-labelledby="shareTitle" aria-hidden="true">
+    <div class="modal-panel modal-panel--compact share-card-panel">
+      <div class="modal-handle sheet-grab-handle" aria-hidden="true"></div>
+      <div class="modal-header">
+        <div>
+          <h2 class="modal-title" id="shareTitle">Compartir resultado</h2>
+          <p class="modal-description subtitle">Elige cómo deseas compartir tu cálculo.</p>
+        </div>
+        <button class="modal-close icon-btn" id="closeShareBtn" type="button" title="Cerrar"
+          aria-label="Cerrar compartir resultado"><span class="material-symbols-rounded" aria-hidden="true">close</span></button>
+      </div>
+
+      <div class="modal-content share-content">
+        <div class="share-preview-wrap" id="sharePreviewWrap" aria-label="Vista previa de la imagen">
+          <canvas class="share-preview-canvas" id="sharePreviewCanvas" width="1080" height="1350" aria-hidden="true"></canvas>
+        </div>
+
+        <div class="share-actions-group">
+          <button class="bank-profile-action bank-profile-action--primary share-action-btn" id="shareImageBtn" type="button">
+            <span class="material-symbols-rounded" aria-hidden="true">share</span>
+            <span>Compartir imagen</span>
+          </button>
+          <div class="share-actions-subgrid">
+            <button class="bank-profile-action bank-profile-action--secondary share-action-btn" id="copySummaryBtn" type="button">
+              <span class="material-symbols-rounded" aria-hidden="true">content_copy</span>
+              <span>Copiar resumen</span>
+            </button>
+            <button class="bank-profile-action bank-profile-action--secondary share-action-btn" id="saveImageBtn" type="button">
+              <span class="material-symbols-rounded" aria-hidden="true">download</span>
+              <span>Guardar imagen</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   </section>
 
   <section class="modal-shell qr-panel" id="qrPanel" role="dialog" aria-modal="true"

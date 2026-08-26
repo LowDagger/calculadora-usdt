@@ -3758,3 +3758,67 @@ html[data-theme="light"] .skeleton-shimmer::after {
     max-width: 280px;
   }
 }
+
+/* Share Result Bottom Sheet */
+.share-panel {
+  z-index: 110;
+}
+
+.share-card-panel {
+  max-width: 420px;
+}
+
+.share-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding-bottom: 8px;
+}
+
+.share-preview-wrap {
+  width: 100%;
+  max-width: 260px;
+  aspect-ratio: 4 / 5;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+  background: var(--surface-soft);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.share-preview-canvas {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+.share-actions-group {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.share-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.share-actions-subgrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.share-actions-subgrid .share-action-btn {
+  padding: 0 10px;
+  font-size: 0.82rem;
+}
