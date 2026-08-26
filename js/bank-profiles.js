@@ -1,11 +1,12 @@
 export const BANK_PROFILE_STORAGE_KEY = 'calcuflowBankProfilesV1';
-export const BANK_PROFILE_STATE_VERSION = 4;
+export const BANK_PROFILE_STATE_VERSION = 5;
 export const MANUAL_PROFILE_ID = 'manual';
 export const DEFAULT_PROFILE_ID = 'bdv-virtual';
 export const MAX_CARD_FEE = 100;
 export const MAX_PERSISTED_LOGO_BYTES = 100 * 1024;
 export const DEFAULT_QUICK_AMOUNTS = Object.freeze([100, 200, 500, 1000]);
 export const MAX_QUICK_AMOUNT = 10000;
+export const MAX_CUSTOM_PROFILES = 50;
 
 export const BANK_ICONS = Object.freeze({
   bdv: Object.freeze({
@@ -127,8 +128,89 @@ export const DEFAULT_BANK_PROFILES = Object.freeze([
   })
 ]);
 
+export const MAX_TOTAL_PROFILES = DEFAULT_BANK_PROFILES.length + MAX_CUSTOM_PROFILES;
 const DEFAULT_PROFILE_MAP = new Map(DEFAULT_BANK_PROFILES.map(profile => [profile.id, profile]));
 const DEFAULT_PROFILE_IDS = new Set(DEFAULT_PROFILE_MAP.keys());
+const ORIGINAL_PRESET_IDS = new Set([
+  'bdv-fisica',
+  'bdv-virtual',
+  'bbva-provincial',
+  'banco-tesoro',
+  'bancamiga',
+  'banesco-fisica',
+  'banesco-virtual',
+  'bnc'
+]);
+
+/**
+ * Snapshot of historical default values used ONLY for one-time migrations from
+ * legacy un-versioned or v1-v4 states that lacked explicit field override metadata.
+ *
+ * In v5+, explicit `overrides: string[]` is the sole source of truth for user customizations.
+ * Future default updates in v5+ do not require expanding this historical table.
+ *
+ * Legacy Ambiguity Policy:
+ * When migrating legacy data, stored values matching any historical default (e.g. BBVA fee = 0%)
+ * are deterministically treated as untouched application defaults and upgraded to current defaults.
+ * Any stored value differing from all historical defaults is treated as an intentional user customization
+ * and preserved with an explicit override marker.
+ */
+const HISTORICAL_PRESET_DEFAULTS = Object.freeze({
+  'bdv-fisica': Object.freeze({
+    fees: [1.5],
+    names: ['Banco de Venezuela'],
+    cardTypes: ['Física'],
+    icons: ['/assets/banks/banco-de-venezuela.png']
+  }),
+  'bdv-virtual': Object.freeze({
+    fees: [2.5],
+    names: ['Banco de Venezuela'],
+    cardTypes: ['Virtual / otra modalidad'],
+    icons: ['/assets/banks/banco-de-venezuela.png']
+  }),
+  'bbva-provincial': Object.freeze({
+    fees: [0, 1.5],
+    names: ['BBVA Provincial'],
+    cardTypes: [''],
+    icons: ['/assets/banks/bbva-provisional.png']
+  }),
+  'banco-tesoro': Object.freeze({
+    fees: [2.5],
+    names: ['Banco del Tesoro'],
+    cardTypes: [''],
+    icons: ['/assets/banks/banco-del-tesoro.png']
+  }),
+  'bancamiga': Object.freeze({
+    fees: [5],
+    names: ['Bancamiga'],
+    cardTypes: [''],
+    icons: ['/assets/banks/bancamiga.png']
+  }),
+  'banesco-fisica': Object.freeze({
+    fees: [1.5],
+    names: ['Banesco'],
+    cardTypes: ['Física'],
+    icons: ['/assets/banks/banesco-provisional.png']
+  }),
+  'banesco-virtual': Object.freeze({
+    fees: [2.5],
+    names: ['Banesco'],
+    cardTypes: ['Virtual'],
+    icons: ['/assets/banks/banesco-provisional.png']
+  }),
+  'bnc': Object.freeze({
+    fees: [1.5],
+    names: ['BNC'],
+    cardTypes: [''],
+    icons: ['/assets/banks/bnc.png']
+  }),
+  'bdt': Object.freeze({
+    fees: [0, 2.5],
+    names: ['Banco Digital de los Trabajadores'],
+    cardTypes: [''],
+    icons: ['/assets/banks/bdt.png']
+  })
+});
 const CUSTOM_ID_PATTERN = /^custom-[a-z0-9-]{1,80}$/;
 const ASSET_ICON_PATTERN = /^(?:\.?\/)?assets\/[a-z0-9/_-]+\.(?:png|webp)$/i;
 const DATA_LOGO_PATTERN = /^data:image\/(png|jpeg|webp);base64,([a-z0-9+/]+={0,2})$/i;
@@ -169,11 +251,14 @@ function getFreshDefaultProfiles() {
 function isSameStoredProfile(first, second) {
   const firstQuickAmounts = sanitizeQuickAmounts(first.quickAmounts);
   const secondQuickAmounts = sanitizeQuickAmounts(second.quickAmounts);
+  const firstOverrides = sanitizeOverrides(first.overrides);
+  const secondOverrides = sanitizeOverrides(second.overrides);
   return first.id === second.id
     && first.name === second.name
     && first.cardType === second.cardType
     && first.fee === second.fee
     && first.icon === second.icon
+    && JSON.stringify(firstOverrides) === JSON.stringify(secondOverrides)
     && JSON.stringify(firstQuickAmounts) === JSON.stringify(secondQuickAmounts);
 }
 
@@ -227,6 +312,30 @@ function getSafeQuickAmounts(amounts) {
   return sanitizeQuickAmounts(amounts) || [...DEFAULT_QUICK_AMOUNTS];
 }
 
+function sanitizeOverrides(overrides) {
+  if (!Array.isArray(overrides)) return [];
+  const valid = new Set(['name', 'cardType', 'fee', 'icon']);
+  const result = [];
+  for (const field of overrides) {
+    if (typeof field === 'string' && valid.has(field) && !result.includes(field)) {
+      result.push(field);
+    }
+  }
+  return result;
+}
+
+function sanitizeRemovedPresetIds(removedIds) {
+  if (!Array.isArray(removedIds)) return [];
+  const result = [];
+  for (const id of removedIds) {
+    const cleanId = cleanText(id, 87).toLowerCase();
+    if (DEFAULT_PROFILE_IDS.has(cleanId) && !result.includes(cleanId)) {
+      result.push(cleanId);
+    }
+  }
+  return result;
+}
+
 function sanitizeStoredProfile(profile, usedIds) {
   if (!isRecord(profile)) return null;
   const id = cleanText(profile.id, 87).toLowerCase();
@@ -247,9 +356,68 @@ function sanitizeStoredProfile(profile, usedIds) {
     fee,
     icon: sanitizeProfileLogo(profile.icon)
   };
+  if (isDefaultId) {
+    const overrides = sanitizeOverrides(profile.overrides);
+    if (overrides.length) sanitized.overrides = overrides;
+  }
   const quickAmounts = sanitizeQuickAmounts(profile.quickAmounts);
   if (quickAmounts) sanitized.quickAmounts = quickAmounts;
   return sanitized;
+}
+
+function migratePresetFromHistory(storedProfile) {
+  const preset = DEFAULT_PROFILE_MAP.get(storedProfile.id);
+  if (!preset) return null;
+  const history = HISTORICAL_PRESET_DEFAULTS[storedProfile.id] || {
+    fees: [preset.defaultFee],
+    names: [preset.name],
+    cardTypes: [preset.cardType],
+    icons: [getDefaultIcon(preset)]
+  };
+
+  const overrides = [];
+
+  let fee = sanitizeCardFee(storedProfile.fee);
+  if (fee === null) {
+    fee = preset.defaultFee;
+  } else if (!history.fees.includes(fee)) {
+    overrides.push('fee');
+  } else {
+    fee = preset.defaultFee;
+  }
+
+  let name = cleanText(storedProfile.name, 64);
+  if (!name || history.names.includes(name)) {
+    name = preset.name;
+  } else {
+    overrides.push('name');
+  }
+
+  let cardType = cleanText(storedProfile.cardType, 40);
+  if (history.cardTypes.includes(cardType)) {
+    cardType = preset.cardType;
+  } else {
+    overrides.push('cardType');
+  }
+
+  let icon = sanitizeProfileLogo(storedProfile.icon);
+  if (!icon || history.icons.includes(icon)) {
+    icon = getDefaultIcon(preset);
+  } else {
+    overrides.push('icon');
+  }
+
+  const migrated = {
+    id: storedProfile.id,
+    name,
+    cardType,
+    fee,
+    icon
+  };
+  if (overrides.length) migrated.overrides = overrides;
+  const quickAmounts = sanitizeQuickAmounts(storedProfile.quickAmounts);
+  if (quickAmounts) migrated.quickAmounts = quickAmounts;
+  return migrated;
 }
 
 function migrateVersionOneState(source, fallbackSelectedId) {
@@ -258,12 +426,21 @@ function migrateVersionOneState(source, fallbackSelectedId) {
 
   for (const profile of profiles) {
     const fee = sanitizeCardFee(presetFees[profile.id]);
-    if (fee !== null) profile.fee = fee;
+    const defaultPreset = DEFAULT_PROFILE_MAP.get(profile.id);
+    const history = HISTORICAL_PRESET_DEFAULTS[profile.id] || { fees: [defaultPreset.defaultFee] };
+    if (fee !== null) {
+      if (!history.fees.includes(fee)) {
+        profile.fee = fee;
+        profile.overrides = ['fee'];
+      } else {
+        profile.fee = defaultPreset.defaultFee;
+      }
+    }
   }
 
   const usedIds = new Set(DEFAULT_PROFILE_IDS);
   const customProfiles = Array.isArray(source.customProfiles) ? source.customProfiles : [];
-  for (const profile of customProfiles.slice(0, 50)) {
+  for (const profile of customProfiles.slice(0, MAX_CUSTOM_PROFILES)) {
     const sanitized = sanitizeStoredProfile(profile, usedIds);
     if (sanitized && !DEFAULT_PROFILE_IDS.has(sanitized.id)) profiles.push(sanitized);
   }
@@ -277,18 +454,47 @@ function migrateVersionOneState(source, fallbackSelectedId) {
     version: BANK_PROFILE_STATE_VERSION,
     selectedId: validIds.has(requestedSelectedId) ? requestedSelectedId : safeFallback,
     quickAmounts: [...DEFAULT_QUICK_AMOUNTS],
+    removedPresetIds: [],
     profiles
   };
 }
 
-function migrateVersionTwoState(source, fallbackSelectedId) {
+function migrateVersionFourState(source, fallbackSelectedId) {
   const usedIds = new Set();
-  const profiles = Array.isArray(source.profiles)
-    ? source.profiles
-      .slice(0, 58)
-      .map(profile => sanitizeStoredProfile(profile, usedIds))
-      .filter(Boolean)
-    : [];
+  const sourceProfiles = Array.isArray(source.profiles) ? source.profiles : [];
+  const storedIds = new Set(sourceProfiles.map(p => cleanText(p?.id, 87).toLowerCase()).filter(Boolean));
+
+  const removedPresetIds = [];
+  if (sourceProfiles.length > 0) {
+    for (const originalId of ORIGINAL_PRESET_IDS) {
+      if (!storedIds.has(originalId)) {
+        removedPresetIds.push(originalId);
+      }
+    }
+  }
+
+  const profiles = [];
+  for (const rawProfile of sourceProfiles.slice(0, MAX_TOTAL_PROFILES)) {
+    if (!isRecord(rawProfile)) continue;
+    const id = cleanText(rawProfile.id, 87).toLowerCase();
+    if (DEFAULT_PROFILE_IDS.has(id)) {
+      if (usedIds.has(id)) continue;
+      usedIds.add(id);
+      const migratedPreset = migratePresetFromHistory(rawProfile);
+      if (migratedPreset) profiles.push(migratedPreset);
+    } else if (CUSTOM_ID_PATTERN.test(id)) {
+      const sanitizedCustom = sanitizeStoredProfile(rawProfile, usedIds);
+      if (sanitizedCustom) profiles.push(sanitizedCustom);
+    }
+  }
+
+  for (const preset of DEFAULT_BANK_PROFILES) {
+    if (!usedIds.has(preset.id) && !removedPresetIds.includes(preset.id)) {
+      usedIds.add(preset.id);
+      profiles.push(createDefaultStoredProfile(preset));
+    }
+  }
+
   const safeProfiles = profiles.length ? profiles : getFreshDefaultProfiles();
   const validIds = new Set(safeProfiles.map(profile => profile.id));
   validIds.add(MANUAL_PROFILE_ID);
@@ -300,35 +506,127 @@ function migrateVersionTwoState(source, fallbackSelectedId) {
   return {
     version: BANK_PROFILE_STATE_VERSION,
     selectedId: validIds.has(requestedSelectedId) ? requestedSelectedId : safeFallback,
-    quickAmounts: [...DEFAULT_QUICK_AMOUNTS],
+    quickAmounts: getSafeQuickAmounts(source.quickAmounts),
+    removedPresetIds,
     profiles: safeProfiles
   };
 }
 
+function migrateVersionTwoState(source, fallbackSelectedId) {
+  const v4Result = migrateVersionFourState(source, fallbackSelectedId);
+  return {
+    ...v4Result,
+    quickAmounts: [...DEFAULT_QUICK_AMOUNTS]
+  };
+}
+
 function migrateVersionThreeState(source, fallbackSelectedId) {
-  const usedIds = new Set();
-  const profiles = Array.isArray(source.profiles)
-    ? source.profiles
-      .slice(0, 58)
-      .map(profile => sanitizeStoredProfile(profile, usedIds))
-      .filter(Boolean)
-    : [];
-  const safeProfiles = profiles.length ? profiles : getFreshDefaultProfiles();
-  const validIds = new Set(safeProfiles.map(profile => profile.id));
-  validIds.add(MANUAL_PROFILE_ID);
-  const requestedSelectedId = cleanText(source.selectedId, 87).toLowerCase();
-  const safeFallback = validIds.has(fallbackSelectedId)
-    ? fallbackSelectedId
-    : safeProfiles[0]?.id || DEFAULT_PROFILE_ID;
   const legacyDefaults = [100, 500, 1000];
   const storedQuickAmounts = getSafeQuickAmounts(source.quickAmounts);
   const usesLegacyDefaults = storedQuickAmounts.length === legacyDefaults.length
     && storedQuickAmounts.every((amount, index) => amount === legacyDefaults[index]);
 
+  const v4Result = migrateVersionFourState(source, fallbackSelectedId);
+  return {
+    ...v4Result,
+    quickAmounts: usesLegacyDefaults ? [...DEFAULT_QUICK_AMOUNTS] : storedQuickAmounts
+  };
+}
+
+function reconcileVersionFiveState(source, fallbackSelectedId) {
+  const usedIds = new Set();
+  const removedPresetIds = sanitizeRemovedPresetIds(source.removedPresetIds);
+  const removedSet = new Set(removedPresetIds);
+  const sourceProfiles = Array.isArray(source.profiles) ? source.profiles.slice(0, MAX_TOTAL_PROFILES) : [];
+  const profiles = [];
+
+  for (const rawProfile of sourceProfiles) {
+    if (!isRecord(rawProfile)) continue;
+    const id = cleanText(rawProfile.id, 87).toLowerCase();
+
+    if (DEFAULT_PROFILE_IDS.has(id)) {
+      if (usedIds.has(id) || removedSet.has(id)) continue;
+      usedIds.add(id);
+      const defaultPreset = DEFAULT_PROFILE_MAP.get(id);
+      const overrides = new Set(sanitizeOverrides(rawProfile.overrides));
+
+      let name = defaultPreset.name;
+      if (overrides.has('name')) {
+        const customName = cleanText(rawProfile.name, 64);
+        if (customName && customName !== defaultPreset.name) {
+          name = customName;
+        } else {
+          overrides.delete('name');
+        }
+      }
+
+      let cardType = defaultPreset.cardType;
+      if (overrides.has('cardType')) {
+        const customCardType = cleanText(rawProfile.cardType, 40);
+        if (customCardType !== defaultPreset.cardType) {
+          cardType = customCardType;
+        } else {
+          overrides.delete('cardType');
+        }
+      }
+
+      let fee = defaultPreset.defaultFee;
+      if (overrides.has('fee')) {
+        const customFee = sanitizeCardFee(rawProfile.fee);
+        if (customFee !== null && customFee !== defaultPreset.defaultFee) {
+          fee = customFee;
+        } else {
+          overrides.delete('fee');
+        }
+      }
+
+      let icon = getDefaultIcon(defaultPreset);
+      if (overrides.has('icon')) {
+        const customIcon = sanitizeProfileLogo(rawProfile.icon);
+        if (customIcon !== getDefaultIcon(defaultPreset)) {
+          icon = customIcon;
+        } else {
+          overrides.delete('icon');
+        }
+      }
+
+      const reconciledPreset = {
+        id,
+        name,
+        cardType,
+        fee,
+        icon
+      };
+      if (overrides.size > 0) reconciledPreset.overrides = [...overrides];
+      const quickAmounts = sanitizeQuickAmounts(rawProfile.quickAmounts);
+      if (quickAmounts) reconciledPreset.quickAmounts = quickAmounts;
+      profiles.push(reconciledPreset);
+    } else if (CUSTOM_ID_PATTERN.test(id)) {
+      const sanitizedCustom = sanitizeStoredProfile(rawProfile, usedIds);
+      if (sanitizedCustom) profiles.push(sanitizedCustom);
+    }
+  }
+
+  for (const preset of DEFAULT_BANK_PROFILES) {
+    if (!usedIds.has(preset.id) && !removedSet.has(preset.id)) {
+      usedIds.add(preset.id);
+      profiles.push(createDefaultStoredProfile(preset));
+    }
+  }
+
+  const safeProfiles = profiles.length ? profiles : getFreshDefaultProfiles();
+  const validIds = new Set(safeProfiles.map(profile => profile.id));
+  validIds.add(MANUAL_PROFILE_ID);
+  const requestedSelectedId = cleanText(source.selectedId, 87).toLowerCase();
+  const safeFallback = validIds.has(fallbackSelectedId)
+    ? fallbackSelectedId
+    : safeProfiles[0]?.id || DEFAULT_PROFILE_ID;
+
   return {
     version: BANK_PROFILE_STATE_VERSION,
     selectedId: validIds.has(requestedSelectedId) ? requestedSelectedId : safeFallback,
-    quickAmounts: usesLegacyDefaults ? [...DEFAULT_QUICK_AMOUNTS] : storedQuickAmounts,
+    quickAmounts: getSafeQuickAmounts(source.quickAmounts),
+    removedPresetIds,
     profiles: safeProfiles
   };
 }
@@ -342,6 +640,7 @@ export function createEmptyBankProfileState(selectedId = DEFAULT_PROFILE_ID) {
     version: BANK_PROFILE_STATE_VERSION,
     selectedId: validSelectedId,
     quickAmounts: [...DEFAULT_QUICK_AMOUNTS],
+    removedPresetIds: [],
     profiles
   };
 }
@@ -354,29 +653,14 @@ export function sanitizeBankProfileState(value, fallbackSelectedId = DEFAULT_PRO
   if (source.version === 3 && Array.isArray(source.profiles)) {
     return migrateVersionThreeState(source, fallbackSelectedId);
   }
+  if (source.version === 4 && Array.isArray(source.profiles)) {
+    return migrateVersionFourState(source, fallbackSelectedId);
+  }
   if (source.version !== BANK_PROFILE_STATE_VERSION || !Array.isArray(source.profiles)) {
     return migrateVersionOneState(source, fallbackSelectedId);
   }
 
-  const usedIds = new Set();
-  const profiles = source.profiles
-    .slice(0, 58)
-    .map(profile => sanitizeStoredProfile(profile, usedIds))
-    .filter(Boolean);
-  const safeProfiles = profiles.length ? profiles : getFreshDefaultProfiles();
-  const validIds = new Set(safeProfiles.map(profile => profile.id));
-  validIds.add(MANUAL_PROFILE_ID);
-  const requestedSelectedId = cleanText(source.selectedId, 87).toLowerCase();
-  const safeFallback = validIds.has(fallbackSelectedId)
-    ? fallbackSelectedId
-    : safeProfiles[0]?.id || DEFAULT_PROFILE_ID;
-
-  return {
-    version: BANK_PROFILE_STATE_VERSION,
-    selectedId: validIds.has(requestedSelectedId) ? requestedSelectedId : safeFallback,
-    quickAmounts: getSafeQuickAmounts(source.quickAmounts),
-    profiles: safeProfiles
-  };
+  return reconcileVersionFiveState(source, fallbackSelectedId);
 }
 
 function getIconPresentation(profile) {
@@ -530,8 +814,32 @@ export function updateBankProfile(state, profile) {
   const safeState = sanitizeBankProfileState(state);
   const existingIndex = safeState.profiles.findIndex(item => item.id === profile?.id);
   if (existingIndex < 0) return safeState;
+
+  let profileToSanitize = { ...profile };
+  const isDefaultId = DEFAULT_PROFILE_IDS.has(profile?.id);
+
+  if (isDefaultId) {
+    const defaultPreset = DEFAULT_PROFILE_MAP.get(profile.id);
+    const overrides = new Set();
+
+    const name = cleanText(profile.name, 64);
+    if (name && name !== defaultPreset.name) overrides.add('name');
+
+    const cardType = cleanText(profile.cardType, 40);
+    if (cardType !== defaultPreset.cardType) overrides.add('cardType');
+
+    const fee = sanitizeCardFee(profile.fee);
+    if (fee !== null && fee !== defaultPreset.defaultFee) overrides.add('fee');
+
+    const icon = sanitizeProfileLogo(profile.icon);
+    if (icon !== getDefaultIcon(defaultPreset)) overrides.add('icon');
+
+    if (overrides.size > 0) profileToSanitize.overrides = [...overrides];
+    else delete profileToSanitize.overrides;
+  }
+
   const usedIds = new Set(safeState.profiles.filter((_, index) => index !== existingIndex).map(item => item.id));
-  const sanitized = sanitizeStoredProfile(profile, usedIds);
+  const sanitized = sanitizeStoredProfile(profileToSanitize, usedIds);
   if (!sanitized) return safeState;
   const profiles = [...safeState.profiles];
   profiles[existingIndex] = sanitized;
@@ -548,8 +856,24 @@ export function updatePresetFee(state, profileId, feeValue) {
 export function restoreBankProfile(state, profileId) {
   const safeState = sanitizeBankProfileState(state);
   const preset = DEFAULT_PROFILE_MAP.get(profileId);
-  if (!preset || !safeState.profiles.some(profile => profile.id === profileId)) return safeState;
-  return updateBankProfile(safeState, createDefaultStoredProfile(preset));
+  if (!preset) return safeState;
+
+  const restored = createDefaultStoredProfile(preset);
+  const existingIndex = safeState.profiles.findIndex(profile => profile.id === profileId);
+  const removedPresetIds = safeState.removedPresetIds.filter(id => id !== profileId);
+  let profiles = [...safeState.profiles];
+
+  if (existingIndex >= 0) {
+    profiles[existingIndex] = restored;
+  } else {
+    profiles.push(restored);
+  }
+
+  return {
+    ...safeState,
+    removedPresetIds,
+    profiles
+  };
 }
 
 export const restorePresetFee = restoreBankProfile;
@@ -591,9 +915,14 @@ export function removeBankProfile(state, profileId) {
       ? DEFAULT_PROFILE_ID
       : profiles[0].id;
   }
+  const removedPresetIds = [...safeState.removedPresetIds];
+  if (DEFAULT_PROFILE_IDS.has(profileId) && !removedPresetIds.includes(profileId)) {
+    removedPresetIds.push(profileId);
+  }
   return {
     ...safeState,
     selectedId,
+    removedPresetIds,
     profiles
   };
 }
@@ -631,6 +960,7 @@ export function readBankProfileState(storage, { hasLegacyCardFee = false } = {})
       && parsed.version !== 1
       && parsed.version !== 2
       && parsed.version !== 3
+      && parsed.version !== 4
       && parsed.version !== BANK_PROFILE_STATE_VERSION;
     const hasUnusableProfileCollection = parsed?.version === BANK_PROFILE_STATE_VERSION
       && Array.isArray(parsed.profiles)

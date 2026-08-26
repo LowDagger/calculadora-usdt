@@ -119,3 +119,18 @@ test('keeps editor data visible when local persistence fails', () => {
   assert.match(app, /persistBankProfiles\(nextState, \{ preserveEditor: true \}\)/);
   assert.match(app, /No hay espacio suficiente para guardar el perfil\. El formulario se conserva\./);
 });
+
+test('skips personalized quick-amount validation when profile uses general amounts', () => {
+  assert.match(
+    app,
+    /function applyQuickAmountEditorChanges\(nextState, profileId\) \{\s*if \(bankProfileEls\.quickUseGeneral\.checked\) \{\s*return useGeneralQuickAmountsForProfile\(nextState, profileId\);\s*\}/
+  );
+  assert.match(
+    app,
+    /const createdProfile = nextState\.profiles\.find\(profile => !previousIds\.has\(profile\.id\)\);[\s\S]*?nextState = applyQuickAmountEditorChanges\(nextState, createdProfile\.id\);/
+  );
+  assert.doesNotMatch(
+    app,
+    /applyQuickAmountEditorChanges\(nextState, MANUAL_PROFILE_ID\)/
+  );
+});

@@ -600,12 +600,8 @@ function syncQuickAmountEditor() {
 }
 
 function applyQuickAmountEditorChanges(nextState, profileId) {
-  if (bankProfileEls.quickUseGeneral.checked || profileId === MANUAL_PROFILE_ID) {
-    const amounts = profileId === MANUAL_PROFILE_ID ? collectQuickAmountInputs() : getGeneralQuickAmounts(nextState);
-    if (!amounts) return null;
-    return profileId === MANUAL_PROFILE_ID
-      ? updateGeneralQuickAmounts(nextState, amounts)
-      : useGeneralQuickAmountsForProfile(nextState, profileId);
+  if (bankProfileEls.quickUseGeneral.checked) {
+    return useGeneralQuickAmountsForProfile(nextState, profileId);
   }
   const amounts = collectQuickAmountInputs();
   if (!amounts) return null;
@@ -745,8 +741,8 @@ function showBankProfileEditor(profileId, { manualMode = 'manual' } = {}) {
   const quickSource = getEditingProfileQuickSource(profile);
   bankProfileEls.quickUseGeneral.checked = quickSource === 'general';
   bankProfileEls.quickUseCustom.checked = quickSource === 'custom';
-  bankProfileEls.quickUseCustom.disabled = isManual;
-  bankProfileEls.quickUseGeneral.nextElementSibling.textContent = isManual ? 'Montos generales' : 'Usar montos generales';
+  bankProfileEls.quickUseCustom.disabled = isManual && !isCustomOnly;
+  bankProfileEls.quickUseGeneral.nextElementSibling.textContent = isManual && !isCustomOnly ? 'Montos generales' : 'Usar montos generales';
   updateQuickAmountSummary(profile);
   syncQuickAmountEditor();
   setQuickAmountDisclosure(expandQuickAmountsOnOpen);
@@ -881,13 +877,13 @@ function saveManualProfile() {
     fee,
     icon: editingBankProfileLogo
   }, requestedId);
-  nextState = applyQuickAmountEditorChanges(nextState, MANUAL_PROFILE_ID);
-  if (!nextState) return;
   const createdProfile = nextState.profiles.find(profile => !previousIds.has(profile.id));
   if (!createdProfile) {
     setBankProfileFormError('No se pudo guardar el perfil. Revisa los datos.');
     return;
   }
+  nextState = applyQuickAmountEditorChanges(nextState, createdProfile.id);
+  if (!nextState) return;
   if (!persistBankProfiles(nextState, { preserveEditor: true })) return;
   applySelectedBankProfile(createdProfile.id);
 }
