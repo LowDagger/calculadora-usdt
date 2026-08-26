@@ -1962,9 +1962,16 @@ function setupKeyboardUX() {
   }, { passive: true });
 }
 
-// --- PWA Install Prompt & iOS detection ---
+// --- PWA Install Prompt & Standalone Detection ---
 let deferredPrompt = null;
 let installPromptFocusOrigin = null;
+
+function isRunningStandalone() {
+  return Boolean(
+    window.navigator.standalone
+    || window.matchMedia('(display-mode: standalone)').matches
+  );
+}
 
 function revealInstallPrompt(promptEl, focusTarget) {
   installPromptFocusOrigin = document.activeElement;
@@ -1972,39 +1979,6 @@ function revealInstallPrompt(promptEl, focusTarget) {
   promptEl.setAttribute('aria-hidden', 'false');
   lockBodyScroll();
   requestAnimationFrame(() => focusTarget?.focus());
-}
-
-function shouldShowInstallPrompt() {
-  const dismissedTime = localStorage.getItem('installPromptDismissed');
-  if (dismissedTime) {
-    const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
-    if (Date.now() - parseInt(dismissedTime, 10) < thirtyDaysMs) {
-      return false;
-    }
-  }
-  return true;
-}
-
-function showAndroidInstallPrompt() {
-  const promptEl = document.getElementById('installPrompt');
-  if (!promptEl) return;
-  document.getElementById('installPromptTitle').textContent = 'Instalar CalcuFlow';
-  document.getElementById('installPromptDesc').textContent = 'Agrega CalcuFlow a tu pantalla de inicio para un acceso más rápido.';
-  const dismissBtn = document.getElementById('installDismissBtn');
-  if (dismissBtn) dismissBtn.textContent = 'Ahora no';
-  revealInstallPrompt(promptEl, document.getElementById('installConfirmBtn'));
-}
-
-function showIOSInstallPrompt() {
-  const promptEl = document.getElementById('installPrompt');
-  if (!promptEl) return;
-  document.getElementById('installPromptTitle').textContent = 'Instalar en iOS';
-  document.getElementById('installPromptDesc').innerHTML = 'Para instalar la app, toca el botón de compartir <span class="ios-share-icon"></span> y selecciona <strong>"Agregar a inicio"</strong>.';
-  const dismissBtn = document.getElementById('installDismissBtn');
-  if (dismissBtn) dismissBtn.textContent = 'Entendido';
-  const confirmBtn = document.getElementById('installConfirmBtn');
-  if (confirmBtn) confirmBtn.style.display = 'none';
-  revealInstallPrompt(promptEl, dismissBtn);
 }
 
 function hideInstallPrompt() {
@@ -2020,47 +1994,138 @@ function hideInstallPrompt() {
   }
 }
 
-function initInstallPrompt() {
-  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-  const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
-  const isStandalone = window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches;
-  const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-  
-  if (!isMobile || isStandalone) return;
-  
-  if (isIOS && isSafari) {
-    if (shouldShowInstallPrompt()) {
-      showIOSInstallPrompt();
-    }
+function showIOSInstallPrompt() {
+  const promptEl = document.getElementById('installPrompt');
+  if (!promptEl) return;
+  const titleEl = document.getElementById('installPromptTitle');
+  const descEl = document.getElementById('installPromptDesc');
+  const dismissBtn = document.getElementById('installDismissBtn');
+  const confirmBtn = document.getElementById('installConfirmBtn');
+
+  if (titleEl) titleEl.textContent = 'Instalar CalcuFlow';
+  if (descEl) {
+    descEl.innerHTML = '1. Toca Compartir <span class="ios-share-icon" aria-hidden="true"></span>.<br>'
+      + '2. Selecciona <strong>"Agregar a inicio"</strong>.<br>'
+      + '3. Activa "Abrir como app web" si aparece.<br>'
+      + '4. Toca <strong>"Agregar"</strong>.';
   }
-  
+  if (dismissBtn) {
+    dismissBtn.textContent = 'Entendido';
+    dismissBtn.hidden = false;
+  }
+  if (confirmBtn) {
+    confirmBtn.hidden = true;
+  }
+  revealInstallPrompt(promptEl, dismissBtn);
+}
+
+function showAndroidFallbackPrompt() {
+  const promptEl = document.getElementById('installPrompt');
+  if (!promptEl) return;
+  const titleEl = document.getElementById('installPromptTitle');
+  const descEl = document.getElementById('installPromptDesc');
+  const dismissBtn = document.getElementById('installDismissBtn');
+  const confirmBtn = document.getElementById('installConfirmBtn');
+
+  if (titleEl) titleEl.textContent = 'Instalar CalcuFlow';
+  if (descEl) {
+    descEl.innerHTML = 'Abre el menú de tu navegador y busca <strong>"Instalar aplicación"</strong> o <strong>"Agregar a pantalla de inicio"</strong>.';
+  }
+  if (dismissBtn) {
+    dismissBtn.textContent = 'Entendido';
+    dismissBtn.hidden = false;
+  }
+  if (confirmBtn) {
+    confirmBtn.hidden = true;
+  }
+  revealInstallPrompt(promptEl, dismissBtn);
+}
+
+async function handleInstallAction() {
+  if (isRunningStandalone()) return;
+
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+  if (isIOS) {
+    showIOSInstallPrompt();
+    return;
+  }
+
+  if (deferredPrompt) {
+    const promptEvent = deferredPrompt;
+    deferredPrompt = null;
+    updateInstallUIVisibility();
+    try {
+      promptEvent.prompt();
+      await promptEvent.userChoice;
+    } catch {
+      // Ignore cancellation/errors
+    }
+    return;
+  }
+
+  showAndroidFallbackPrompt();
+}
+
+function updateInstallUIVisibility() {
+  const isStandalone = isRunningStandalone();
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+  const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  const canInstall = !isStandalone && (isMobile || isIOS || Boolean(deferredPrompt));
+
+  const headerBtn = document.getElementById('installHeaderBtn');
+  const communityBtn = document.getElementById('openInstallCommunityBtn');
+
+  if (headerBtn) headerBtn.hidden = !canInstall;
+  if (communityBtn) communityBtn.hidden = !canInstall;
+}
+
+function initInstallPrompt() {
+  updateInstallUIVisibility();
+
+  const standaloneMedia = window.matchMedia('(display-mode: standalone)');
+  if (typeof standaloneMedia.addEventListener === 'function') {
+    standaloneMedia.addEventListener('change', updateInstallUIVisibility);
+  } else if (typeof standaloneMedia.addListener === 'function') {
+    standaloneMedia.addListener(updateInstallUIVisibility);
+  }
+
   window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault();
     deferredPrompt = e;
-    if (shouldShowInstallPrompt()) {
-      showAndroidInstallPrompt();
-    }
+    updateInstallUIVisibility();
   });
-  
+
+  window.addEventListener('appinstalled', () => {
+    deferredPrompt = null;
+    hideInstallPrompt();
+    updateInstallUIVisibility();
+  });
+
+  const headerBtn = document.getElementById('installHeaderBtn');
+  if (headerBtn) {
+    headerBtn.addEventListener('click', () => {
+      handleInstallAction();
+    });
+  }
+
+  const communityBtn = document.getElementById('openInstallCommunityBtn');
+  if (communityBtn) {
+    communityBtn.addEventListener('click', () => {
+      handleInstallAction();
+    });
+  }
+
   const dismissBtn = document.getElementById('installDismissBtn');
   if (dismissBtn) {
     dismissBtn.addEventListener('click', () => {
       hideInstallPrompt();
-      localStorage.setItem('installPromptDismissed', Date.now().toString());
     });
   }
-  
+
   const confirmBtn = document.getElementById('installConfirmBtn');
   if (confirmBtn) {
-    confirmBtn.addEventListener('click', async () => {
+    confirmBtn.addEventListener('click', () => {
       hideInstallPrompt();
-      if (!deferredPrompt) return;
-      deferredPrompt.prompt();
-      const { outcome } = await deferredPrompt.userChoice;
-      if (outcome !== 'accepted') {
-        localStorage.setItem('installPromptDismissed', Date.now().toString());
-      }
-      deferredPrompt = null;
     });
   }
 }
