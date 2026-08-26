@@ -1153,14 +1153,25 @@ function saveState(show = true) {
 
 function loadState() {
   const data = readState();
+  let stateMigrated = false;
   if (Object.prototype.hasOwnProperty.call(data, 'usdToBuy')) els.usdToBuy.value = data.usdToBuy;
   if (Object.prototype.hasOwnProperty.call(data, 'bankMargin')) els.bankMargin.value = data.bankMargin;
   if (Object.prototype.hasOwnProperty.call(data, 'bcvRate')) els.bcvRate.value = data.bcvRate;
   if (Object.prototype.hasOwnProperty.call(data, 'p2pRate')) els.p2pRate.value = data.p2pRate;
   if (Object.prototype.hasOwnProperty.call(data, 'cardFee')) els.cardFee.value = data.cardFee;
-  if (Object.prototype.hasOwnProperty.call(data, 'bpayFee')) els.bpayFee.value = data.bpayFee;
+  if (Object.prototype.hasOwnProperty.call(data, 'bpayFee')) {
+    if (data.bpayFee === '4.1' || data.bpayFee === 4.1 || data.bpayFee === '4,1') {
+      els.bpayFee.value = '3.6';
+      stateMigrated = true;
+    } else {
+      els.bpayFee.value = data.bpayFee;
+    }
+  }
   if (typeof data.autoRates === 'boolean') els.autoRates.checked = data.autoRates;
   ratesController.hydrate(data);
+  if (stateMigrated) {
+    saveState(false);
+  }
   return data;
 }
 

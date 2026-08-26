@@ -77,7 +77,7 @@ test('marks result-card symbols as decorative and bumps the PWA cache', () => {
   assert.match(ui, /btn\.setAttribute\('aria-pressed', String\(isActive\)\)/);
   assert.match(settingsController, /btn\.setAttribute\('aria-pressed', String\(isActive\)\)/);
   assert.match(html, /data-theme-val="system" aria-pressed="true"/);
-  assert.match(serviceWorker, /const APP_VERSION\s+= '61';/);
+  assert.match(serviceWorker, /const APP_VERSION\s+= '62';/);
   assert.match(serviceWorker, /'\/js\/bcv-rates\.js'/);
   for (const moduleName of ['modal-controller', 'rates-controller', 'settings-controller', 'share']) {
     assert.match(serviceWorker, new RegExp(`'/js/${moduleName}\\.js'`));
@@ -260,4 +260,10 @@ test('rounds BCV only in the visible rate card', () => {
   assert.match(ui, /els\.bcvView\.textContent\s+= bcv\s+\? money\(bcv, 2\)/);
   assert.match(ui, /els\.bankView\.textContent = bank \? money\(bank, 2\)/);
   assert.match(ui, /els\.p2pView\.textContent\s+= p2p\s+\? money\(p2p, 2\)/);
+});
+
+test('migrates legacy 4.1% BPay fee to 3.6% automatically on load', () => {
+  assert.match(app, /if\s*\(data\.bpayFee === '4\.1' \|\| data\.bpayFee === 4\.1 \|\| data\.bpayFee === '4,1'\)/);
+  assert.match(app, /els\.bpayFee\.value = '3\.6'/);
+  assert.match(app, /if\s*\(stateMigrated\)\s*\{\s*saveState\(false\);\s*\}/);
 });
