@@ -1168,7 +1168,7 @@ function resetDefaults() {
   triggerHaptic('warning');
   els.usdToBuy.value = '500';
   els.bankMargin.value = '0.5';
-  els.bpayFee.value = '4.1';
+  els.bpayFee.value = '3.6';
   els.autoRates.checked = true;
   temporaryCardFee = null;
   manualFeeConfigured = false;
