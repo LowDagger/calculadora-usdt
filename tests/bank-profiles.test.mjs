@@ -40,7 +40,7 @@ import {
 import { calculateValues } from '../js/calculator.js';
 
 const EXPECTED_PRESETS = {
-  'bdv-fisica': 1.5,
+  'bdv-fisica': 2.5,
   'bdv-virtual': 2.5,
   'bbva-provincial': 1.5,
   'banco-tesoro': 2.5,
@@ -105,7 +105,7 @@ test('includes every immutable initial bank profile and reported percentage', ()
   assert.equal(bdtProfile.icon, '/assets/banks/bdt.png');
   assert.equal(bdtProfile.status, 'Comisión reportada');
 
-  assert.equal(getBankProfile({}, 'bdv-virtual').status, 'Pendiente de confirmar');
+  assert.equal(getBankProfile({}, 'bdv-virtual').status, 'Comisión reportada');
   assert.ok(profiles.every(profile => profile.icon?.startsWith('/assets/banks/')));
   assert.ok(profiles.every(profile => profile.iconScale > 0 && profile.iconScale <= 1));
   assert.equal(Object.isFrozen(DEFAULT_BANK_PROFILES), true);
@@ -159,7 +159,7 @@ test('edits every field of a default profile without changing its stable id and 
   const restored = getBankProfile(state, 'bdv-fisica');
   assert.equal(restored.name, 'Banco de Venezuela');
   assert.equal(restored.cardType, 'Física');
-  assert.equal(restored.fee, 1.5);
+  assert.equal(restored.fee, 2.5);
   assert.equal(restored.icon, BANK_ICONS.bdv.src);
   assert.equal(restored.isModified, false);
 });
@@ -884,7 +884,7 @@ test('applies a temporary fee without changing the selected profile or its saved
   assert.equal(temporary.id, 'bdv-fisica');
   assert.equal(temporary.fee, 2.2);
   assert.equal(temporary.status, 'Temporal');
-  assert.equal(saved.fee, 1.5);
+  assert.equal(saved.fee, 2.5);
   assert.deepEqual(state, before);
 });
 

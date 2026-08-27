@@ -1,7 +1,7 @@
 export const BANK_PROFILE_STORAGE_KEY = 'calcuflowBankProfilesV1';
 export const BANK_PROFILE_STATE_VERSION = 5;
 export const MANUAL_PROFILE_ID = 'manual';
-export const DEFAULT_PROFILE_ID = 'bdv-virtual';
+export const DEFAULT_PROFILE_ID = 'bdv-fisica';
 export const MAX_CARD_FEE = 100;
 export const MAX_PERSISTED_LOGO_BYTES = 100 * 1024;
 export const DEFAULT_QUICK_AMOUNTS = Object.freeze([100, 200, 500, 1000]);
@@ -49,7 +49,7 @@ export const DEFAULT_BANK_PROFILES = Object.freeze([
     id: 'bdv-fisica',
     name: 'Banco de Venezuela',
     cardType: 'Física',
-    defaultFee: 1.5,
+    defaultFee: 2.5,
     initials: 'BDV',
     iconKey: 'bdv',
     defaultStatus: 'Comisión reportada'
@@ -61,7 +61,7 @@ export const DEFAULT_BANK_PROFILES = Object.freeze([
     defaultFee: 2.5,
     initials: 'BDV',
     iconKey: 'bdv',
-    defaultStatus: 'Pendiente de confirmar'
+    defaultStatus: 'Comisión reportada'
   }),
   Object.freeze({
     id: 'bbva-provincial',
@@ -157,7 +157,7 @@ const ORIGINAL_PRESET_IDS = new Set([
  */
 const HISTORICAL_PRESET_DEFAULTS = Object.freeze({
   'bdv-fisica': Object.freeze({
-    fees: [1.5],
+    fees: [1.5, 2.5],
     names: ['Banco de Venezuela'],
     cardTypes: ['Física'],
     icons: ['/assets/banks/banco-de-venezuela.png']

@@ -5,7 +5,7 @@ export const els = {
   usdToBuy: $('usdToBuy'), bankMargin: $('bankMargin'), bcvRate: $('bcvRate'), p2pRate: $('p2pRate'),
   cardFee: $('cardFee'), bpayFee: $('bpayFee'), autoRates: $('autoRates'), bcvView: $('bcvView'), bankView: $('bankView'), p2pView: $('p2pView'), bankMarginView: $('bankMarginView'),
   lastUpdate: $('lastUpdate'), statusBox: $('statusBox'), opStatus: $('opStatus'), vesNeeded: $('vesNeeded'), vesSub: $('vesSub'),
-  profitCard: $('profitCard'), profitUsdtBig: $('profitUsdtBig'), profitVes: $('profitVes'), roiMeta: $('roiMeta'), bpayRecommended: $('bpayRecommended'), usdtFinal: $('usdtFinal'), feesSub: $('feesSub'),
+  profitCard: $('profitCard'), profitUsdtBig: $('profitUsdtBig'), profitVes: $('profitVes'), roiMeta: $('roiMeta'), bpayRecommended: $('bpayRecommended'), bpaySub: $('bpaySub'), usdtFinal: $('usdtFinal'), feesSub: $('feesSub'),
   flowUsd: $('flowUsd'), flowVes: $('flowVes'), flowCard: $('flowCard'), flowBpay: $('flowBpay'),
   flowReturn: $('flowReturn'), flowAfterCard: $('flowAfterCard'), flowBankDeduction: $('flowBankDeduction'), flowNetToBinance: $('flowNetToBinance'), flowUsdtToSell: $('flowUsdtToSell'), flowUsdtFinal: $('flowUsdtFinal'), flowProfit: $('flowProfit'), flowProfitSub: $('flowProfitSub'), formulaText: $('formulaText'), loadRatesBtn: $('loadRatesBtn'), shareBtn: $('shareBtn'), openSettingsBtn: $('openSettingsBtn'),
   settingsPanel: $('settingsPanel'), closeSettingsBtn: $('closeSettingsBtn'), clearBtn: $('clearBtn'), clearBtnTop: $('clearBtnTop'),
@@ -131,6 +131,7 @@ export function renderEmpty() {
   if (els.flowProfitSub) els.flowProfitSub.textContent = 'Resultado neto estimado.';
   if (els.flowProfitSub) els.flowProfitSub.className = '';
   els.feesSub.textContent = 'Tarjeta + BPay';
+  if (els.bpaySub) els.bpaySub.textContent = 'Máximo (comisión 4,1%)';
   els.roiMeta.textContent = 'Retorno --';
   els.vesSub.innerHTML = 'Vender ≈-- USDT';
   els.formulaText.textContent = 'Completa USD, BCV y P2P para ver fórmula.';
@@ -303,6 +304,7 @@ export function renderResult(r) {
   const usdtToSell = r.vesNeeded / r.p2p;
   els.vesSub.innerHTML = `Vender ≈${money(usdtToSell, 2)} USDT`;
   animateNumber(els.bpayRecommended, r.safeGateway.bpayInputAmount, (v) => money(v, 2), '<span class="value-unit">USD</span>');
+  if (els.bpaySub) els.bpaySub.textContent = `Máximo (comisión ${money(r.bpayPct, 1)}%)`;
   animateNumber(els.usdtFinal,    r.usdtFinal,  (v) => money(v, 2),                              '<span class="value-unit">USDT</span>');
   animateNumber(els.profitUsdtBig, r.profitUsdt, (v) => (v >= 0 ? '+' : '') + money(v, 2),      '<span class="value-unit">USD</span>');
   animateNumber(els.profitVes,    r.profitVes,  (v) => (v >= 0 ? '+' : '') + money(v, 2) + ' Bs');

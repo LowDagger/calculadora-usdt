@@ -1160,8 +1160,8 @@ function loadState() {
   if (Object.prototype.hasOwnProperty.call(data, 'p2pRate')) els.p2pRate.value = data.p2pRate;
   if (Object.prototype.hasOwnProperty.call(data, 'cardFee')) els.cardFee.value = data.cardFee;
   if (Object.prototype.hasOwnProperty.call(data, 'bpayFee')) {
-    if (data.bpayFee === '4.1' || data.bpayFee === 4.1 || data.bpayFee === '4,1') {
-      els.bpayFee.value = '3.6';
+    if (data.bpayFee === '3.6' || data.bpayFee === 3.6 || data.bpayFee === '3,6') {
+      els.bpayFee.value = '4.1';
       stateMigrated = true;
     } else {
       els.bpayFee.value = data.bpayFee;
@@ -1179,7 +1179,7 @@ function resetDefaults() {
   triggerHaptic('warning');
   els.usdToBuy.value = '500';
   els.bankMargin.value = '0.5';
-  els.bpayFee.value = '3.6';
+  els.bpayFee.value = '4.1';
   els.autoRates.checked = true;
   temporaryCardFee = null;
   manualFeeConfigured = false;
