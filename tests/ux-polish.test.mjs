@@ -262,10 +262,10 @@ test('rounds BCV only in the visible rate card', () => {
   assert.match(ui, /els\.p2pView\.textContent\s+= p2p\s+\? money\(p2p, 2\)/);
 });
 
-test('migrates legacy 3.6% BPay fee to 4.1% automatically on load', () => {
-  assert.match(app, /if\s*\(data\.bpayFee === '3\.6' \|\| data\.bpayFee === 3\.6 \|\| data\.bpayFee === '3,6'\)/);
-  assert.match(app, /els\.bpayFee\.value = '4\.1'/);
-  assert.match(app, /if\s*\(stateMigrated\)\s*\{\s*saveState\(false\);\s*\}/);
+test('preserves explicit BPay preference and metadata on load', () => {
+  assert.match(app, /if\s*\(Object\.prototype\.hasOwnProperty\.call\(data,\s*'bpayCustomized'\)\)/);
+  assert.match(app, /bpayCustomized:\s*isBpayCustomized/);
+  assert.match(app, /els\.bpayFee\.value = String\(currentDefaultBpayFee\)/);
 });
 
 test('showcases BPay percentage on Monto en BPay card', () => {

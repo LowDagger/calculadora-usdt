@@ -1,4 +1,4 @@
-import { MAX_REQUESTED_USD, calculateValues, currentBankRate, sanitizeRequestedUsdInput, validateRequestedUsd } from './calculator.js';
+import { DEFAULT_BPAY_FEE, MAX_REQUESTED_USD, calculateValues, currentBankRate, sanitizeRequestedUsdInput, validateRequestedUsd } from './calculator.js';
 import {
   DEFAULT_PROFILE_ID,
   DEFAULT_QUICK_AMOUNTS,
@@ -42,6 +42,8 @@ let shareController = null;
 let manualCardFee = '1.5';
 let temporaryCardFee = null;
 let manualFeeConfigured = false;
+let currentDefaultBpayFee = DEFAULT_BPAY_FEE;
+let isBpayCustomized = false;
 let editingBankProfileId = null;
 let bankProfileListMode = 'select';
 let bankProfileSelectionView = 'banks';
@@ -1138,6 +1140,7 @@ function getState() {
     p2pRate: els.p2pRate.value,
     cardFee: els.cardFee.value,
     bpayFee: els.bpayFee.value,
+    bpayCustomized: isBpayCustomized,
     autoRates: els.autoRates.checked,
     ...ratesController.getStoredState()
   };
@@ -1153,25 +1156,31 @@ function saveState(show = true) {
 
 function loadState() {
   const data = readState();
-  let stateMigrated = false;
   if (Object.prototype.hasOwnProperty.call(data, 'usdToBuy')) els.usdToBuy.value = data.usdToBuy;
   if (Object.prototype.hasOwnProperty.call(data, 'bankMargin')) els.bankMargin.value = data.bankMargin;
   if (Object.prototype.hasOwnProperty.call(data, 'bcvRate')) els.bcvRate.value = data.bcvRate;
   if (Object.prototype.hasOwnProperty.call(data, 'p2pRate')) els.p2pRate.value = data.p2pRate;
   if (Object.prototype.hasOwnProperty.call(data, 'cardFee')) els.cardFee.value = data.cardFee;
-  if (Object.prototype.hasOwnProperty.call(data, 'bpayFee')) {
-    if (data.bpayFee === '3.6' || data.bpayFee === 3.6 || data.bpayFee === '3,6') {
-      els.bpayFee.value = '4.1';
-      stateMigrated = true;
+
+  if (Object.prototype.hasOwnProperty.call(data, 'bpayCustomized')) {
+    isBpayCustomized = Boolean(data.bpayCustomized);
+    if (isBpayCustomized && Object.prototype.hasOwnProperty.call(data, 'bpayFee')) {
+      els.bpayFee.value = String(data.bpayFee);
     } else {
-      els.bpayFee.value = data.bpayFee;
+      els.bpayFee.value = String(currentDefaultBpayFee);
     }
+  } else if (Object.prototype.hasOwnProperty.call(data, 'bpayFee')) {
+    // Ambiguous legacy state without metadata: preserve the user's stored value and mark as customized
+    els.bpayFee.value = String(data.bpayFee);
+    isBpayCustomized = true;
+  } else {
+    // New user / unconfigured BPay state
+    els.bpayFee.value = String(currentDefaultBpayFee);
+    isBpayCustomized = false;
   }
+
   if (typeof data.autoRates === 'boolean') els.autoRates.checked = data.autoRates;
   ratesController.hydrate(data);
-  if (stateMigrated) {
-    saveState(false);
-  }
   return data;
 }
 
@@ -1179,7 +1188,8 @@ function resetDefaults() {
   triggerHaptic('warning');
   els.usdToBuy.value = '500';
   els.bankMargin.value = '0.5';
-  els.bpayFee.value = '4.1';
+  isBpayCustomized = false;
+  els.bpayFee.value = String(currentDefaultBpayFee);
   els.autoRates.checked = true;
   temporaryCardFee = null;
   manualFeeConfigured = false;
@@ -1608,11 +1618,13 @@ function bindEvents() {
         ratesController.useManualP2p();
       }
       if (key === 'cardFee') syncActiveProfileFromCardFee();
+      if (key === 'bpayFee') isBpayCustomized = true;
       calculate();
       saveState(false);
     });
     els[key].addEventListener('change', () => {
       if (key === 'cardFee') syncActiveProfileFromCardFee();
+      if (key === 'bpayFee') isBpayCustomized = true;
       calculate();
       saveState(false);
     });

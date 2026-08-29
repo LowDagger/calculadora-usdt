@@ -5,6 +5,7 @@ const PERCENT_FACTOR_SCALE = 100n * DECIMAL_SCALE;
 const UNITS_PER_CENT = 10_000n;
 const MAX_CORRECTIONS = 100;
 export const MAX_REQUESTED_USD = 1_000_000;
+export const DEFAULT_BPAY_FEE = 4.1;
 
 const REQUESTED_USD_PATTERN = /^(?:\d+(?:[.,]\d{0,2})?|[.,]\d{1,2})$/;
 
