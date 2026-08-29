@@ -29,7 +29,7 @@ function createWorker({ cachedResponse, networkResponse } = {}) {
     caches: {
       open: async () => cache,
       match: async () => cachedResponse,
-      keys: async () => ['calcuflow-v62', 'calcuflow-v63'],
+      keys: async () => ['calcuflow-v63', 'calcuflow-v64'],
       delete: async (name) => { deletedCaches.push(name); return true; }
     },
     fetch: async () => {
@@ -85,6 +85,7 @@ test('/api/* requests remain excluded from service-worker caching', async () => 
   const worker = createWorker({ networkResponse: { source: 'network' } });
 
   assert.equal(await dispatchFetch(worker, request('/api/rates')), null);
+  assert.equal(await dispatchFetch(worker, request('/api/config')), null);
   assert.equal(worker.getFetchCalls(), 0);
   assert.equal(worker.putCalls.length, 0);
 });
@@ -95,5 +96,5 @@ test('activation deletes old versioned caches and retains the current cache', as
   worker.listeners.activate({ waitUntil: (promise) => { activation = promise; } });
   await activation;
 
-  assert.deepEqual(worker.deletedCaches, ['calcuflow-v62']);
+  assert.deepEqual(worker.deletedCaches, ['calcuflow-v63']);
 });

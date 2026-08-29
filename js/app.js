@@ -10,6 +10,7 @@ import {
   getGeneralQuickAmounts,
   getProfileQuickAmounts,
   getSelectedBankProfile,
+  getPresetDefaultFee,
   groupBankProfiles,
   hasDuplicateProfileName,
   readBankProfileState,
@@ -17,16 +18,19 @@ import {
   restoreGeneralQuickAmounts,
   restoreBankProfile,
   restoreDefaultBankProfiles,
+  sanitizeBankProfileState,
   sanitizeCardFee,
   sanitizeQuickAmounts,
   saveBankProfileState,
   selectBankProfile,
+  setRemoteBankDefaults,
   updateBankProfile,
   updateGeneralQuickAmounts,
   updateProfileQuickAmounts,
   useGeneralQuickAmountsForProfile,
   upsertCustomProfile
 } from './bank-profiles.js';
+import { fetchRemoteConfig, validateOperationalConfig } from './api.js';
 import { renderBankLogo } from './bank-logo.js';
 import { processBankLogo } from './bank-logo-processing.js';
 import { closeManagedModal, createCommunityModalController, openManagedModal, trapModalFocus } from './modal-controller.js';
@@ -1132,6 +1136,71 @@ function bindBankProfileEvents() {
   bankProfileEls.remove.addEventListener('click', deleteEditingBankProfile);
 }
 
+export const REMOTE_CONFIG_STORAGE_KEY = 'calcuflowRemoteConfigV1';
+
+export function readCachedRemoteConfig() {
+  try {
+    const raw = localStorage.getItem(REMOTE_CONFIG_STORAGE_KEY);
+    if (!raw) return null;
+    return validateOperationalConfig(JSON.parse(raw));
+  } catch {
+    return null;
+  }
+}
+
+export function saveCachedRemoteConfig(config) {
+  try {
+    if (config) localStorage.setItem(REMOTE_CONFIG_STORAGE_KEY, JSON.stringify(config));
+  } catch {
+    // localStorage unavailable / quota exceeded
+  }
+}
+
+export function applyOperationalConfig(config, { reRender = true } = {}) {
+  if (!config || typeof config !== 'object') return false;
+  let changed = false;
+
+  if (config.defaults && typeof config.defaults.bpayFee === 'number') {
+    currentDefaultBpayFee = config.defaults.bpayFee;
+    if (!isBpayCustomized) {
+      els.bpayFee.value = String(currentDefaultBpayFee);
+      changed = true;
+    }
+  }
+
+  if (config.bankFees && typeof config.bankFees === 'object') {
+    setRemoteBankDefaults(config.bankFees);
+    if (bankProfileState) {
+      bankProfileState = sanitizeBankProfileState(bankProfileState);
+      const activeProfile = getSelectedBankProfile(bankProfileState, manualCardFee);
+      if (activeProfile.kind !== 'manual' && temporaryCardFee === null) {
+        els.cardFee.value = feeToInputValue(activeProfile.fee);
+      }
+      changed = true;
+    }
+  }
+
+  if (changed && reRender) {
+    renderBankProfiles();
+    calculate();
+    saveState(false);
+  }
+
+  return changed;
+}
+
+export async function loadOperationalConfig() {
+  try {
+    const remoteConfig = await fetchRemoteConfig();
+    if (remoteConfig) {
+      saveCachedRemoteConfig(remoteConfig);
+      applyOperationalConfig(remoteConfig);
+    }
+  } catch {
+    // Graceful fallback to built-in or cached defaults
+  }
+}
+
 function getState() {
   return {
     usdToBuy: els.usdToBuy.value,
@@ -2221,6 +2290,8 @@ function initBicycleEasterEgg() {
 
 
 
+const cachedConfig = readCachedRemoteConfig();
+if (cachedConfig) applyOperationalConfig(cachedConfig, { reRender: false });
 const storedAppState = loadState();
 initBankProfiles(storedAppState);
 initTheme();
@@ -2235,5 +2306,6 @@ setInterval(updateRelativeTime, 1000);
 registerServiceWorker();
 
 window.addEventListener('load', () => {
+  loadOperationalConfig().catch(() => {});
   if (els.autoRates.checked) loadRates(false).catch(() => {});
 });

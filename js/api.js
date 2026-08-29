@@ -1,6 +1,8 @@
 import { markBcvRecordCached, selectNewestBcvRecord } from './bcv-rates.js';
+import { DEFAULT_PROFILE_IDS, sanitizeCardFee } from './bank-profiles.js';
 
 export const RATES_ENDPOINT = '/api/rates';
+export const CONFIG_ENDPOINT = '/api/config';
 
 const REQUEST_TIMEOUT_MS = 10_000;
 const P2P_STALE_MS = 10 * 60 * 1000;
@@ -143,3 +145,68 @@ export function preserveFailedRates({ bcvRecord, p2pRecord, now = new Date() }) 
     p2pRecord: markP2pRecordCached(p2pRecord, { now })
   };
 }
+
+export function validateOperationalConfig(data) {
+  if (!data || typeof data !== 'object' || Array.isArray(data)) return null;
+  if (data.configVersion !== 1) return null;
+
+  const validated = {
+    configVersion: 1
+  };
+
+  if (typeof data.updatedAt === 'string' && data.updatedAt.trim()) {
+    validated.updatedAt = data.updatedAt.trim();
+  }
+
+  if (data.defaults && typeof data.defaults === 'object' && !Array.isArray(data.defaults)) {
+    const rawBpay = data.defaults.bpayFee;
+    if (typeof rawBpay === 'number' && Number.isFinite(rawBpay) && rawBpay >= 0 && rawBpay < 100) {
+      validated.defaults = {
+        bpayFee: Math.round((rawBpay + Number.EPSILON) * 100) / 100
+      };
+    }
+  }
+
+  if (data.bankFees && typeof data.bankFees === 'object' && !Array.isArray(data.bankFees)) {
+    const bankFees = {};
+    for (const [id, rawFee] of Object.entries(data.bankFees)) {
+      if (DEFAULT_PROFILE_IDS.has(id)) {
+        const sanitized = sanitizeCardFee(rawFee);
+        if (sanitized !== null) {
+          bankFees[id] = sanitized;
+        }
+      }
+    }
+    if (Object.keys(bankFees).length > 0) {
+      validated.bankFees = bankFees;
+    }
+  }
+
+  return validated;
+}
+
+export async function fetchRemoteConfig({
+  fetchImpl = globalThis.fetch,
+  timeoutMs = REQUEST_TIMEOUT_MS
+} = {}) {
+  if (typeof fetchImpl !== 'function') throw new TypeError('fetch implementation is required');
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetchImpl(CONFIG_ENDPOINT, {
+      cache: 'no-store',
+      headers: { accept: 'application/json' },
+      signal: controller.signal
+    });
+    if (!response.ok) return null;
+    const contentType = response.headers.get('content-type') || '';
+    if (!/^application\/json(?:\s*;|$)/i.test(contentType)) return null;
+    const data = await response.json();
+    return validateOperationalConfig(data);
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+

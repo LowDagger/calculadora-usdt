@@ -130,7 +130,32 @@ export const DEFAULT_BANK_PROFILES = Object.freeze([
 
 export const MAX_TOTAL_PROFILES = DEFAULT_BANK_PROFILES.length + MAX_CUSTOM_PROFILES;
 const DEFAULT_PROFILE_MAP = new Map(DEFAULT_BANK_PROFILES.map(profile => [profile.id, profile]));
-const DEFAULT_PROFILE_IDS = new Set(DEFAULT_PROFILE_MAP.keys());
+export const DEFAULT_PROFILE_IDS = Object.freeze(new Set(DEFAULT_PROFILE_MAP.keys()));
+let activeRemoteBankFees = {};
+
+export function setRemoteBankDefaults(remoteFees) {
+  if (!remoteFees || typeof remoteFees !== 'object' || Array.isArray(remoteFees)) {
+    activeRemoteBankFees = {};
+    return;
+  }
+  const clean = {};
+  for (const [id, fee] of Object.entries(remoteFees)) {
+    if (DEFAULT_PROFILE_IDS.has(id)) {
+      const sanitized = sanitizeCardFee(fee);
+      if (sanitized !== null) {
+        clean[id] = sanitized;
+      }
+    }
+  }
+  activeRemoteBankFees = clean;
+}
+
+export function getPresetDefaultFee(profileId) {
+  if (Object.prototype.hasOwnProperty.call(activeRemoteBankFees, profileId)) {
+    return activeRemoteBankFees[profileId];
+  }
+  return DEFAULT_PROFILE_MAP.get(profileId)?.defaultFee ?? null;
+}
 const ORIGINAL_PRESET_IDS = new Set([
   'bdv-fisica',
   'bdv-virtual',
@@ -239,7 +264,7 @@ function createDefaultStoredProfile(profile) {
     id: profile.id,
     name: profile.name,
     cardType: profile.cardType,
-    fee: profile.defaultFee,
+    fee: getPresetDefaultFee(profile.id),
     icon: getDefaultIcon(profile)
   };
 }
@@ -570,10 +595,11 @@ function reconcileVersionFiveState(source, fallbackSelectedId) {
         }
       }
 
-      let fee = defaultPreset.defaultFee;
+      const activeDefaultFee = getPresetDefaultFee(id);
+      let fee = activeDefaultFee;
       if (overrides.has('fee')) {
         const customFee = sanitizeCardFee(rawProfile.fee);
-        if (customFee !== null && customFee !== defaultPreset.defaultFee) {
+        if (customFee !== null && customFee !== activeDefaultFee) {
           fee = customFee;
         } else {
           overrides.delete('fee');
@@ -685,7 +711,7 @@ export function getBankProfiles(state) {
       ...profile,
       initials: createProfileInitials(profile.name),
       ...getIconPresentation(profile),
-      defaultFee: preset?.defaultFee ?? null,
+      defaultFee: preset ? getPresetDefaultFee(preset.id) : null,
       defaultStatus: preset?.defaultStatus || 'Personalizado',
       kind: preset ? 'preset' : 'custom',
       isModified,
@@ -829,7 +855,7 @@ export function updateBankProfile(state, profile) {
     if (cardType !== defaultPreset.cardType) overrides.add('cardType');
 
     const fee = sanitizeCardFee(profile.fee);
-    if (fee !== null && fee !== defaultPreset.defaultFee) overrides.add('fee');
+    if (fee !== null && fee !== getPresetDefaultFee(profile.id)) overrides.add('fee');
 
     const icon = sanitizeProfileLogo(profile.icon);
     if (icon !== getDefaultIcon(defaultPreset)) overrides.add('icon');
