@@ -77,7 +77,7 @@ test('marks result-card symbols as decorative and bumps the PWA cache', () => {
   assert.match(ui, /btn\.setAttribute\('aria-pressed', String\(isActive\)\)/);
   assert.match(settingsController, /btn\.setAttribute\('aria-pressed', String\(isActive\)\)/);
   assert.match(html, /data-theme-val="system" aria-pressed="true"/);
-  assert.match(serviceWorker, /const APP_VERSION\s+= '64';/);
+  assert.match(serviceWorker, /const APP_VERSION\s+= '65';/);
   assert.match(serviceWorker, /'\/js\/bcv-rates\.js'/);
   for (const moduleName of ['modal-controller', 'rates-controller', 'settings-controller', 'share']) {
     assert.match(serviceWorker, new RegExp(`'/js/${moduleName}\\.js'`));
