@@ -1910,10 +1910,12 @@ function bindEvents() {
  *
  * Flow on a new deployment:
  *  1. Browser checks service-worker.js (bypassing HTTP cache via updateViaCache: 'none').
- *  2. The new SW installs and calls self.skipWaiting() or receives SKIP_WAITING.
- *  3. The new SW activates, purges stale caches, and calls self.clients.claim().
- *  4. controllerchange triggers a single reload (preventing loops via a boolean flag).
- *  5. App checks for updates when becoming active/visible (mobile PWA resume).
+ *  2. The new SW installs and enters the waiting state.
+ *  3. A persistent toast prompts the user ("Actualización disponible - Toca para recargar").
+ *  4. On user tap, client sends SKIP_WAITING to the waiting worker.
+ *  5. The new SW activates, purges stale caches, and calls self.clients.claim().
+ *  6. controllerchange triggers a single reload (preventing loops via a boolean flag).
+ *  7. App checks for updates when becoming active/visible (mobile PWA resume).
  */
 function registerServiceWorker() {
   if (!('serviceWorker' in navigator)) return;
@@ -1935,9 +1937,16 @@ function registerServiceWorker() {
       waitingWorker.postMessage({ type: 'SKIP_WAITING' });
     }
 
+    function promptUpdate(waitingWorker) {
+      if (!waitingWorker) return;
+      showToast('Actualización disponible - Toca para recargar', 'ok', 0, () => {
+        activateWaiting(waitingWorker);
+      });
+    }
+
     // ── Handle a worker that is already waiting when the page loads ──
-    if (reg.waiting) {
-      activateWaiting(reg.waiting);
+    if (reg.waiting && navigator.serviceWorker.controller) {
+      promptUpdate(reg.waiting);
     }
 
     // ── Handle a worker that starts installing after this page loads ──
@@ -1947,7 +1956,7 @@ function registerServiceWorker() {
 
       newWorker.addEventListener('statechange', () => {
         if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-          activateWaiting(newWorker);
+          promptUpdate(newWorker);
         }
       });
     });

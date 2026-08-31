@@ -488,13 +488,16 @@ let _toastTimer = null;
  * Show a Material Design 3 snackbar toast.
  * @param {string} message  Text to display.
  * @param {'ok'|'err'|'warn'} type  Visual variant.
- * @param {number} duration  Auto-dismiss delay in ms (default 2500).
+ * @param {number} duration  Auto-dismiss delay in ms (default 2500). Pass 0 or Infinity for persistent.
+ * @param {Function|null} onClick Optional click action handler.
  */
-export function showToast(message, type = 'ok', duration = 2500) {
+export function showToast(message, type = 'ok', duration = 2500, onClick = null) {
   // Lazily create the toast element once
   if (!_toastEl) {
     _toastEl = document.createElement('div');
     _toastEl.className = 'toast';
+    _toastEl.setAttribute('role', 'status');
+    _toastEl.setAttribute('aria-live', 'polite');
     document.body.appendChild(_toastEl);
   }
 
@@ -502,17 +505,47 @@ export function showToast(message, type = 'ok', duration = 2500) {
   if (_toastTimer) { clearTimeout(_toastTimer); _toastTimer = null; }
 
   // Reset state before updating to force re-animation even if already showing
-  _toastEl.classList.remove('toast-show', 'toast-err', 'toast-warn');
+  _toastEl.classList.remove('toast-show', 'toast-err', 'toast-warn', 'toast-clickable');
+  _toastEl.onclick = null;
+  _toastEl.onkeydown = null;
+  _toastEl.removeAttribute('tabindex');
+
   // Force reflow so removing + re-adding the class triggers the transition
   void _toastEl.offsetWidth;
 
   _toastEl.textContent = message;
   if (type === 'err')  _toastEl.classList.add('toast-err');
   if (type === 'warn') _toastEl.classList.add('toast-warn');
+
+  if (typeof onClick === 'function') {
+    _toastEl.classList.add('toast-clickable');
+    _toastEl.tabIndex = 0;
+    _toastEl.setAttribute('role', 'button');
+
+    const handleAction = (e) => {
+      e.preventDefault();
+      _toastEl.classList.remove('toast-show');
+      _toastEl.onclick = null;
+      _toastEl.onkeydown = null;
+      onClick();
+    };
+
+    _toastEl.onclick = handleAction;
+    _toastEl.onkeydown = (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        handleAction(e);
+      }
+    };
+  } else {
+    _toastEl.setAttribute('role', 'status');
+  }
+
   _toastEl.classList.add('toast-show');
 
-  _toastTimer = setTimeout(() => {
-    _toastEl.classList.remove('toast-show');
-    _toastTimer = null;
-  }, duration);
+  if (duration && duration > 0 && duration !== Infinity) {
+    _toastTimer = setTimeout(() => {
+      _toastEl.classList.remove('toast-show');
+      _toastTimer = null;
+    }, duration);
+  }
 }

@@ -38,13 +38,13 @@ const PRECACHE_ASSETS = [
 const PRECACHE_PATHS = new Set(PRECACHE_ASSETS);
 
 // ─── Install ──────────────────────────────────────────────────────────────────
-// Pre-cache all assets and immediately take control (no waiting for old tabs).
+// Pre-cache all assets. Activation is deferred until user-initiated SKIP_WAITING
+// or natural lifecycle replacement to avoid interrupting active user sessions.
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches
       .open(CACHE_NAME)
       .then((cache) => cache.addAll(PRECACHE_ASSETS))
-      .then(() => self.skipWaiting())   // activate as soon as install is done
   );
 });
 
