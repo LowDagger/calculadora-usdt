@@ -108,8 +108,16 @@ function createMockRatesFetch({
 // ---------------------------------------------------------------------------
 
 test('parseTelegramMessage parses /start, /ayuda, /help correctly', () => {
-  assert.deepEqual(parseTelegramMessage('/start'), { type: 'help' });
-  assert.deepEqual(parseTelegramMessage('/start@CalcuFlowBot'), { type: 'help' });
+  assert.deepEqual(parseTelegramMessage('/start'), { type: 'home' });
+  assert.deepEqual(parseTelegramMessage('/start@CalcuFlowBot'), { type: 'home' });
+  assert.deepEqual(parseTelegramMessage('/start support'), { type: 'support' });
+  assert.deepEqual(parseTelegramMessage('/start calc'), { type: 'show_banks' });
+  assert.deepEqual(parseTelegramMessage('/apoyar'), { type: 'support' });
+  assert.deepEqual(parseTelegramMessage('/terms'), { type: 'terms' });
+  assert.deepEqual(parseTelegramMessage('/paysupport'), { type: 'payment_support' });
+  assert.deepEqual(parseTelegramMessage('/soporte'), { type: 'unknown' });
+  assert.deepEqual(parseTelegramMessage('/bancos'), { type: 'show_banks' });
+  assert.deepEqual(parseTelegramMessage('/privado'), { type: 'private_access' });
   assert.deepEqual(parseTelegramMessage('/ayuda'), { type: 'help' });
   assert.deepEqual(parseTelegramMessage('/help'), { type: 'help' });
   assert.deepEqual(parseTelegramMessage('ayuda'), { type: 'help' });
@@ -126,6 +134,7 @@ test('parseTelegramMessage parses /tasas and synonyms', () => {
 });
 
 test('parseTelegramMessage parses /calc commands with amount and bank', () => {
+  assert.deepEqual(parseTelegramMessage('/calcular'), { type: 'show_banks' });
   const result1 = parseTelegramMessage('/calc 100');
   assert.equal(result1.type, 'calc');
   assert.equal(result1.amount, 100);
@@ -171,8 +180,7 @@ test('parseTelegramMessage parses plain numbers as calc intent', () => {
 
 test('parseTelegramMessage validates and rejects invalid calculation requests', () => {
   const emptyCalc = parseTelegramMessage('/calc');
-  assert.equal(emptyCalc.type, 'invalid_calc');
-  assert.match(emptyCalc.error, /Indica el monto/);
+  assert.equal(emptyCalc.type, 'show_banks');
 
   const nonNumeric = parseTelegramMessage('/calc abc');
   assert.equal(nonNumeric.type, 'invalid_calc');
@@ -293,8 +301,8 @@ test('formatCalculationResult produces required emojis and fields', () => {
   // Ganancia / Retorno
   assert.ok(formatted.includes('💰 *Ganancia estimada:* +'));
 
-  // App Link
-  assert.ok(formatted.includes(CANONICAL_APP_URL));
+  // App link belongs in an inline URL button, not message text.
+  assert.ok(!formatted.includes(CANONICAL_APP_URL));
 });
 
 test('formatRatesMessage presents BCV, P2P, and Spread (brecha)', () => {
@@ -308,7 +316,7 @@ test('formatRatesMessage presents BCV, P2P, and Spread (brecha)', () => {
   assert.ok(formatted.includes('🏦 *BCV:* 68,50 Bs/USD (2026-08-31)'));
   assert.ok(formatted.includes('🔄 *P2P:* 75,20 Bs/USDT'));
   assert.ok(formatted.includes('📊 *Brecha:* +9,78%'));
-  assert.ok(formatted.includes(CANONICAL_APP_URL));
+  assert.ok(!formatted.includes(CANONICAL_APP_URL));
 });
 
 test('formatHelpMessage and formatErrorMessage provide friendly user output', () => {
@@ -317,7 +325,7 @@ test('formatHelpMessage and formatErrorMessage provide friendly user output', ()
   assert.ok(help.includes('/calc'));
   assert.ok(help.includes('/tasas'));
   assert.ok(help.includes('/ayuda'));
-  assert.ok(help.includes(CANONICAL_APP_URL));
+  assert.ok(!help.includes(CANONICAL_APP_URL));
 
   const error = formatErrorMessage('Monto no válido');
   assert.equal(error, '⚠️ Monto no válido');
@@ -350,10 +358,14 @@ test('isChatAuthorized handles unset, matching, and restricted chats', () => {
 // Group 5: Webhook Handler Flow & End-to-End Tests
 // ---------------------------------------------------------------------------
 
-test('createTelegramHandler rejects non-POST HTTP methods', async () => {
+test('createTelegramHandler exposes a safe GET health response and rejects unsupported methods', async () => {
   const handler = createTelegramHandler();
   const getResponse = await handler.fetch(new Request('https://example.com/api/telegram', { method: 'GET' }));
-  assert.equal(getResponse.status, 405);
+  assert.equal(getResponse.status, 200);
+  assert.deepEqual(await getResponse.json(), {
+    ok: true,
+    service: 'calcuflow-telegram-webhook'
+  });
 
   const putResponse = await handler.fetch(new Request('https://example.com/api/telegram', { method: 'PUT' }));
   assert.equal(putResponse.status, 405);
@@ -422,10 +434,10 @@ test('createTelegramHandler warns unauthorized chat and returns 200', async () =
   const response = await handler.fetch(request);
   assert.equal(response.status, 200);
   const data = await response.json();
-  assert.equal(data.status, 'unauthorized_chat');
+  assert.equal(data.status, 'redirect_sent');
   assert.ok(sentPayload);
   assert.equal(sentPayload.chat_id, -100111111);
-  assert.ok(sentPayload.text.includes('comunidad oficial'));
+  assert.ok(sentPayload.text.includes('mantener limpio el grupo'));
 });
 
 test('createTelegramHandler ignores casual chat message without sending reply', async () => {
@@ -565,12 +577,12 @@ test('createTelegramHandler calculates /calc 500 bbva successfully', async () =>
   const response = await handler.fetch(request);
   assert.equal(response.status, 200);
   assert.ok(sentPayload);
-  assert.ok(sentPayload.text.includes('CalcuFlow — Banco ➔ USDT'));
+  assert.ok(sentPayload.text.includes('*CalcuFlow*'));
   assert.ok(sentPayload.text.includes('BBVA Provincial'));
-  assert.ok(sentPayload.text.includes('*Compra:* 500,00 USD'));
-  assert.ok(sentPayload.text.includes('Bs necesarios:'));
-  assert.ok(sentPayload.text.includes('USDT finales:'));
-  assert.ok(sentPayload.text.includes('Ganancia estimada:'));
+  assert.ok(sentPayload.text.includes('Compra: 500,00 USD'));
+  assert.ok(sentPayload.text.includes('Bolívares necesarios'));
+  assert.ok(sentPayload.text.includes('USDT finales'));
+  assert.ok(sentPayload.text.includes('Ganancia estimada'));
 });
 
 test('createTelegramHandler calculates plain number input 100', async () => {
@@ -606,7 +618,7 @@ test('createTelegramHandler calculates plain number input 100', async () => {
   const response = await handler.fetch(request);
   assert.equal(response.status, 200);
   assert.ok(sentPayload);
-  assert.ok(sentPayload.text.includes('*Compra:* 100,00 USD'));
+  assert.ok(sentPayload.text.includes('Compra: 100,00 USD'));
   assert.ok(sentPayload.text.includes('Banco de Venezuela'));
 });
 
@@ -712,34 +724,15 @@ test('buildBankInlineKeyboard updates checkmark for different selected banks and
   assert.equal(bdtKeyboard.inline_keyboard[3][0].callback_data, 'calc:50:bdt');
 });
 
-test('buildQuickAmountsInlineKeyboard contains 3 rows of quick amounts, rates, and web app link', () => {
+test('buildQuickAmountsInlineKeyboard opens the bank-first home flow without forcing BDV', () => {
   const keyboard = buildQuickAmountsInlineKeyboard();
   assert.ok(keyboard && Array.isArray(keyboard.inline_keyboard));
-  assert.equal(keyboard.inline_keyboard.length, 3);
-
-  // Row 1: 100 USD and 200 USD
-  const row1 = keyboard.inline_keyboard[0];
-  assert.equal(row1.length, 2);
-  assert.equal(row1[0].text, '💵 100 USD');
-  assert.equal(row1[0].callback_data, 'calc:100:bdv-fisica');
-  assert.equal(row1[1].text, '💵 200 USD');
-  assert.equal(row1[1].callback_data, 'calc:200:bdv-fisica');
-
-  // Row 2: 500 USD and 1000 USD
-  const row2 = keyboard.inline_keyboard[1];
-  assert.equal(row2.length, 2);
-  assert.equal(row2[0].text, '💵 500 USD');
-  assert.equal(row2[0].callback_data, 'calc:500:bdv-fisica');
-  assert.equal(row2[1].text, '💵 1000 USD');
-  assert.equal(row2[1].callback_data, 'calc:1000:bdv-fisica');
-
-  // Row 3: Ver Tasas and Web App URL
-  const row3 = keyboard.inline_keyboard[2];
-  assert.equal(row3.length, 2);
-  assert.equal(row3[0].text, '📈 Ver Tasas');
-  assert.equal(row3[0].callback_data, 'rates');
-  assert.equal(row3[1].text, '🌐 Abrir Web App');
-  assert.equal(row3[1].url, CANONICAL_APP_URL);
+  assert.equal(keyboard.inline_keyboard.length, 4);
+  assert.equal(keyboard.inline_keyboard[0][0].callback_data, 'banks');
+  assert.equal(keyboard.inline_keyboard[1][0].callback_data, 'rates');
+  assert.equal(keyboard.inline_keyboard[2][0].callback_data, 'support');
+  assert.equal(keyboard.inline_keyboard[3][0].url, CANONICAL_APP_URL);
+  assert.ok(!JSON.stringify(keyboard).includes('calc:100:bdv-fisica'));
 });
 
 test('parseCallbackData parses valid calculation and rates payloads', () => {
@@ -806,6 +799,37 @@ test('sendTelegramMessage sends reply_markup in payload when provided', async ()
   assert.equal(requestBody.chat_id, 12345);
   assert.equal(requestBody.text, 'Hola');
   assert.deepEqual(requestBody.reply_markup, keyboard);
+});
+
+test('Telegram API helpers reject sanitized upstream failures', async () => {
+  const secretToken = '123456789:not-a-real-secret-token-value';
+  const failingFetch = async () => mockFetchResponse({
+    ok: false,
+    description: 'Unauthorized'
+  }, { status: 401 });
+
+  await assert.rejects(
+    () => sendTelegramMessage({
+      fetchImpl: failingFetch,
+      botToken: secretToken,
+      chatId: 12345,
+      text: 'Hola'
+    }),
+    error => {
+      assert.equal(error.message, 'Telegram sendMessage failed (HTTP 401).');
+      assert.ok(!error.message.includes(secretToken));
+      return true;
+    }
+  );
+
+  await assert.rejects(
+    () => answerTelegramCallbackQuery({
+      fetchImpl: failingFetch,
+      botToken: secretToken,
+      callbackQueryId: 'query_123'
+    }),
+    /Telegram answerCallbackQuery failed \(HTTP 401\)\./
+  );
 });
 
 test('answerTelegramCallbackQuery calls answerCallbackQuery endpoint with parameters', async () => {
@@ -989,14 +1013,13 @@ test('createTelegramHandler processes callback_query for calc and updates bank s
   assert.equal(editedMessages.length, 1);
   assert.equal(editedMessages[0].chat_id, 12345);
   assert.equal(editedMessages[0].message_id, 105);
-  assert.ok(editedMessages[0].text.includes('BBVA Provincial (1,5%)'));
-  assert.ok(editedMessages[0].text.includes('*Compra:* 500,00 USD'));
+  assert.ok(editedMessages[0].text.includes('BBVA Provincial · 1,5%'));
+  assert.ok(editedMessages[0].text.includes('Compra: 500,00 USD'));
 
-  // Verify keyboard updated with checkmark on BBVA
+  // Verify result keyboard keeps BBVA context for changing the amount.
   const replyMarkup = editedMessages[0].reply_markup;
   assert.ok(replyMarkup && replyMarkup.inline_keyboard);
-  assert.equal(replyMarkup.inline_keyboard[0][0].text, 'BDV (2.5%)');
-  assert.equal(replyMarkup.inline_keyboard[0][1].text, '✓ BBVA (1.5%)');
+  assert.equal(replyMarkup.inline_keyboard[0][0].callback_data, 'bank:bbva-provincial|u:12345');
 });
 
 test('createTelegramHandler rejects callback_query from unauthorized chat', async () => {
@@ -1030,7 +1053,7 @@ test('createTelegramHandler rejects callback_query from unauthorized chat', asyn
     body: JSON.stringify({
       callback_query: {
         id: 'cb_unauthorized',
-        from: { id: -100111111 },
+        from: { id: 12345 },
         message: {
           message_id: 110,
           chat: { id: -100111111 }
@@ -1043,10 +1066,8 @@ test('createTelegramHandler rejects callback_query from unauthorized chat', asyn
   const response = await handler.fetch(request);
   assert.equal(response.status, 200);
   const data = await response.json();
-  assert.equal(data.status, 'unauthorized_chat');
+  assert.equal(data.status, 'ephemeral_redirect');
   assert.equal(answeredQueries.length, 1);
-  assert.equal(answeredQueries[0].show_alert, true);
-  assert.ok(answeredQueries[0].text.toLowerCase().includes('no autorizado'));
+  assert.equal(answeredQueries[0].callback_query_id, 'cb_unauthorized');
   assert.equal(editCount, 0);
 });
-

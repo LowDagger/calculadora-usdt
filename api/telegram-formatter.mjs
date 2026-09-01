@@ -158,9 +158,19 @@ export function parseTelegramMessage(text) {
     const command = match[1].toLowerCase();
     const args = match[2]?.trim() || '';
 
-    if (command === 'start' || command === 'ayuda' || command === 'help') {
-      return { type: 'help' };
+    if (command === 'start') {
+      const startParameter = args.toLowerCase();
+      if (startParameter === 'support') return { type: 'support' };
+      if (startParameter === 'calc') return { type: 'show_banks' };
+      return { type: 'home' };
     }
+
+    if (command === 'ayuda' || command === 'help') return { type: 'help' };
+    if (command === 'apoyar') return { type: 'support' };
+    if (command === 'terms' || command === 'terminos') return { type: 'terms' };
+    if (command === 'paysupport') return { type: 'payment_support' };
+    if (command === 'bancos') return { type: 'show_banks' };
+    if (command === 'privado') return { type: 'private_access' };
 
     if (command === 'tasas' || command === 'tasa' || command === 'rates' || command === 'precio') {
       return { type: 'rates' };
@@ -168,10 +178,7 @@ export function parseTelegramMessage(text) {
 
     if (command === 'calc' || command === 'calcular' || command === 'c') {
       if (!args) {
-        return {
-          type: 'invalid_calc',
-          error: 'Indica el monto a calcular. Ej: `/calc 100` o `/calc 500 bdv`'
-        };
+        return { type: 'show_banks' };
       }
       return parseAmountAndBank(args);
     }
@@ -234,9 +241,7 @@ export function formatCalculationResult(result, bankInfo) {
 • Monto en BPay: ${bpayAmount} USD
 • USDT finales: ${finalUsdt} USDT
 
-💰 *Ganancia estimada:* ${profitUsd} USD (${roi}%)
-
-🌐 ${CANONICAL_APP_URL}`;
+💰 *Ganancia estimada:* ${profitUsd} USD (${roi}%)`;
 }
 
 export function formatRatesMessage({ bcv, p2p, bcvDate = null }) {
@@ -251,9 +256,7 @@ export function formatRatesMessage({ bcv, p2p, bcvDate = null }) {
 
 🏦 *BCV:* ${bcvFormatted} Bs/USD${dateInfo}
 🔄 *P2P:* ${p2pFormatted} Bs/USDT
-📊 *Brecha:* ${brechaFormatted}
-
-🌐 ${CANONICAL_APP_URL}`;
+📊 *Brecha:* ${brechaFormatted}`;
 }
 
 export function formatHelpMessage() {
@@ -262,18 +265,19 @@ export function formatHelpMessage() {
 Calcula al instante tu operación Banco ➔ USDT con tasas actualizadas.
 
 📌 *Comandos:*
-• \`/calc <monto> [banco]\` — Calcula tu operación (ej: \`/calc 100\`, \`/calc 500 bdv\`, \`/calc 200 bbva\`)
+• \`/calcular\` o \`/calc <monto> [banco]\` — Abre o calcula una operación
+• \`/bancos\` — Abre la selección de banco
 • \`<monto>\` — Envía solo el monto (ej: \`100\`, \`500\`)
 • \`/tasas\` — Consulta las tasas BCV y P2P en tiempo real
-• \`/ayuda\` o \`/start\` — Muestra este mensaje de ayuda
+• \`/privado\` — Abre CalcuFlow en privado
+• \`/ayuda\` — Muestra este mensaje de ayuda
+• \`/start\` — Abre el inicio de CalcuFlow
 
 💡 *O pulsa los botones de acceso rápido abajo para calcular al instante:*
 
 🏦 *Bancos soportados:*
 BDV (2,5%), BBVA (1,5%), Banesco (1,5%), BNC (1,5%), Bancamiga (5%), Tesoro (2,5%), BDT (2,5%).
-También puedes indicar una comisión directa (ej: \`/calc 100 3%\`).
-
-🌐 *Web App:* ${CANONICAL_APP_URL}`;
+También puedes indicar una comisión directa (ej: \`/calc 100 3%\`).`;
 }
 
 export function formatErrorMessage(error) {
@@ -325,18 +329,10 @@ export function buildBankInlineKeyboard(amount, selectedBankId = 'bdv-fisica') {
 export function buildQuickAmountsInlineKeyboard() {
   return {
     inline_keyboard: [
-      [
-        { text: '💵 100 USD', callback_data: 'calc:100:bdv-fisica' },
-        { text: '💵 200 USD', callback_data: 'calc:200:bdv-fisica' }
-      ],
-      [
-        { text: '💵 500 USD', callback_data: 'calc:500:bdv-fisica' },
-        { text: '💵 1000 USD', callback_data: 'calc:1000:bdv-fisica' }
-      ],
-      [
-        { text: '📈 Ver Tasas', callback_data: 'rates' },
-        { text: '🌐 Abrir Web App', url: CANONICAL_APP_URL }
-      ]
+      [{ text: '🧮 Calcular', callback_data: 'banks', style: 'primary' }],
+      [{ text: '📈 Ver Tasas', callback_data: 'rates' }],
+      [{ text: '⭐ Apoyar CalcuFlow', callback_data: 'support', style: 'success' }],
+      [{ text: '🌐 Abrir CalcuFlow', url: CANONICAL_APP_URL }]
     ]
   };
 }
@@ -371,4 +367,3 @@ export function parseCallbackData(data) {
 
   return { type: 'unknown' };
 }
-

@@ -1,26 +1,26 @@
-import { resolveServerRates } from './rate-providers.mjs';
-import { calculateValues, DEFAULT_BPAY_FEE } from '../js/calculator.js';
-import {
-  parseTelegramMessage,
-  resolveBank,
-  formatCalculationResult,
-  formatRatesMessage,
-  formatHelpMessage,
-  formatErrorMessage,
-  buildBankInlineKeyboard,
-  buildQuickAmountsInlineKeyboard,
-  parseCallbackData
-} from './telegram-formatter.mjs';
+import { createTelegramAppHandler } from './telegram-app-handler.mjs';
 
-const NO_STORE = 'private, no-store';
 const REQUEST_TIMEOUT_MS = 8000;
 
-function json(body, { status = 200 } = {}) {
-  const headers = new Headers({
-    'content-type': 'application/json; charset=utf-8',
-    'cache-control': NO_STORE
-  });
-  return new Response(JSON.stringify(body), { status, headers });
+function telegramMethodUrl(botToken, method, testMode = false) {
+  const environmentPath = testMode ? '/test' : '';
+  return `https://api.telegram.org/bot${botToken}${environmentPath}/${method}`;
+}
+
+class TelegramApiError extends Error {
+  constructor(method, status = null) {
+    const statusSuffix = Number.isInteger(status) ? ` (HTTP ${status})` : '';
+    super(`Telegram ${method} failed${statusSuffix}.`);
+    this.name = 'TelegramApiError';
+    this.status = status;
+  }
+}
+
+function requireTelegramSuccess(response, method) {
+  if (!response?.ok) {
+    throw new TelegramApiError(method, response?.status);
+  }
+  return response;
 }
 
 export async function sendTelegramMessage({
@@ -30,6 +30,10 @@ export async function sendTelegramMessage({
   text,
   replyToMessageId = null,
   replyMarkup = null,
+  messageThreadId = null,
+  linkPreviewOptions = { is_disabled: true },
+  ephemeralMessageParameters = null,
+  testMode = false,
   timeoutMs = REQUEST_TIMEOUT_MS
 }) {
   if (!botToken || !chatId || !text) {
@@ -50,9 +54,18 @@ export async function sendTelegramMessage({
   if (replyMarkup) {
     payload.reply_markup = replyMarkup;
   }
+  if (messageThreadId) {
+    payload.message_thread_id = messageThreadId;
+  }
+  if (linkPreviewOptions) {
+    payload.link_preview_options = linkPreviewOptions;
+  }
+  if (ephemeralMessageParameters) {
+    payload.ephemeral_message_parameters = ephemeralMessageParameters;
+  }
 
   try {
-    const response = await fetchImpl(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+    const response = await fetchImpl(telegramMethodUrl(botToken, 'sendMessage', testMode), {
       method: 'POST',
       headers: {
         'content-type': 'application/json; charset=utf-8',
@@ -75,15 +88,28 @@ export async function sendTelegramMessage({
         if (replyMarkup) {
           plainPayload.reply_markup = replyMarkup;
         }
-        await fetchImpl(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+        if (messageThreadId) {
+          plainPayload.message_thread_id = messageThreadId;
+        }
+        if (linkPreviewOptions) {
+          plainPayload.link_preview_options = linkPreviewOptions;
+        }
+        if (ephemeralMessageParameters) {
+          plainPayload.ephemeral_message_parameters = ephemeralMessageParameters;
+        }
+        const fallbackResponse = await fetchImpl(telegramMethodUrl(botToken, 'sendMessage', testMode), {
           method: 'POST',
           headers: { 'content-type': 'application/json; charset=utf-8' },
           body: JSON.stringify(plainPayload),
           signal: controller.signal
-        }).catch(() => null);
+        });
+        return requireTelegramSuccess(fallbackResponse, 'sendMessage');
       }
     }
-    return response;
+    return requireTelegramSuccess(response, 'sendMessage');
+  } catch (error) {
+    if (error instanceof TelegramApiError) throw error;
+    throw new TelegramApiError('sendMessage');
   } finally {
     clearTimeout(timeout);
   }
@@ -95,6 +121,7 @@ export async function answerTelegramCallbackQuery({
   callbackQueryId,
   text = null,
   showAlert = false,
+  testMode = false,
   timeoutMs = REQUEST_TIMEOUT_MS
 }) {
   if (!botToken || !callbackQueryId) {
@@ -115,7 +142,7 @@ export async function answerTelegramCallbackQuery({
   }
 
   try {
-    const response = await fetchImpl(`https://api.telegram.org/bot${botToken}/answerCallbackQuery`, {
+    const response = await fetchImpl(telegramMethodUrl(botToken, 'answerCallbackQuery', testMode), {
       method: 'POST',
       headers: {
         'content-type': 'application/json; charset=utf-8',
@@ -124,7 +151,10 @@ export async function answerTelegramCallbackQuery({
       body: JSON.stringify(payload),
       signal: controller.signal
     });
-    return response;
+    return requireTelegramSuccess(response, 'answerCallbackQuery');
+  } catch (error) {
+    if (error instanceof TelegramApiError) throw error;
+    throw new TelegramApiError('answerCallbackQuery');
   } finally {
     clearTimeout(timeout);
   }
@@ -137,6 +167,8 @@ export async function editTelegramMessageText({
   messageId,
   text,
   replyMarkup = null,
+  linkPreviewOptions = { is_disabled: true },
+  testMode = false,
   timeoutMs = REQUEST_TIMEOUT_MS
 }) {
   if (!botToken || !chatId || !messageId || !text) {
@@ -155,9 +187,12 @@ export async function editTelegramMessageText({
   if (replyMarkup) {
     payload.reply_markup = replyMarkup;
   }
+  if (linkPreviewOptions) {
+    payload.link_preview_options = linkPreviewOptions;
+  }
 
   try {
-    const response = await fetchImpl(`https://api.telegram.org/bot${botToken}/editMessageText`, {
+    const response = await fetchImpl(telegramMethodUrl(botToken, 'editMessageText', testMode), {
       method: 'POST',
       headers: {
         'content-type': 'application/json; charset=utf-8',
@@ -177,18 +212,116 @@ export async function editTelegramMessageText({
         if (replyMarkup) {
           plainPayload.reply_markup = replyMarkup;
         }
-        await fetchImpl(`https://api.telegram.org/bot${botToken}/editMessageText`, {
+        if (linkPreviewOptions) {
+          plainPayload.link_preview_options = linkPreviewOptions;
+        }
+        const fallbackResponse = await fetchImpl(telegramMethodUrl(botToken, 'editMessageText', testMode), {
           method: 'POST',
           headers: { 'content-type': 'application/json; charset=utf-8' },
           body: JSON.stringify(plainPayload),
           signal: controller.signal
-        }).catch(() => null);
+        });
+        return requireTelegramSuccess(fallbackResponse, 'editMessageText');
       }
     }
-    return response;
+    return requireTelegramSuccess(response, 'editMessageText');
+  } catch (error) {
+    if (error instanceof TelegramApiError) throw error;
+    throw new TelegramApiError('editMessageText');
   } finally {
     clearTimeout(timeout);
   }
+}
+
+async function postTelegramMethod({
+  fetchImpl = globalThis.fetch,
+  botToken,
+  method,
+  payload,
+  testMode = false,
+  timeoutMs = REQUEST_TIMEOUT_MS
+}) {
+  if (!botToken || !method) throw new Error('Missing required Telegram API parameters');
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetchImpl(telegramMethodUrl(botToken, method, testMode), {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json; charset=utf-8',
+        accept: 'application/json'
+      },
+      body: JSON.stringify(payload),
+      signal: controller.signal
+    });
+    return requireTelegramSuccess(response, method);
+  } catch (error) {
+    if (error instanceof TelegramApiError) throw error;
+    throw new TelegramApiError(method);
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+export async function deleteTelegramMessage({
+  fetchImpl = globalThis.fetch,
+  botToken,
+  chatId,
+  messageId,
+  testMode = false,
+  timeoutMs = REQUEST_TIMEOUT_MS
+}) {
+  if (!chatId || !messageId) throw new Error('Missing required Telegram deleteMessage parameters');
+  return postTelegramMethod({
+    fetchImpl,
+    botToken,
+    method: 'deleteMessage',
+    payload: { chat_id: chatId, message_id: messageId },
+    timeoutMs,
+    testMode
+  });
+}
+
+export async function sendTelegramInvoice({
+  fetchImpl = globalThis.fetch,
+  botToken,
+  chatId,
+  title,
+  description,
+  payload,
+  amount,
+  messageThreadId = null,
+  testMode = false,
+  timeoutMs = REQUEST_TIMEOUT_MS
+}) {
+  if (!chatId || !title || !description || !payload || !Number.isInteger(amount)) {
+    throw new Error('Missing required Telegram sendInvoice parameters');
+  }
+  const requestPayload = {
+    chat_id: chatId,
+    title,
+    description,
+    payload,
+    currency: 'XTR',
+    prices: [{ label: 'Apoyo voluntario a CalcuFlow', amount }]
+  };
+  if (messageThreadId) requestPayload.message_thread_id = messageThreadId;
+  return postTelegramMethod({ fetchImpl, botToken, method: 'sendInvoice', payload: requestPayload, timeoutMs, testMode });
+}
+
+export async function answerTelegramPreCheckoutQuery({
+  fetchImpl = globalThis.fetch,
+  botToken,
+  preCheckoutQueryId,
+  ok,
+  errorMessage = null,
+  testMode = false,
+  timeoutMs = REQUEST_TIMEOUT_MS
+}) {
+  if (!preCheckoutQueryId) throw new Error('Missing required Telegram answerPreCheckoutQuery parameters');
+  const payload = { pre_checkout_query_id: preCheckoutQueryId, ok: Boolean(ok) };
+  if (!ok && errorMessage) payload.error_message = errorMessage;
+  return postTelegramMethod({ fetchImpl, botToken, method: 'answerPreCheckoutQuery', payload, timeoutMs, testMode });
 }
 
 export function isChatAuthorized(chatId, allowedChatIdSetting) {
@@ -207,386 +340,18 @@ export function isChatAuthorized(chatId, allowedChatIdSetting) {
   return allowedIds.some(allowed => allowed === currentIdStr);
 }
 
-export function createTelegramHandler({
-  fetchImpl = globalThis.fetch,
-  getEnv = () => process.env,
-  now = () => new Date(),
-  timeoutMs = REQUEST_TIMEOUT_MS
-} = {}) {
-  return {
-    async fetch(request) {
-      if (request.method !== 'POST') {
-        return json({ error: 'Método no permitido.' }, { status: 405 });
-      }
-
-      let body;
-      try {
-        body = await request.json();
-      } catch {
-        return json({ error: 'JSON no válido.' }, { status: 400 });
-      }
-
-      const update = body;
-      const callbackQuery = update?.callback_query;
-
-      // Handle Telegram Callback Queries (Inline Keyboard Buttons)
-      if (callbackQuery && typeof callbackQuery === 'object') {
-        const callbackQueryId = callbackQuery.id;
-        const chatId = callbackQuery.message?.chat?.id || callbackQuery.from?.id;
-        const messageId = callbackQuery.message?.message_id;
-        const data = callbackQuery.data;
-
-        const env = typeof getEnv === 'function' ? getEnv() : process.env;
-        const botToken = env?.TELEGRAM_BOT_TOKEN;
-        const allowedChatId = env?.TELEGRAM_ALLOWED_CHAT_ID;
-
-        if (!botToken) {
-          return json({ error: 'TELEGRAM_BOT_TOKEN no configurado.' }, { status: 500 });
-        }
-
-        // Check chat authorization
-        if (chatId && !isChatAuthorized(chatId, allowedChatId)) {
-          if (callbackQueryId) {
-            try {
-              await answerTelegramCallbackQuery({
-                fetchImpl,
-                botToken,
-                callbackQueryId,
-                text: '⚠️ No autorizado.',
-                showAlert: true,
-                timeoutMs
-              });
-            } catch {
-              // Ignore network errors
-            }
-          }
-          return json({ ok: true, status: 'unauthorized_chat' });
-        }
-
-        // Immediately answer callback query to clear button loading state
-        if (callbackQueryId) {
-          try {
-            await answerTelegramCallbackQuery({
-              fetchImpl,
-              botToken,
-              callbackQueryId,
-              timeoutMs
-            });
-          } catch {
-            // Ignore answer error
-          }
-        }
-
-        const parsedCallback = parseCallbackData(data);
-
-        if (parsedCallback.type === 'rates') {
-          try {
-            const ratesResult = await resolveServerRates({ fetchImpl, now, timeoutMs });
-            if (!ratesResult.bcv?.ok || !ratesResult.p2p?.ok) {
-              if (chatId && messageId) {
-                await editTelegramMessageText({
-                  fetchImpl,
-                  botToken,
-                  chatId,
-                  messageId,
-                  text: formatErrorMessage('No se pudieron consultar las tasas en este momento. Intenta de nuevo en unos minutos.'),
-                  replyMarkup: buildQuickAmountsInlineKeyboard(),
-                  timeoutMs
-                });
-              }
-              return json({ ok: true, status: 'rates_unavailable' });
-            }
-
-            const ratesText = formatRatesMessage({
-              bcv: ratesResult.bcv.rate,
-              p2p: ratesResult.p2p.rate,
-              bcvDate: ratesResult.bcv.effectiveDate
-            });
-
-            if (chatId && messageId) {
-              await editTelegramMessageText({
-                fetchImpl,
-                botToken,
-                chatId,
-                messageId,
-                text: ratesText,
-                replyMarkup: buildQuickAmountsInlineKeyboard(),
-                timeoutMs
-              });
-            }
-            return json({ ok: true, status: 'rates_sent' });
-          } catch {
-            if (chatId && messageId) {
-              await editTelegramMessageText({
-                fetchImpl,
-                botToken,
-                chatId,
-                messageId,
-                text: formatErrorMessage('Error al consultar los proveedores de tasas.'),
-                timeoutMs
-              });
-            }
-            return json({ ok: true, status: 'rates_error' });
-          }
-        }
-
-        if (parsedCallback.type === 'calc') {
-          try {
-            const ratesResult = await resolveServerRates({ fetchImpl, now, timeoutMs });
-            if (!ratesResult.bcv?.ok || !ratesResult.p2p?.ok) {
-              if (chatId && messageId) {
-                await editTelegramMessageText({
-                  fetchImpl,
-                  botToken,
-                  chatId,
-                  messageId,
-                  text: formatErrorMessage('No se pudieron obtener las tasas actuales para calcular. Intenta de nuevo en unos minutos.'),
-                  timeoutMs
-                });
-              }
-              return json({ ok: true, status: 'rates_unavailable' });
-            }
-
-            const bank = resolveBank(parsedCallback.bankId);
-            const calcResult = calculateValues({
-              requestedUsd: parsedCallback.amount,
-              bcvRate: ratesResult.bcv.rate,
-              bankMargin: 0,
-              p2pRate: ratesResult.p2p.rate,
-              cardFee: bank.fee,
-              bpayFee: DEFAULT_BPAY_FEE
-            });
-
-            if (!calcResult) {
-              if (chatId && messageId) {
-                await editTelegramMessageText({
-                  fetchImpl,
-                  botToken,
-                  chatId,
-                  messageId,
-                  text: formatErrorMessage('No se pudo calcular la operación con los valores proporcionados.'),
-                  timeoutMs
-                });
-              }
-              return json({ ok: true, status: 'calc_failed' });
-            }
-
-            const responseText = formatCalculationResult(calcResult, bank);
-            const replyMarkup = buildBankInlineKeyboard(parsedCallback.amount, bank.id);
-
-            if (chatId && messageId) {
-              await editTelegramMessageText({
-                fetchImpl,
-                botToken,
-                chatId,
-                messageId,
-                text: responseText,
-                replyMarkup,
-                timeoutMs
-              });
-            }
-            return json({ ok: true, status: 'calc_sent' });
-          } catch {
-            if (chatId && messageId) {
-              await editTelegramMessageText({
-                fetchImpl,
-                botToken,
-                chatId,
-                messageId,
-                text: formatErrorMessage('Error interno al procesar el cálculo.'),
-                timeoutMs
-              });
-            }
-            return json({ ok: true, status: 'calc_error' });
-          }
-        }
-
-        return json({ ok: true, status: 'ignored_unknown_callback' });
-      }
-
-      // Handle standard message updates
-      const message = update?.message || update?.edited_message;
-      if (!message || typeof message !== 'object') {
-        return json({ ok: true, status: 'ignored_no_message' });
-      }
-
-      const chatId = message.chat?.id;
-      const messageId = message.message_id;
-      const text = message.text;
-
-      if (!chatId || !text) {
-        return json({ ok: true, status: 'ignored_no_text' });
-      }
-
-      const env = typeof getEnv === 'function' ? getEnv() : process.env;
-      const botToken = env?.TELEGRAM_BOT_TOKEN;
-      const allowedChatId = env?.TELEGRAM_ALLOWED_CHAT_ID;
-
-      if (!botToken) {
-        return json({ error: 'TELEGRAM_BOT_TOKEN no configurado.' }, { status: 500 });
-      }
-
-      // Check chat authorization
-      if (!isChatAuthorized(chatId, allowedChatId)) {
-        try {
-          await sendTelegramMessage({
-            fetchImpl,
-            botToken,
-            chatId,
-            text: '⚠️ Este bot está configurado para responder exclusivamente en la comunidad oficial de CalcuFlow: https://t.me/CalcuFlow',
-            replyToMessageId: messageId,
-            timeoutMs
-          });
-        } catch {
-          // Ignore network errors when notifying unauthorized chats
-        }
-        return json({ ok: true, status: 'unauthorized_chat' });
-      }
-
-      // Parse incoming text
-      const parsed = parseTelegramMessage(text);
-      if (parsed.type === 'unknown') {
-        return json({ ok: true, status: 'ignored_unknown_message' });
-      }
-
-      if (parsed.type === 'help') {
-        const helpText = formatHelpMessage();
-        await sendTelegramMessage({
-          fetchImpl,
-          botToken,
-          chatId,
-          text: helpText,
-          replyToMessageId: messageId,
-          replyMarkup: buildQuickAmountsInlineKeyboard(),
-          timeoutMs
-        });
-        return json({ ok: true, status: 'help_sent' });
-      }
-
-      if (parsed.type === 'invalid_calc') {
-        const errorText = formatErrorMessage(parsed.error);
-        await sendTelegramMessage({
-          fetchImpl,
-          botToken,
-          chatId,
-          text: errorText,
-          replyToMessageId: messageId,
-          replyMarkup: buildQuickAmountsInlineKeyboard(),
-          timeoutMs
-        });
-        return json({ ok: true, status: 'error_sent' });
-      }
-
-      if (parsed.type === 'rates') {
-        try {
-          const ratesResult = await resolveServerRates({ fetchImpl, now, timeoutMs });
-          if (!ratesResult.bcv?.ok || !ratesResult.p2p?.ok) {
-            await sendTelegramMessage({
-              fetchImpl,
-              botToken,
-              chatId,
-              text: formatErrorMessage('No se pudieron consultar las tasas en este momento. Intenta de nuevo en unos minutos.'),
-              replyToMessageId: messageId,
-              replyMarkup: buildQuickAmountsInlineKeyboard(),
-              timeoutMs
-            });
-            return json({ ok: true, status: 'rates_unavailable' });
-          }
-
-          const ratesText = formatRatesMessage({
-            bcv: ratesResult.bcv.rate,
-            p2p: ratesResult.p2p.rate,
-            bcvDate: ratesResult.bcv.effectiveDate
-          });
-          await sendTelegramMessage({
-            fetchImpl,
-            botToken,
-            chatId,
-            text: ratesText,
-            replyToMessageId: messageId,
-            replyMarkup: buildQuickAmountsInlineKeyboard(),
-            timeoutMs
-          });
-          return json({ ok: true, status: 'rates_sent' });
-        } catch {
-          await sendTelegramMessage({
-            fetchImpl,
-            botToken,
-            chatId,
-            text: formatErrorMessage('Error al consultar los proveedores de tasas.'),
-            replyToMessageId: messageId,
-            timeoutMs
-          });
-          return json({ ok: true, status: 'rates_error' });
-        }
-      }
-
-      if (parsed.type === 'calc') {
-        try {
-          const ratesResult = await resolveServerRates({ fetchImpl, now, timeoutMs });
-          if (!ratesResult.bcv?.ok || !ratesResult.p2p?.ok) {
-            await sendTelegramMessage({
-              fetchImpl,
-              botToken,
-              chatId,
-              text: formatErrorMessage('No se pudieron obtener las tasas actuales para calcular. Intenta de nuevo en unos minutos.'),
-              replyToMessageId: messageId,
-              timeoutMs
-            });
-            return json({ ok: true, status: 'rates_unavailable' });
-          }
-
-          const bank = resolveBank(parsed.bankQuery);
-          const calcResult = calculateValues({
-            requestedUsd: parsed.amount,
-            bcvRate: ratesResult.bcv.rate,
-            bankMargin: 0,
-            p2pRate: ratesResult.p2p.rate,
-            cardFee: bank.fee,
-            bpayFee: DEFAULT_BPAY_FEE
-          });
-
-          if (!calcResult) {
-            await sendTelegramMessage({
-              fetchImpl,
-              botToken,
-              chatId,
-              text: formatErrorMessage('No se pudo calcular la operación con los valores proporcionados.'),
-              replyToMessageId: messageId,
-              timeoutMs
-            });
-            return json({ ok: true, status: 'calc_failed' });
-          }
-
-          const responseText = formatCalculationResult(calcResult, bank);
-          const replyMarkup = buildBankInlineKeyboard(parsed.amount, bank.id);
-          await sendTelegramMessage({
-            fetchImpl,
-            botToken,
-            chatId,
-            text: responseText,
-            replyToMessageId: messageId,
-            replyMarkup,
-            timeoutMs
-          });
-          return json({ ok: true, status: 'calc_sent' });
-        } catch {
-          await sendTelegramMessage({
-            fetchImpl,
-            botToken,
-            chatId,
-            text: formatErrorMessage('Error interno al procesar el cálculo.'),
-            replyToMessageId: messageId,
-            timeoutMs
-          });
-          return json({ ok: true, status: 'calc_error' });
-        }
-      }
-
-      return json({ ok: true, status: 'unhandled' });
+export function createTelegramHandler(options = {}) {
+  return createTelegramAppHandler({
+    ...options,
+    api: {
+      sendTelegramMessage,
+      answerTelegramCallbackQuery,
+      editTelegramMessageText,
+      deleteTelegramMessage,
+      sendTelegramInvoice,
+      answerTelegramPreCheckoutQuery
     }
-  };
+  });
 }
 
 export default createTelegramHandler();
-
