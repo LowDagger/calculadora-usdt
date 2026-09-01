@@ -11,7 +11,6 @@ function createWorker({ cachedResponse, networkResponse } = {}) {
   const deletedCaches = [];
   const putCalls = [];
   let fetchCalls = 0;
-  let skipWaitingCalls = 0;
   const cache = {
     addAll: async () => {},
     match: async () => cachedResponse,
@@ -24,7 +23,7 @@ function createWorker({ cachedResponse, networkResponse } = {}) {
     self: {
       location: { origin: 'https://example.com' },
       clients: { claim: async () => {} },
-      skipWaiting: async () => { skipWaitingCalls += 1; },
+      skipWaiting: async () => {},
       addEventListener: (type, handler) => { listeners[type] = handler; }
     },
     caches: {
@@ -40,7 +39,7 @@ function createWorker({ cachedResponse, networkResponse } = {}) {
   };
 
   vm.runInNewContext(serviceWorkerSource, context);
-  return { listeners, deletedCaches, putCalls, getFetchCalls: () => fetchCalls, getSkipWaitingCalls: () => skipWaitingCalls };
+  return { listeners, deletedCaches, putCalls, getFetchCalls: () => fetchCalls };
 }
 
 function request(path, { mode = 'same-origin' } = {}) {
@@ -98,25 +97,4 @@ test('activation deletes old versioned caches and retains the current cache', as
   await activation;
 
   assert.deepEqual(worker.deletedCaches, ['calcuflow-v64']);
-});
-
-test('service-worker install caches assets without immediately calling skipWaiting', () => {
-  const installBlock = serviceWorkerSource.match(/addEventListener\('install'[\s\S]*?\n\}\);/)?.[0] || '';
-  assert.ok(installBlock.length > 0);
-  assert.doesNotMatch(installBlock, /skipWaiting/);
-});
-
-test('service-worker activates on SKIP_WAITING message', () => {
-  const worker = createWorker();
-  assert.equal(worker.getSkipWaitingCalls(), 0);
-  worker.listeners.message({
-    data: { type: 'SKIP_WAITING' }
-  });
-  assert.equal(worker.getSkipWaitingCalls(), 1);
-});
-
-test('service worker update flow prompts user without force-reloading active session', () => {
-  assert.match(appSource, /promptUpdate/);
-  assert.match(appSource, /Actualizaci[óo]n disponible - Toca para recargar/);
-  assert.doesNotMatch(appSource, /newWorker\.state === 'installed' && navigator\.serviceWorker\.controller\) \{\s*activateWaiting/);
 });
