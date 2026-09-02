@@ -4,6 +4,7 @@ import {
   formatErrorMessage,
   formatHelpMessage,
   formatRatesMessage,
+  formatThreadIdMessage,
   parseTelegramMessage,
   resolveBank
 } from './telegram-formatter.mjs';
@@ -116,6 +117,7 @@ function parseEnhancedMessage(text) {
     if (command === 'apoyar') return { type: 'support' };
     if (command === 'terms' || command === 'terminos') return { type: 'terms' };
     if (command === 'paysupport') return { type: 'payment_support' };
+    if (command === 'threadid' || command === 'topicid') return { type: 'thread_id' };
     if (command === 'bancos') return { type: 'show_banks' };
     if (command === 'privado') return { type: 'private_access' };
     if ((command === 'calc' || command === 'calcular' || command === 'c') && !args) {
@@ -622,6 +624,18 @@ export function createTelegramAppHandler({
 
     if (typeof message.text !== 'string') return json({ ok: true, status: 'ignored_no_text' });
     const parsed = parseEnhancedMessage(message.text);
+
+    if (parsed.type === 'thread_id') {
+      await safeSend({
+        botToken,
+        chatId,
+        text: formatThreadIdMessage(chatId, messageThreadId),
+        replyToMessageId: message.message_id,
+        messageThreadId
+      });
+      return json({ ok: true, status: 'thread_id_sent' });
+    }
+
     if (!access.allowed) {
       if (!isExplicitGroupInvocation(message, parsed)) return json({ ok: true, status: 'ignored_external_group_message' });
       const status = await sendRedirect({
@@ -638,16 +652,30 @@ export function createTelegramAppHandler({
     if (parsed.type === 'unknown') return json({ ok: true, status: 'ignored_unknown_message' });
     const ownerId = message.from?.id || null;
     const common = { botToken, chatId, replyToMessageId: message.message_id, messageThreadId };
+
+    const cleanupCommandMessage = async () => {
+      if (!access.isPrivate && access.isOfficialGroup && access.isAllowedThread && String(message.text || '').trim().startsWith('/')) {
+        try {
+          await api.deleteTelegramMessage({ fetchImpl, botToken, chatId, messageId: message.message_id, timeoutMs, testMode: useTestApi() });
+        } catch {
+          // Cleanup is best-effort and must never break functionality.
+        }
+      }
+    };
+
     if (parsed.type === 'home') {
       await safeSend({ ...common, text: formatHomeMessage(), replyMarkup: buildHomeInlineKeyboard({ isPrivate: access.isPrivate, botUsername: env.TELEGRAM_BOT_USERNAME, ownerId }) });
+      await cleanupCommandMessage();
       return json({ ok: true, status: 'home_sent' });
     }
     if (parsed.type === 'help') {
       await safeSend({ ...common, text: formatHelpMessage(), replyMarkup: buildHomeInlineKeyboard({ isPrivate: access.isPrivate, botUsername: env.TELEGRAM_BOT_USERNAME, ownerId }) });
+      await cleanupCommandMessage();
       return json({ ok: true, status: 'help_sent' });
     }
     if (parsed.type === 'show_banks') {
       await safeSend({ ...common, text: formatBankSelectionMessage(), replyMarkup: buildBankMenuInlineKeyboard(ownerId) });
+      await cleanupCommandMessage();
       return json({ ok: true, status: 'banks_sent' });
     }
     if (parsed.type === 'private_access') {
@@ -663,11 +691,13 @@ export function createTelegramAppHandler({
         fromUserId: message.from?.id,
         replyToMessageId: message.message_id
       });
+      await cleanupCommandMessage();
       return json({ ok: true, status });
     }
     if (parsed.type === 'support') {
       if (!access.isPrivate) {
         const status = await sendPrivateSupport({ botToken, env, chat, messageThreadId, fromUserId: message.from?.id, replyToMessageId: message.message_id });
+        await cleanupCommandMessage();
         return json({ ok: true, status });
       }
       await safeSend({ ...common, text: formatSupportMessage(), replyMarkup: buildSupportInlineKeyboard(ownerId) });
@@ -675,11 +705,13 @@ export function createTelegramAppHandler({
     }
     if (parsed.type === 'terms') {
       await safeSend({ ...common, text: formatTermsMessage(), replyMarkup: buildTermsInlineKeyboard(ownerId) });
+      await cleanupCommandMessage();
       return json({ ok: true, status: 'terms_sent' });
     }
     if (parsed.type === 'payment_support') {
       const view = paymentSupportView(env, ownerId);
       await safeSend({ ...common, text: view.text, replyMarkup: view.replyMarkup });
+      await cleanupCommandMessage();
       return json({ ok: true, status: 'payment_support_sent' });
     }
     if (parsed.type === 'invalid_calc') {
@@ -693,6 +725,7 @@ export function createTelegramAppHandler({
           ? formatRatesMessage({ bcv: rates.bcv.rate, p2p: rates.p2p.rate, bcvDate: rates.bcv.effectiveDate })
           : formatErrorMessage('No se pudieron consultar las tasas en este momento. Intenta de nuevo en unos minutos.');
         await safeSend({ ...common, text, replyMarkup: buildRatesInlineKeyboard(ownerId) });
+        await cleanupCommandMessage();
         return json({ ok: true, status: rates ? 'rates_sent' : 'rates_unavailable' });
       } catch {
         await safeSend({ ...common, text: formatErrorMessage('Error al consultar los proveedores de tasas.'), replyMarkup: buildRatesInlineKeyboard(ownerId) });

@@ -1,6 +1,6 @@
 import { money } from '../js/utils.js';
 
-export const CANONICAL_APP_URL = 'https://calculadora-banco-usdt.vercel.app';
+export const CANONICAL_APP_URL = 'https://calcu-flow.vercel.app';
 
 export const BANK_ALIASES = Object.freeze({
   // BDV
@@ -166,6 +166,7 @@ export function parseTelegramMessage(text) {
     }
 
     if (command === 'ayuda' || command === 'help') return { type: 'help' };
+    if (command === 'threadid' || command === 'topicid') return { type: 'thread_id' };
     if (command === 'apoyar') return { type: 'support' };
     if (command === 'terms' || command === 'terminos') return { type: 'terms' };
     if (command === 'paysupport') return { type: 'payment_support' };
@@ -366,4 +367,9 @@ export function parseCallbackData(data) {
   }
 
   return { type: 'unknown' };
+}
+
+export function formatThreadIdMessage(chatId, messageThreadId) {
+  const topicDisplay = messageThreadId ? String(messageThreadId) : 'none';
+  return `Chat ID:\n${chatId}\n\nTopic ID:\n${topicDisplay}`;
 }

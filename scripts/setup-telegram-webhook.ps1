@@ -145,6 +145,7 @@ try {
     throw 'TELEGRAM_BOT_TOKEN tiene un formato inválido. No uses marcadores, comillas, espacios, saltos de línea ni el prefijo bot.'
   }
 
+  $WebhookUrl = ([string]$WebhookUrl).Trim()
   $WebhookUri = $null
   if (-not [Uri]::TryCreate($WebhookUrl, [UriKind]::Absolute, [ref]$WebhookUri) -or
       $WebhookUri.Scheme -cne [Uri]::UriSchemeHttps -or
