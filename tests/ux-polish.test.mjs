@@ -77,7 +77,7 @@ test('marks result-card symbols as decorative and bumps the PWA cache', () => {
   assert.match(ui, /btn\.setAttribute\('aria-pressed', String\(isActive\)\)/);
   assert.match(settingsController, /btn\.setAttribute\('aria-pressed', String\(isActive\)\)/);
   assert.match(html, /data-theme-val="system" aria-pressed="true"/);
-  assert.match(serviceWorker, /const APP_VERSION\s+= '65';/);
+  assert.match(serviceWorker, /const APP_VERSION\s+= '66';/);
   assert.match(serviceWorker, /'\/js\/bcv-rates\.js'/);
   for (const moduleName of ['modal-controller', 'rates-controller', 'settings-controller', 'share']) {
     assert.match(serviceWorker, new RegExp(`'/js/${moduleName}\\.js'`));
@@ -155,14 +155,14 @@ test('consolidates Community actions into one accessible Telegram modal', () => 
   assert.match(html, /id="openCommunityBtn"[^>]*aria-controls="qrPanel"/);
   assert.match(settingsHtml, /id="openCommunitySettingsBtn"[^>]*aria-controls="qrPanel"/);
   assert.match(html, /id="qrPanel" role="dialog" aria-modal="true"[\s\S]*?aria-labelledby="qrTitle"/);
-  assert.match(html, /id="qrTitle">Comunidad CalcuFlow<[\s\S]*?Únete al grupo de Telegram/);
+  assert.match(html, /id="qrTitle">Comunidad CalcuFlow<[\s\S]*?Habla con otros usuarios sobre bancos/);
   assert.match(html, /id="closeQrBtn"/);
   assert.match(html, /class="community-handle" href="https:\/\/t\.me\/CalcuFlow"[\s\S]*?class="community-telegram-icon"[\s\S]*?<span>t\.me\/CalcuFlow<\/span>/);
   assert.match(html, /class="qr-image-link" href="https:\/\/t\.me\/CalcuFlow" target="_blank" rel="noopener noreferrer"[\s\S]*?aria-label="Abrir grupo de CalcuFlow en Telegram"/);
   assert.match(html, /<img[^>]*src="assets\/telegram-qr\.webp"[^>]*alt="Código QR del grupo de Telegram de CalcuFlow"[^>]*width="700"[^>]*height="700"[^>]*loading="lazy"[^>]*decoding="async"[^>]*\/?>/);
   assert.match(html, /class="bank-profile-action bank-profile-action--primary community-primary-action"[\s\S]*?href="https:\/\/t\.me\/CalcuFlow"[\s\S]*?class="community-telegram-icon"[\s\S]*?<span>Abrir en Telegram<\/span>/);
   assert.match(serviceWorker, /'\/assets\/telegram-qr\.webp'/);
-  assert.equal((html.match(/href="https:\/\/t\.me\/CalcuFlow"/g) || []).length, 3);
+  assert.equal((html.match(/href="https:\/\/t\.me\/CalcuFlow"/g) || []).length, 4);
   assert.doesNotMatch([html, app, ui, modalController].join('\n'), /https:\/\/telegram\.me\/CalcuFlow/);
   assert.match(app, /const communityTriggers = \[[\s\S]*?openCommunityHeaderBtn[\s\S]*?openCommunityBtn[\s\S]*?openCommunitySettingsBtn/);
   assert.match(app, /createCommunityModalController\(\{[\s\S]*?panel: els\.qrPanel[\s\S]*?openModal: openQr[\s\S]*?closeModal: closeQr/);

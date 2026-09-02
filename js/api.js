@@ -182,6 +182,23 @@ export function validateOperationalConfig(data) {
     }
   }
 
+  if (data.telegramCommunityPromo !== undefined) {
+    if (data.telegramCommunityPromo && typeof data.telegramCommunityPromo === 'object' && !Array.isArray(data.telegramCommunityPromo)) {
+      const promo = data.telegramCommunityPromo;
+      const enabled = typeof promo.enabled === 'boolean' ? promo.enabled : false;
+      const campaignId = typeof promo.campaignId === 'string' ? promo.campaignId.trim() : '';
+      const rawEndsAt = typeof promo.endsAt === 'string' ? promo.endsAt.trim() : (typeof promo.campaignEndsAt === 'string' ? promo.campaignEndsAt.trim() : '');
+      const endsAtMs = rawEndsAt ? Date.parse(rawEndsAt) : NaN;
+      if (campaignId && Number.isFinite(endsAtMs)) {
+        validated.telegramCommunityPromo = {
+          enabled,
+          campaignId,
+          endsAt: new Date(endsAtMs).toISOString()
+        };
+      }
+    }
+  }
+
   return validated;
 }
 

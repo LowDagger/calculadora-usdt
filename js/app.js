@@ -1,3 +1,4 @@
+import { createCommunityPromoController, DEFAULT_TELEGRAM_CAMPAIGN } from './community-promo.js';
 import { DEFAULT_BPAY_FEE, MAX_REQUESTED_USD, calculateValues, currentBankRate, sanitizeRequestedUsdInput, validateRequestedUsd } from './calculator.js';
 import {
   DEFAULT_PROFILE_ID,
@@ -39,10 +40,12 @@ import { applyTheme, createSettingsController, initTheme, updateThemeUI } from '
 import { createShareController, initShare, shareOrCopy } from './share.js';
 import { loadState as readState, saveState as writeState } from './storage.js';
 import { money, n, triggerHaptic } from './utils.js';
-import { els, updateUsdToBuyDisplay, setStatus, clearStatus, showToast, renderEmpty, renderRates, renderResult, renderBcvDate, renderUsdAmountValidation, openBreakdown, closeBreakdown, openSupport, closeSupport, openQr, closeQr, openShare, closeShare, lockBodyScroll, unlockBodyScroll } from './ui.js';
+import { els, updateUsdToBuyDisplay, setStatus, clearStatus, showToast, renderEmpty, renderRates, renderResult, renderBcvDate, renderUsdAmountValidation, openBreakdown, closeBreakdown, openSupport, closeSupport, openQr, closeQr, openCommunityPromo, closeCommunityPromo, openShare, closeShare, lockBodyScroll, unlockBodyScroll } from './ui.js';
 
 let bankProfileState = null;
 let shareController = null;
+let promoController = null;
+let activeTelegramPromoConfig = { ...DEFAULT_TELEGRAM_CAMPAIGN };
 let manualCardFee = '1.5';
 let temporaryCardFee = null;
 let manualFeeConfigured = false;
@@ -1180,6 +1183,10 @@ export function applyOperationalConfig(config, { reRender = true } = {}) {
     }
   }
 
+  if (config.telegramCommunityPromo && typeof config.telegramCommunityPromo === 'object') {
+    activeTelegramPromoConfig = { ...config.telegramCommunityPromo };
+  }
+
   if (changed && reRender) {
     renderBankProfiles();
     calculate();
@@ -1751,6 +1758,22 @@ function bindEvents() {
   const dismissBreakdown = () => closeManagedModal(els.breakdownPanel, els.openBreakdownBtn, closeBreakdown);
   const showSupport = () => openManagedModal(els.supportPanel, els.openSupportBtn, openSupport, els.closeSupportBtn);
   const dismissSupport = () => closeManagedModal(els.supportPanel, els.openSupportBtn, closeSupport);
+  promoController = createCommunityPromoController({
+    modal: els.communityPromoModal,
+    closeButton: els.closeCommunityPromoBtn,
+    ctaButton: els.communityPromoCta,
+    getPromoConfig: () => activeTelegramPromoConfig,
+    getStorage: () => localStorage,
+    openModal: openCommunityPromo,
+    closeModal: closeCommunityPromo,
+    hasActiveModal: () => Boolean(
+      document.querySelector('.modal-shell.open:not(#communityPromoModal), .install-prompt.show')
+    ),
+    isInputFocused: () => {
+      const el = document.activeElement;
+      return Boolean(el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA'));
+    }
+  });
   const communityTriggers = [
     document.getElementById('openCommunityHeaderBtn'),
     document.getElementById('openCommunityBtn'),
@@ -1843,6 +1866,7 @@ function bindEvents() {
       else if (bsHelperEls.panel.classList.contains('open')) dismissBsHelper();
       else if (p2pEditorEls.panel.classList.contains('open')) dismissP2pEditor();
       else if (bcvEditorEls.panel.classList.contains('open')) dismissBcvEditor();
+      else if (els.communityPromoModal?.classList.contains('open')) promoController?.dismiss();
       else if (els.qrPanel.classList.contains('open')) dismissCommunity();
       else if (els.settingsPanel.classList.contains('open')) dismissSettings();
       else if (els.breakdownPanel.classList.contains('open')) dismissBreakdown();
@@ -2301,9 +2325,47 @@ initBicycleEasterEgg();
 calculate();
 setupKeyboardUX();
 initInstallPrompt();
+initCommunityPromoLifecycle();
 updateRelativeTime();
 setInterval(updateRelativeTime, 1000);
 registerServiceWorker();
+
+
+export function initCommunityPromoLifecycle({ delayMs = 1500, maxRetries = 3 } = {}) {
+  let hasEvaluated = false;
+  let retryCount = 0;
+
+  function attemptEvaluation() {
+    if (hasEvaluated || !promoController) return;
+
+    const isRatesLoading = Boolean(
+      els.loadRatesBtn?.classList.contains('loading') ||
+      els.loadRatesBtnMobile?.classList.contains('loading')
+    );
+
+    const hasActiveModal = Boolean(
+      document.querySelector('.modal-shell.open:not(#communityPromoModal), .install-prompt.show')
+    );
+
+    const activeEl = document.activeElement;
+    const isInputFocused = Boolean(
+      activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA')
+    );
+
+    if (isRatesLoading || hasActiveModal || isInputFocused) {
+      if (retryCount < maxRetries) {
+        retryCount += 1;
+        setTimeout(attemptEvaluation, delayMs);
+      }
+      return;
+    }
+
+    hasEvaluated = true;
+    promoController.show();
+  }
+
+  setTimeout(attemptEvaluation, delayMs);
+}
 
 window.addEventListener('load', () => {
   loadOperationalConfig().catch(() => {});

@@ -62,6 +62,12 @@ export function formatCustomAmountPrompt(bankId, panelMessageId, ownerId = null)
   return `✏️ *Escribe el monto en USD*\n\nEjemplo: 375\n\nReferencia: ${CUSTOM_AMOUNT_PROMPT_PREFIX}:${bankId}:${panelMessageId}${ownerSuffix}`;
 }
 
+export function isCustomAmountPrompt(message) {
+  const prompt = message?.reply_to_message;
+  if (!prompt?.from?.is_bot || typeof prompt.text !== 'string') return false;
+  return prompt.text.includes(CUSTOM_AMOUNT_PROMPT_PREFIX);
+}
+
 export function parseCustomAmountReply(message) {
   const prompt = message?.reply_to_message;
   if (!prompt?.from?.is_bot || typeof prompt.text !== 'string') return null;

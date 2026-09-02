@@ -3822,3 +3822,93 @@ html[data-theme="light"] .skeleton-shimmer::after {
   padding: 0 10px;
   font-size: 0.82rem;
 }
+
+/* Community Promo Centered Modal */
+.community-promo-shell {
+  z-index: 120;
+}
+
+.community-promo-card {
+  max-width: 380px;
+  border-radius: 20px;
+  padding: 20px;
+  gap: 14px;
+}
+
+.community-promo-title-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.community-promo-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  align-self: flex-start;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--primary);
+  background: var(--primary-bg);
+  padding: 3px 8px;
+  border-radius: 6px;
+  letter-spacing: 0.02em;
+}
+
+.community-promo-badge .community-telegram-icon {
+  width: 14px;
+  height: 14px;
+  color: currentColor;
+}
+
+.community-promo-title {
+  font-size: 1.15rem;
+  line-height: 1.25;
+  margin: 0;
+}
+
+.community-promo-desc {
+  font-size: 0.84rem;
+  line-height: 1.45;
+  color: var(--text);
+  margin: 0;
+}
+
+.community-promo-subtext {
+  font-size: 0.76rem;
+  line-height: 1.4;
+  color: var(--muted);
+  margin: 0;
+}
+
+.community-promo-actions {
+  margin-top: 4px;
+}
+
+.community-promo-cta {
+  font-size: 0.9rem;
+  min-height: 44px;
+}
+
+/* Force centered compact modal behavior on mobile viewports */
+@media (max-width: 600px) {
+  .community-promo-shell.open,
+  .community-promo-shell.closing {
+    display: grid !important;
+    place-items: center !important;
+    padding: 16px !important;
+  }
+
+  .community-promo-shell .community-promo-card {
+    border-radius: 20px !important;
+    max-width: 360px !important;
+    width: 100% !important;
+    max-height: calc(100dvh - 32px) !important;
+    margin: auto !important;
+    animation: modal-in 200ms var(--ease-out) forwards !important;
+  }
+
+  .community-promo-shell.closing .community-promo-card {
+    animation: modal-out 180ms var(--ease-out) forwards !important;
+  }
+}

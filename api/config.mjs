@@ -1,3 +1,9 @@
+export const DEFAULT_TELEGRAM_COMMUNITY_PROMO = Object.freeze({
+  enabled: true,
+  campaignId: 'telegram-community-2026-09',
+  endsAt: '2026-10-17T00:00:00.000Z'
+});
+
 export const DEFAULT_OPERATIONAL_CONFIG = Object.freeze({
   configVersion: 1,
   defaults: Object.freeze({
@@ -13,7 +19,8 @@ export const DEFAULT_OPERATIONAL_CONFIG = Object.freeze({
     'banesco-virtual': 2.5,
     bnc: 1.5,
     bdt: 2.5
-  })
+  }),
+  telegramCommunityPromo: DEFAULT_TELEGRAM_COMMUNITY_PROMO
 });
 
 export const KNOWN_BANK_IDS = Object.freeze(new Set([
@@ -71,6 +78,23 @@ export function validateRemoteConfig(rawConfig) {
     }
     if (Object.keys(bankFees).length > 0) {
       validated.bankFees = bankFees;
+    }
+  }
+
+  if (rawConfig.telegramCommunityPromo !== undefined) {
+    if (rawConfig.telegramCommunityPromo && typeof rawConfig.telegramCommunityPromo === 'object' && !Array.isArray(rawConfig.telegramCommunityPromo)) {
+      const promo = rawConfig.telegramCommunityPromo;
+      const enabled = typeof promo.enabled === 'boolean' ? promo.enabled : false;
+      const campaignId = typeof promo.campaignId === 'string' ? promo.campaignId.trim() : '';
+      const rawEndsAt = typeof promo.endsAt === 'string' ? promo.endsAt.trim() : (typeof promo.campaignEndsAt === 'string' ? promo.campaignEndsAt.trim() : '');
+      const endsAtMs = rawEndsAt ? Date.parse(rawEndsAt) : NaN;
+      if (campaignId && Number.isFinite(endsAtMs)) {
+        validated.telegramCommunityPromo = {
+          enabled,
+          campaignId,
+          endsAt: new Date(endsAtMs).toISOString()
+        };
+      }
     }
   }
 
@@ -138,7 +162,8 @@ export async function resolveServerConfig({
       bankFees: {
         ...DEFAULT_OPERATIONAL_CONFIG.bankFees,
         ...(validated.bankFees || {})
-      }
+      },
+      telegramCommunityPromo: validated.telegramCommunityPromo ?? DEFAULT_OPERATIONAL_CONFIG.telegramCommunityPromo
     };
 
     return { config: mergedConfig, cacheable: true, source: 'edge-config' };

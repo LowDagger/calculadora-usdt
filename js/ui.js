@@ -33,7 +33,10 @@ export const els = {
   brechaView: $('brechaView'),
   bcvEffectiveDate: $('bcvEffectiveDate'),
   p2pUpdateTime: $('p2pUpdateTime'),
-  usdAmountError: $('usdAmountError')
+  usdAmountError: $('usdAmountError'),
+  communityPromoModal: $('communityPromoModal'),
+  closeCommunityPromoBtn: $('closeCommunityPromoBtn'),
+  communityPromoCta: $('communityPromoCta')
 };
 
 export function updateUsdToBuyDisplay(value) {
@@ -416,6 +419,29 @@ export function openQr() {
 export function closeQr() {
   const panel = els.qrPanel;
   if (!panel.classList.contains('open')) return;
+  panel.classList.add('closing');
+  triggerHaptic('light');
+  const duration = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 250;
+  setTimeout(() => {
+    panel.classList.remove('open', 'closing');
+    panel.setAttribute('aria-hidden', 'true');
+    unlockBodyScroll();
+  }, duration);
+}
+
+export function openCommunityPromo() {
+  const panel = els.communityPromoModal;
+  if (!panel) return;
+  panel.classList.remove('closing');
+  panel.classList.add('open');
+  panel.setAttribute('aria-hidden', 'false');
+  triggerHaptic('light');
+  lockBodyScroll();
+}
+
+export function closeCommunityPromo() {
+  const panel = els.communityPromoModal;
+  if (!panel || !panel.classList.contains('open')) return;
   panel.classList.add('closing');
   triggerHaptic('light');
   const duration = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 250;

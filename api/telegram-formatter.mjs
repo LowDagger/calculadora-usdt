@@ -101,6 +101,12 @@ export function resolveBank(query) {
   };
 }
 
+export function isValidBankSlug(slug) {
+  if (!slug || typeof slug !== 'string') return false;
+  const normalized = slug.trim().toLowerCase();
+  return Boolean(BANK_ALIASES[normalized]) || /^(\d+(?:[.,]\d+)?)\s*%?$/.test(normalized);
+}
+
 function parseAmountAndBank(input) {
   const parts = input.trim().split(/\s+/);
   const rawAmount = parts[0];

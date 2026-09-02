@@ -5,6 +5,7 @@ import {
   formatHelpMessage,
   formatRatesMessage,
   formatThreadIdMessage,
+  isValidBankSlug,
   parseTelegramMessage,
   resolveBank
 } from './telegram-formatter.mjs';
@@ -37,6 +38,7 @@ import {
   formatPaymentThanksMessage,
   formatSupportMessage,
   formatTermsMessage,
+  isCustomAmountPrompt,
   parseAppCallbackData,
   parseCustomAmountReply,
   parseCustomSupportReply,
@@ -56,21 +58,37 @@ function json(body, { status = 200 } = {}) {
   });
 }
 
+export const OFFICIAL_COMMUNITY_CHAT_ID = '-1003824051698';
+export const OFFICIAL_BOTS_THREAD_ID = '555';
+
 function splitSetting(setting) {
   if (typeof setting !== 'string') return [];
   return setting.split(',').map(value => value.trim()).filter(Boolean);
 }
 
+export function isOfficialGroupChat(chatId, env = {}) {
+  const idStr = String(chatId ?? '').trim();
+  if (!idStr) return false;
+  if (idStr === OFFICIAL_COMMUNITY_CHAT_ID) return true;
+  const officialIds = splitSetting(env.TELEGRAM_ALLOWED_CHAT_ID);
+  return officialIds.includes(idStr);
+}
+
 export function getConfiguredThreadId(chatId, env = {}) {
+  const idStr = String(chatId ?? '').trim();
   const mappingSetting = String(env.TELEGRAM_ALLOWED_THREADS || '').trim();
   if (mappingSetting) {
     for (const entry of splitSetting(mappingSetting)) {
       const match = entry.match(/^(-?\d+):(\d+)$/);
-      if (match && match[1] === String(chatId)) return match[2];
+      if (match && match[1] === idStr) return match[2];
     }
+    if (idStr === OFFICIAL_COMMUNITY_CHAT_ID) return OFFICIAL_BOTS_THREAD_ID;
     return '';
   }
-  return String(env.TELEGRAM_ALLOWED_THREAD_ID || '').trim();
+  const envThread = String(env.TELEGRAM_ALLOWED_THREAD_ID || '').trim();
+  if (envThread) return envThread;
+  if (idStr === OFFICIAL_COMMUNITY_CHAT_ID) return OFFICIAL_BOTS_THREAD_ID;
+  return '';
 }
 
 function inferChatType(chat) {
@@ -82,23 +100,64 @@ export function getTelegramAccessContext(chat, messageThreadId, env = {}) {
   const chatType = inferChatType(chat);
   const isPrivate = chatType === 'private';
   if (isPrivate) {
-    return { allowed: true, isPrivate: true, isOfficialGroup: false, isAllowedThread: true };
+    return {
+      allowed: true,
+      isPrivate: true,
+      isOfficialGroup: false,
+      isAllowedThread: true,
+      chatId: String(chat?.id ?? ''),
+      messageThreadId: null,
+      allowedThreadId: ''
+    };
   }
 
   const isGroup = chatType === 'group' || chatType === 'supergroup';
   if (!isGroup) {
-    return { allowed: false, isPrivate: false, isOfficialGroup: false, isAllowedThread: false };
+    return {
+      allowed: false,
+      isPrivate: false,
+      isOfficialGroup: false,
+      isAllowedThread: false,
+      chatId: String(chat?.id ?? ''),
+      messageThreadId: messageThreadId !== undefined && messageThreadId !== null ? String(messageThreadId) : null,
+      allowedThreadId: ''
+    };
   }
 
-  const officialIds = splitSetting(env.TELEGRAM_ALLOWED_CHAT_ID);
-  const isOfficialGroup = officialIds.includes(String(chat?.id));
-  const allowedThreadId = getConfiguredThreadId(chat?.id, env);
-  const isAllowedThread = !allowedThreadId || String(messageThreadId || '') === allowedThreadId;
+  const chatIdStr = String(chat?.id ?? '').trim();
+  const isOfficial = isOfficialGroupChat(chatIdStr, env);
+  if (!isOfficial) {
+    return {
+      allowed: false,
+      isPrivate: false,
+      isOfficialGroup: false,
+      isAllowedThread: false,
+      chatId: chatIdStr,
+      messageThreadId: messageThreadId !== undefined && messageThreadId !== null ? String(messageThreadId) : null,
+      allowedThreadId: ''
+    };
+  }
+
+  const allowedThreadId = getConfiguredThreadId(chatIdStr, env);
+  const currentThreadStr = messageThreadId !== undefined && messageThreadId !== null
+    ? String(messageThreadId).trim()
+    : '';
+
+  // In the confirmed official group (-1003824051698), message_thread_id MUST match 555 (or configured thread).
+  // In any other official group where allowedThreadId is configured, it must match.
+  // If an unmapped secondary group has no allowedThreadId, it is allowed.
+  const isAllowedThread = Boolean(allowedThreadId)
+    ? currentThreadStr === allowedThreadId
+    : (chatIdStr === OFFICIAL_COMMUNITY_CHAT_ID ? currentThreadStr === OFFICIAL_BOTS_THREAD_ID : true);
+
   return {
-    allowed: isOfficialGroup && isAllowedThread,
+    allowed: isAllowedThread,
     isPrivate: false,
-    isOfficialGroup,
-    isAllowedThread
+    isOfficialGroup: true,
+    isAllowedThread,
+    chatId: chatIdStr,
+    messageThreadId: currentThreadStr || null,
+    allowedThreadId: allowedThreadId || (chatIdStr === OFFICIAL_COMMUNITY_CHAT_ID ? OFFICIAL_BOTS_THREAD_ID : '')
   };
 }
 
@@ -364,16 +423,13 @@ export function createTelegramAppHandler({
     const parsed = parseAppCallbackData(callbackQuery.data);
 
     if (!access.allowed) {
-      await safeAnswerCallback({ botToken, callbackQueryId: callbackQuery.id });
-      const status = await sendRedirect({
+      await safeAnswerCallback({
         botToken,
-        env,
-        chat: chat || { id: chatId },
-        messageThreadId,
-        fromUserId: callbackQuery.from?.id,
-        callbackQueryId: callbackQuery.id
+        callbackQueryId: callbackQuery.id,
+        text: access.isOfficialGroup ? 'Usa el tema Bots para interactuar con CalcuFlow.' : undefined,
+        showAlert: false
       });
-      return json({ ok: true, status });
+      return json({ ok: true, status: 'ephemeral_redirect' });
     }
 
     const callbackUserId = String(callbackQuery.from?.id ?? '').trim();
@@ -590,11 +646,47 @@ export function createTelegramAppHandler({
     const messageThreadId = message.message_thread_id;
     if (!chatId) return json({ ok: true, status: 'ignored_no_chat' });
 
+    // CENTRAL AUTHORIZATION & ROUTING GUARD
     const access = getTelegramAccessContext(chat, messageThreadId, env);
-    const customReply = parseCustomAmountReply(message);
-    const customSupportReply = parseCustomSupportReply(message);
-    const payment = message.successful_payment;
+    const rawText = typeof message.text === 'string' ? message.text.trim() : '';
 
+    // Diagnostics: /threadid works in forum topics, general, and private
+    if (/^\/(?:threadid|topicid)(?:@\w+)?(?:\s+.*)?$/i.test(rawText)) {
+      await safeSend({
+        botToken,
+        chatId,
+        text: formatThreadIdMessage(chatId, messageThreadId),
+        replyToMessageId: message.message_id,
+        messageThreadId
+      });
+      return json({ ok: true, status: 'thread_id_sent' });
+    }
+
+    // Guard: Block all normal bot functionality outside allowed context
+    if (!access.allowed) {
+      if (rawText.startsWith('/')) {
+        const parsed = parseEnhancedMessage(rawText);
+        if (parsed.type !== 'unknown') {
+          const status = await sendRedirect({
+            botToken,
+            env,
+            chat,
+            messageThreadId,
+            fromUserId: message.from?.id,
+            replyToMessageId: message.message_id
+          });
+          return json({ ok: true, status });
+        }
+      }
+      // Ordinary messages (200, 375, 500 bdv, text, replies to old prompts) are ignored without bot response
+      return json({
+        ok: true,
+        status: access.isOfficialGroup ? 'ignored_general_message' : 'ignored_external_group_message'
+      });
+    }
+
+    // Inside allowed context:
+    const payment = message.successful_payment;
     if (payment) {
       if (!access.isPrivate || !validateSuccessfulPayment(payment)) {
         return json({ ok: true, status: 'ignored_invalid_payment' });
@@ -608,46 +700,47 @@ export function createTelegramAppHandler({
       return json({ ok: true, status: 'payment_thanks_sent' });
     }
 
-    if (customReply) {
-      if (!access.allowed) return json({ ok: true, status: 'ignored_custom_reply_outside_allowed_context' });
+    // Custom amount ForceReply safety
+    const isCustomPrompt = isCustomAmountPrompt(message);
+    if (isCustomPrompt) {
+      const customReply = parseCustomAmountReply(message);
+      if (!customReply) {
+        return json({ ok: true, status: 'ignored_custom_reply_malformed_reference' });
+      }
+
+      if (!access.isPrivate) {
+        const promptChatId = String(message.reply_to_message?.chat?.id || '');
+        if (promptChatId && promptChatId !== String(chatId)) {
+          return json({ ok: true, status: 'ignored_custom_reply_invalid_context' });
+        }
+        const promptThreadId = message.reply_to_message?.message_thread_id !== undefined && message.reply_to_message?.message_thread_id !== null
+          ? String(message.reply_to_message.message_thread_id)
+          : '';
+        if (promptThreadId && promptThreadId !== String(messageThreadId || '')) {
+          return json({ ok: true, status: 'ignored_custom_reply_invalid_context' });
+        }
+      }
+
       const replyUserId = String(message.from?.id ?? '').trim();
       const promptOwnerId = String(customReply.ownerId ?? '').trim();
       if ((promptOwnerId && promptOwnerId !== replyUserId) || (!access.isPrivate && !promptOwnerId)) {
         return json({ ok: true, status: 'ignored_custom_reply_wrong_user' });
       }
+
+      if (!isValidBankSlug(customReply.bankId)) {
+        return json({ ok: true, status: 'ignored_custom_reply_invalid_bank' });
+      }
+
       return handleCustomReply(message, customReply, env, botToken, access);
     }
 
+    const customSupportReply = parseCustomSupportReply(message);
     if (customSupportReply) {
       return handleCustomSupportReply(message, customSupportReply, botToken, access);
     }
 
     if (typeof message.text !== 'string') return json({ ok: true, status: 'ignored_no_text' });
     const parsed = parseEnhancedMessage(message.text);
-
-    if (parsed.type === 'thread_id') {
-      await safeSend({
-        botToken,
-        chatId,
-        text: formatThreadIdMessage(chatId, messageThreadId),
-        replyToMessageId: message.message_id,
-        messageThreadId
-      });
-      return json({ ok: true, status: 'thread_id_sent' });
-    }
-
-    if (!access.allowed) {
-      if (!isExplicitGroupInvocation(message, parsed)) return json({ ok: true, status: 'ignored_external_group_message' });
-      const status = await sendRedirect({
-        botToken,
-        env,
-        chat,
-        messageThreadId,
-        fromUserId: message.from?.id,
-        replyToMessageId: message.message_id
-      });
-      return json({ ok: true, status });
-    }
 
     if (parsed.type === 'unknown') return json({ ok: true, status: 'ignored_unknown_message' });
     const ownerId = message.from?.id || null;
