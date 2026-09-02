@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 import {
   CANONICAL_APP_URL,
   formatHelpMessage,
-  formatRatesMessage
+  formatRatesMessage,
+  formatThreadIdMessage
 } from '../api/telegram-formatter.mjs';
 import {
   SUPPORT_AMOUNTS,
@@ -923,4 +924,167 @@ test('group support action routes to private chat and never creates a public inv
   assert.ok(['ephemeral_support_redirect', 'support_redirect_sent'].includes((await result.json()).status));
   assert.equal(harness.calls.filter(call => call.method === 'sendInvoice').length, 0);
   assert.match(JSON.stringify(harness.calls), /https:\/\/t\.me\/calcuflowbot\?start=support/);
+});
+
+test('formatThreadIdMessage formats chat ID and topic ID cleanly without sensitive data', () => {
+  const inTopic = formatThreadIdMessage(OFFICIAL_CHAT_ID, 1234);
+  assert.equal(inTopic, `Chat ID:\n${OFFICIAL_CHAT_ID}\n\nTopic ID:\n1234`);
+  assert.doesNotMatch(inTopic, /token|user|username|http|secret/i);
+
+  const outsideTopic = formatThreadIdMessage(OFFICIAL_CHAT_ID, null);
+  assert.equal(outsideTopic, `Chat ID:\n${OFFICIAL_CHAT_ID}\n\nTopic ID:\nnone`);
+});
+
+test('/threadid diagnostic command responds in forum topics, general, and private chats', async () => {
+  const harness = createHarness();
+  const handler = createHandler(harness, {
+    TELEGRAM_ALLOWED_CHAT_ID: String(OFFICIAL_CHAT_ID),
+    TELEGRAM_ALLOWED_THREAD_ID: String(BOT_THREAD_ID)
+  });
+
+  // 1. Inside a forum topic
+  const topicResult = await handler.fetch(webhookRequest({ message: {
+    message_id: 601,
+    message_thread_id: 1234,
+    from: { id: PRIVATE_CHAT_ID, username: 'testadmin' },
+    chat: { id: OFFICIAL_CHAT_ID, type: 'supergroup' },
+    text: '/threadid@calcuflowbot'
+  } }));
+  assert.equal((await topicResult.json()).status, 'thread_id_sent');
+  const topicSend = harness.calls.find(call => call.payload.reply_to_message_id === 601);
+  assert.equal(topicSend.payload.chat_id, OFFICIAL_CHAT_ID);
+  assert.equal(topicSend.payload.message_thread_id, 1234);
+  assert.equal(topicSend.payload.text, `Chat ID:\n${OFFICIAL_CHAT_ID}\n\nTopic ID:\n1234`);
+  assert.doesNotMatch(topicSend.payload.text, /testadmin|test_token/i);
+
+  // 2. In General (no thread ID or thread ID 1)
+  const generalResult = await handler.fetch(webhookRequest({ message: {
+    message_id: 602,
+    from: { id: PRIVATE_CHAT_ID },
+    chat: { id: OFFICIAL_CHAT_ID, type: 'supergroup' },
+    text: '/threadid'
+  } }));
+  assert.equal((await generalResult.json()).status, 'thread_id_sent');
+  const generalSend = harness.calls.find(call => call.payload.reply_to_message_id === 602);
+  assert.equal(generalSend.payload.text, `Chat ID:\n${OFFICIAL_CHAT_ID}\n\nTopic ID:\nnone`);
+
+  // 3. In Private chat
+  const privateResult = await handler.fetch(webhookRequest({ message: {
+    message_id: 603,
+    from: { id: PRIVATE_CHAT_ID },
+    chat: { id: PRIVATE_CHAT_ID, type: 'private' },
+    text: '/threadid'
+  } }));
+  assert.equal((await privateResult.json()).status, 'thread_id_sent');
+  const privateSend = harness.calls.find(call => call.payload.reply_to_message_id === 603);
+  assert.equal(privateSend.payload.chat_id, PRIVATE_CHAT_ID);
+  assert.equal(privateSend.payload.text, `Chat ID:\n${PRIVATE_CHAT_ID}\n\nTopic ID:\nnone`);
+});
+
+test('commands in General or unconfigured topics receive redirect and do not execute bot', async () => {
+  const harness = createHarness();
+  const handler = createHandler(harness, {
+    TELEGRAM_ALLOWED_CHAT_ID: String(OFFICIAL_CHAT_ID),
+    TELEGRAM_ALLOWED_THREAD_ID: String(BOT_THREAD_ID)
+  });
+
+  const commandsInGeneral = [
+    '/calcular@calcuflowbot',
+    '/calc@calcuflowbot 500 bdv',
+    '/tasas@calcuflowbot',
+    '/bancos@calcuflowbot',
+    '/ayuda@calcuflowbot'
+  ];
+
+  for (let i = 0; i < commandsInGeneral.length; i++) {
+    const text = commandsInGeneral[i];
+    const msgId = 700 + i;
+    const res = await handler.fetch(webhookRequest({ message: {
+      message_id: msgId,
+      message_thread_id: 1, // General
+      from: { id: PRIVATE_CHAT_ID },
+      chat: { id: OFFICIAL_CHAT_ID, type: 'supergroup' },
+      text
+    } }));
+    const data = await res.json();
+    assert.ok(['ephemeral_redirect', 'redirect_sent'].includes(data.status), `${text} in General should redirect`);
+  }
+
+  // Ensure no rate lookups or calculation results were sent to General
+  assert.equal(harness.calls.filter(call => call.method === 'sendMessage' && call.payload.text?.includes('Bolívares necesarios')).length, 0);
+  assert.equal(harness.calls.filter(call => call.method === 'sendMessage' && call.payload.text?.includes('Elige un banco')).length, 0);
+});
+
+test('interactive panel creation in Bots topic cleans up command message when permitted', async () => {
+  const harness = createHarness();
+  const handler = createHandler(harness, {
+    TELEGRAM_ALLOWED_CHAT_ID: String(OFFICIAL_CHAT_ID),
+    TELEGRAM_ALLOWED_THREAD_ID: String(BOT_THREAD_ID)
+  });
+
+  const res = await handler.fetch(webhookRequest({ message: {
+    message_id: 801,
+    message_thread_id: BOT_THREAD_ID,
+    from: { id: PRIVATE_CHAT_ID },
+    chat: { id: OFFICIAL_CHAT_ID, type: 'supergroup' },
+    text: '/calcular@calcuflowbot'
+  } }));
+  assert.equal((await res.json()).status, 'banks_sent');
+
+  const deletes = harness.calls.filter(call => call.method === 'deleteMessage');
+  assert.ok(deletes.some(call => call.payload.chat_id === OFFICIAL_CHAT_ID && call.payload.message_id === 801));
+});
+
+test('official group with confirmed thread 555 preserves public visibility, topic link, and cleanup', async () => {
+  const CONFIRMED_CHAT_ID = -1003824051698;
+  const CONFIRMED_THREAD_ID = 555;
+  const harness = createHarness();
+  const handler = createHandler(harness, {
+    TELEGRAM_ALLOWED_CHAT_ID: String(CONFIRMED_CHAT_ID),
+    TELEGRAM_ALLOWED_THREAD_ID: String(CONFIRMED_THREAD_ID),
+    TELEGRAM_BOT_USERNAME: 'calcuflowbot'
+  });
+
+  // 1. In Bots #555: /calcular command creates public bank menu and cleans up command message
+  const botsRes = await handler.fetch(webhookRequest({ message: {
+    message_id: 901,
+    message_thread_id: CONFIRMED_THREAD_ID,
+    from: { id: PRIVATE_CHAT_ID },
+    chat: { id: CONFIRMED_CHAT_ID, type: 'supergroup' },
+    text: '/calcular@calcuflowbot'
+  } }));
+  assert.equal((await botsRes.json()).status, 'banks_sent');
+  const botsSend = harness.calls.find(call => call.method === 'sendMessage' && call.payload.reply_to_message_id === 901);
+  assert.equal(botsSend.payload.message_thread_id, CONFIRMED_THREAD_ID);
+  assert.ok(!botsSend.payload.ephemeral_message_parameters); // Public, persistent
+  assert.match(botsSend.payload.text, /Elige un banco/);
+
+  // 2. In General: /calcular command receives ephemeral redirect with the correct topic link
+  const generalRes = await handler.fetch(webhookRequest({ message: {
+    message_id: 902,
+    message_thread_id: 1,
+    from: { id: PRIVATE_CHAT_ID },
+    chat: { id: CONFIRMED_CHAT_ID, type: 'supergroup' },
+    text: '/calcular@calcuflowbot'
+  } }));
+  assert.equal((await generalRes.json()).status, 'ephemeral_redirect');
+  const generalSend = harness.calls.find(call => call.payload.ephemeral_message_parameters?.receiver_user_id === PRIVATE_CHAT_ID);
+  assert.match(generalSend.payload.text, /Los bots se usan en el tema Bots/);
+  assert.ok(JSON.stringify(generalSend.payload.reply_markup).includes('https://t.me/c/3824051698/555'));
+  assert.ok(JSON.stringify(generalSend.payload.reply_markup).includes('https://t.me/calcuflowbot?start=calc'));
+});
+
+test('verifies no analytics or tracking dependencies exist in telegram codebase', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const files = [
+    '../api/telegram.mjs',
+    '../api/telegram-app-handler.mjs',
+    '../api/telegram-formatter.mjs',
+    '../api/telegram-ui.mjs'
+  ];
+  for (const f of files) {
+    const content = await readFile(new URL(f, import.meta.url), 'utf8');
+    assert.doesNotMatch(content, /posthog|supabase|google-analytics|analytics|mixpanel|gtag|telemetry/i);
+    assert.doesNotMatch(content, /sqlite|postgres|mysql|mongodb|indexeddb|localstorage/i);
+  }
 });

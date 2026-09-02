@@ -136,7 +136,7 @@ export function formatPaymentThanksMessage() {
 }
 
 export function formatGroupRedirectMessage() {
-  return 'Para mantener limpio el grupo, usa CalcuFlow aquí:';
+  return '🤖 Los bots se usan en el tema Bots para interactuar con CalcuFlow y mantener limpio el grupo.';
 }
 
 export function formatPrivateAccessMessage() {
@@ -295,8 +295,8 @@ export function buildGroupRedirectInlineKeyboard({ chatId, threadId, botUsername
   const rows = [];
   const topicUrl = buildTopicUrl(chatId, threadId);
   const privateUrl = buildPrivateBotUrl(botUsername, 'calc');
-  if (topicUrl) rows.push([{ text: '💬 Ir al tema CalcuFlow', url: topicUrl }]);
-  if (privateUrl) rows.push([{ text: '🤖 Usar en privado', url: privateUrl, style: 'primary' }]);
+  if (topicUrl) rows.push([{ text: '🤖 Ir a Bots', url: topicUrl }]);
+  if (privateUrl) rows.push([{ text: '👤 Usar en privado', url: privateUrl, style: 'primary' }]);
   return { inline_keyboard: rows };
 }
 
