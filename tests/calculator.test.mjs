@@ -40,6 +40,22 @@ test('observed settlement scenario applies fees sequentially', () => {
   assertSafe(result);
 });
 
+test('BDV sequential 1% then 1.5% matches the verified physical-card operation', () => {
+  const result = calculateSafeGatewayAmount({
+    cardBalance: '501.06',
+    bankFeePercent: '2.5',
+    bankFeeSteps: ['1', '1.5'],
+    gatewayFeePercent: '4.1',
+    targetMargin: '0.01'
+  });
+
+  assert.equal(result.bpayInputAmount, 488.76);
+  assert.equal(result.expectedBankDeduction, 501.05);
+  assert.equal(result.projectedRemainingBalance, 0.01);
+  assert.equal(result.rawBankDeduction, 501.052314);
+  assertSafe(result);
+});
+
 test('zero bank fee preserves the target margin', () => {
   const result = calculateSafeGatewayAmount({
     cardBalance: '100.00', bankFeePercent: '0', gatewayFeePercent: '4.1', targetMargin: '0.01'

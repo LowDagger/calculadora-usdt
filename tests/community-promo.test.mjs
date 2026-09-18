@@ -408,8 +408,8 @@ test('calculator formulas and calculations remain unchanged', () => {
   assert.ok(Number.isFinite(result.profitVes));
 });
 
-test('service-worker pre-caches community-promo.js and bumps APP_VERSION to 66', () => {
-  assert.match(serviceWorker, /const APP_VERSION\s+= '66';/);
+test('service-worker pre-caches community-promo.js and bumps APP_VERSION to 67', () => {
+  assert.match(serviceWorker, /const APP_VERSION\s+= '67';/);
   assert.match(serviceWorker, /'\/js\/community-promo\.js'/);
 });
 
