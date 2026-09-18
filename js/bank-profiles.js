@@ -1,7 +1,7 @@
 export const BANK_PROFILE_STORAGE_KEY = 'calcuflowBankProfilesV1';
-export const BANK_PROFILE_STATE_VERSION = 5;
+export const BANK_PROFILE_STATE_VERSION = 6;
 export const MANUAL_PROFILE_ID = 'manual';
-export const DEFAULT_PROFILE_ID = 'bdv-fisica';
+export const DEFAULT_PROFILE_ID = 'bdv';
 export const MAX_CARD_FEE = 100;
 export const MAX_PERSISTED_LOGO_BYTES = 100 * 1024;
 export const DEFAULT_QUICK_AMOUNTS = Object.freeze([100, 200, 500, 1000]);
@@ -46,19 +46,11 @@ export const BANK_ICONS = Object.freeze({
 
 export const DEFAULT_BANK_PROFILES = Object.freeze([
   Object.freeze({
-    id: 'bdv-fisica',
+    id: 'bdv',
     name: 'Banco de Venezuela',
-    cardType: 'Física',
+    cardType: '',
     defaultFee: 2.5,
-    initials: 'BDV',
-    iconKey: 'bdv',
-    defaultStatus: 'Comisión reportada'
-  }),
-  Object.freeze({
-    id: 'bdv-virtual',
-    name: 'Banco de Venezuela',
-    cardType: 'Virtual / otra modalidad',
-    defaultFee: 2.5,
+    feeSteps: Object.freeze([1, 1.5]),
     initials: 'BDV',
     iconKey: 'bdv',
     defaultStatus: 'Comisión reportada'
@@ -157,8 +149,7 @@ export function getPresetDefaultFee(profileId) {
   return DEFAULT_PROFILE_MAP.get(profileId)?.defaultFee ?? null;
 }
 const ORIGINAL_PRESET_IDS = new Set([
-  'bdv-fisica',
-  'bdv-virtual',
+  'bdv',
   'bbva-provincial',
   'banco-tesoro',
   'bancamiga',
@@ -181,16 +172,10 @@ const ORIGINAL_PRESET_IDS = new Set([
  * and preserved with an explicit override marker.
  */
 const HISTORICAL_PRESET_DEFAULTS = Object.freeze({
-  'bdv-fisica': Object.freeze({
+  bdv: Object.freeze({
     fees: [1.5, 2.5],
     names: ['Banco de Venezuela'],
-    cardTypes: ['Física'],
-    icons: ['/assets/banks/banco-de-venezuela.png']
-  }),
-  'bdv-virtual': Object.freeze({
-    fees: [2.5],
-    names: ['Banco de Venezuela'],
-    cardTypes: ['Virtual / otra modalidad'],
+    cardTypes: ['', 'Física', 'Virtual', 'Virtual / otra modalidad'],
     icons: ['/assets/banks/banco-de-venezuela.png']
   }),
   'bbva-provincial': Object.freeze({
@@ -242,6 +227,34 @@ const DATA_LOGO_PATTERN = /^data:image\/(png|jpeg|webp);base64,([a-z0-9+/]+={0,2
 
 function isRecord(value) {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
+function normalizeLegacyBdvState(source) {
+  if (!isRecord(source)) return source;
+  const normalized = { ...source };
+  if (Array.isArray(source.profiles)) {
+    const legacyProfiles = source.profiles.filter(profile => ['bdv-fisica', 'bdv-virtual'].includes(profile?.id));
+    const preferred = legacyProfiles.find(profile => profile.id === source.selectedId)
+      || legacyProfiles.find(profile => profile.id === 'bdv-fisica')
+      || legacyProfiles[0];
+    normalized.profiles = source.profiles.filter(profile => !['bdv-fisica', 'bdv-virtual'].includes(profile?.id));
+    if (preferred) {
+      normalized.profiles.unshift({ ...preferred, id: 'bdv', name: 'Banco de Venezuela', cardType: '' });
+    }
+  }
+  if (isRecord(source.presetFees)) {
+    const legacyFee = source.presetFees['bdv-fisica'] ?? source.presetFees['bdv-virtual'];
+    normalized.presetFees = { ...source.presetFees };
+    if (legacyFee !== undefined) normalized.presetFees.bdv = legacyFee;
+  }
+  if (['bdv-fisica', 'bdv-virtual'].includes(source.selectedId)) normalized.selectedId = 'bdv';
+  if (Array.isArray(source.removedPresetIds)) {
+    normalized.removedPresetIds = source.removedPresetIds.filter(id => !['bdv-fisica', 'bdv-virtual'].includes(id));
+    if (source.removedPresetIds.includes('bdv-fisica') && source.removedPresetIds.includes('bdv-virtual')) {
+      normalized.removedPresetIds.push('bdv');
+    }
+  }
+  return normalized;
 }
 
 function cleanText(value, maxLength) {
@@ -672,7 +685,7 @@ export function createEmptyBankProfileState(selectedId = DEFAULT_PROFILE_ID) {
 }
 
 export function sanitizeBankProfileState(value, fallbackSelectedId = DEFAULT_PROFILE_ID) {
-  const source = isRecord(value) ? value : {};
+  const source = normalizeLegacyBdvState(isRecord(value) ? value : {});
   if (source.version === 2 && Array.isArray(source.profiles)) {
     return migrateVersionTwoState(source, fallbackSelectedId);
   }
@@ -681,6 +694,9 @@ export function sanitizeBankProfileState(value, fallbackSelectedId = DEFAULT_PRO
   }
   if (source.version === 4 && Array.isArray(source.profiles)) {
     return migrateVersionFourState(source, fallbackSelectedId);
+  }
+  if (source.version === 5 && Array.isArray(source.profiles)) {
+    return reconcileVersionFiveState(source, fallbackSelectedId);
   }
   if (source.version !== BANK_PROFILE_STATE_VERSION || !Array.isArray(source.profiles)) {
     return migrateVersionOneState(source, fallbackSelectedId);
@@ -712,6 +728,7 @@ export function getBankProfiles(state) {
       initials: createProfileInitials(profile.name),
       ...getIconPresentation(profile),
       defaultFee: preset ? getPresetDefaultFee(preset.id) : null,
+      feeSteps: preset?.feeSteps && !profile.overrides?.includes('fee') ? [...preset.feeSteps] : null,
       defaultStatus: preset?.defaultStatus || 'Personalizado',
       kind: preset ? 'preset' : 'custom',
       isModified,
@@ -815,6 +832,7 @@ export function getEffectiveSelectedBankProfile(state, manualFee = 0, temporaryF
   return {
     ...selectedProfile,
     fee: safeTemporaryFee,
+    feeSteps: null,
     status: 'Temporal',
     isTemporary: true
   };

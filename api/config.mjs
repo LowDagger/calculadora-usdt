@@ -10,8 +10,7 @@ export const DEFAULT_OPERATIONAL_CONFIG = Object.freeze({
     bpayFee: 4.1
   }),
   bankFees: Object.freeze({
-    'bdv-fisica': 2.5,
-    'bdv-virtual': 2.5,
+    bdv: 2.5,
     'bbva-provincial': 1.5,
     'banco-tesoro': 2.5,
     bancamiga: 5,
@@ -24,8 +23,7 @@ export const DEFAULT_OPERATIONAL_CONFIG = Object.freeze({
 });
 
 export const KNOWN_BANK_IDS = Object.freeze(new Set([
-  'bdv-fisica',
-  'bdv-virtual',
+  'bdv',
   'bbva-provincial',
   'banco-tesoro',
   'bancamiga',

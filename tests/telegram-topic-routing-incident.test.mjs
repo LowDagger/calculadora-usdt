@@ -419,7 +419,7 @@ test('BANK REGRESSION: reference with invalid bank slug is rejected and never fa
 
 test('isValidBankSlug validates known Venezuelan banks and percentage queries', () => {
   assert.equal(isValidBankSlug('bbva-provincial'), true);
-  assert.equal(isValidBankSlug('bdv-fisica'), true);
+  assert.equal(isValidBankSlug('bdv'), true);
   assert.equal(isValidBankSlug('banesco-fisica'), true);
   assert.equal(isValidBankSlug('bnc'), true);
   assert.equal(isValidBankSlug('bancamiga'), true);

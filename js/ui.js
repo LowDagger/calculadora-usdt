@@ -343,7 +343,7 @@ export function renderResult(r) {
     <strong>USDT a vender:</strong> ${money(r.vesNeeded, 2)} ÷ ${money(r.p2p, 4)} = ${money(r.vesNeeded / r.p2p, 2)} USDT.<br>
     <strong>Tasa banco:</strong> ${money(r.bcv, 4)} × ${(1 + n(els.bankMargin.value) / 100).toFixed(4)} = ${money(r.bank, 4)} Bs/USD.<br>
     <strong>Bs necesarios:</strong> ${money(r.usdUsed, 2)} × ${money(r.bank, 4)} = ${money(r.vesNeeded, 2)} Bs.<br>
-    <strong>Monto máximo BPay:</strong> ${money(r.safeGateway.allowedBankSpend, 2)} ÷ ${(1 + r.cardPct / 100).toFixed(4)}, truncado a centavos = ${money(r.afterCard, 2)} USD.<br>
+    <strong>Monto máximo BPay:</strong> ${r.bankFeeSteps?.length ? `${money(r.safeGateway.allowedBankSpend, 2)} con comisión bancaria de ${money(r.cardPct, 1)}%` : `${money(r.safeGateway.allowedBankSpend, 2)} ÷ ${(1 + r.cardPct / 100).toFixed(4)}`}, truncado a centavos = ${money(r.afterCard, 2)} USD.<br>
     <strong>USDT final:</strong> ${money(r.afterCard, 2)} - ${money(r.bpayFeeUsd, 2)} BPay = ${money(r.usdtFinal, 2)} USDT.<br>
     <strong>Retorno P2P:</strong> ${money(r.usdtFinal, 2)} × ${money(r.p2p, 4)} = ${money(r.vesReturn, 2)} Bs.<br>
     <strong>Ganancia:</strong> ${money(r.vesReturn, 2)} - ${money(r.vesNeeded, 2)} = ${(r.profitVes >= 0 ? '+' : '') + money(r.profitVes, 2)} Bs (${(r.profitUsdt >= 0 ? '+' : '') + money(r.profitUsdt, 2)} USD).

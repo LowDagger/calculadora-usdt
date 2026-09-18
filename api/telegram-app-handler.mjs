@@ -353,6 +353,7 @@ export function createTelegramAppHandler({
       bankMargin: TELEGRAM_BANK_MARGIN,
       p2pRate: rates.p2p.rate,
       cardFee: bank.fee,
+      bankFeeSteps: bank.feeSteps,
       bpayFee: DEFAULT_BPAY_FEE
     });
     if (!result) return { ok: false, error: 'No se pudo calcular la operación con los valores proporcionados.' };

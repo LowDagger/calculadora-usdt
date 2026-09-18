@@ -1301,7 +1301,9 @@ function calculate() {
 
   const result = calculateValues({
     requestedUsd: els.usdToBuy.value, bcvRate: bcv, bankMargin: els.bankMargin.value,
-    p2pRate: p2p, cardFee: els.cardFee.value, bpayFee: els.bpayFee.value
+    p2pRate: p2p, cardFee: els.cardFee.value,
+    bankFeeSteps: getEffectiveSelectedBankProfile(bankProfileState, manualCardFee, temporaryCardFee)?.feeSteps,
+    bpayFee: els.bpayFee.value
   });
 
   if (!result) {

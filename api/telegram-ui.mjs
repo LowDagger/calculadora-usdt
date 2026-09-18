@@ -1,7 +1,7 @@
 import { money } from '../js/utils.js';
 import {
   CANONICAL_APP_URL,
-  formatPercent,
+  formatBankFee,
   resolveBank
 } from './telegram-formatter.mjs';
 
@@ -14,7 +14,7 @@ export const CUSTOM_SUPPORT_PROMPT_PREFIX = 'CF-STARS';
 const CALLBACK_OWNER_SEPARATOR = '|u:';
 
 export const MENU_BANKS = Object.freeze([
-  Object.freeze({ id: 'bdv-fisica', label: 'Banco de Venezuela' }),
+  Object.freeze({ id: 'bdv', label: 'Banco de Venezuela' }),
   Object.freeze({ id: 'bbva-provincial', label: 'BBVA Provincial' }),
   Object.freeze({ id: 'banesco-fisica', label: 'Banesco' }),
   Object.freeze({ id: 'bnc', label: 'BNC' }),
@@ -48,12 +48,12 @@ export function formatBankSelectionMessage() {
 
 export function formatAmountSelectionMessage(bankInfo) {
   const bank = resolveBank(bankInfo?.id || bankInfo);
-  return `🏦 *${bank.name}*\nComisión: ${formatPercent(bank.fee)}\n\n¿Cuánto quieres calcular?`;
+  return `🏦 *${bank.name}*\nComisión: ${formatBankFee(bank)}\n\n¿Cuánto quieres calcular?`;
 }
 
 export function formatCustomAmountPanel(bankInfo) {
   const bank = resolveBank(bankInfo?.id || bankInfo);
-  return `✏️ *Otro monto*\n\n🏦 ${bank.name} · ${formatPercent(bank.fee)}\n\nResponde al mensaje que te envié con el monto en USD.`;
+  return `✏️ *Otro monto*\n\n🏦 ${bank.name} · ${formatBankFee(bank)}\n\nResponde al mensaje que te envié con el monto en USD.`;
 }
 
 export function formatCustomAmountPrompt(bankId, panelMessageId, ownerId = null) {
@@ -119,7 +119,7 @@ export function formatAppCalculationResult(result, bankInfo, { updatedAt = null,
   const profitSign = result.profitUsdt >= 0 ? '+' : '';
   const roiSign = result.roi >= 0 ? '+' : '';
   const updatedLine = updatedAt ? `\n\n_Actualizado: ${updatedAt}_` : '';
-  return `📊 *CalcuFlow*\n\n🏦 *${bank.name} · ${formatPercent(bank.fee)}*\nCompra: ${money(result.usdUsed, 2)} USD\n\n🇻🇪 *Bolívares necesarios*\n${money(result.vesNeeded, 2)} Bs\n\n💳 *Monto en BPay*\n${money(result.safeGateway?.bpayInputAmount ?? result.afterCard, 2)} USD\n\n🟢 *USDT finales*\n${money(result.usdtFinal, 2)} USDT\n\n💰 *Ganancia estimada*\n${profitSign}${money(result.profitUsdt, 2)} USD · ${roiSign}${money(result.roi, 2)}%\n\n📈 BCV: ${money(result.bcv, 2)} Bs\n🏦 Tasa banco (+${money(bankMargin, 1)}%): ${money(result.bank, 2)} Bs\n🔄 P2P: ${money(result.p2p, 2)} Bs${updatedLine}`;
+  return `📊 *CalcuFlow*\n\n🏦 *${bank.name} · ${formatBankFee(bank)}*\nCompra: ${money(result.usdUsed, 2)} USD\n\n🇻🇪 *Bolívares necesarios*\n${money(result.vesNeeded, 2)} Bs\n\n💳 *Monto en BPay*\n${money(result.safeGateway?.bpayInputAmount ?? result.afterCard, 2)} USD\n\n🟢 *USDT finales*\n${money(result.usdtFinal, 2)} USDT\n\n💰 *Ganancia estimada*\n${profitSign}${money(result.profitUsdt, 2)} USD · ${roiSign}${money(result.roi, 2)}%\n\n📈 BCV: ${money(result.bcv, 2)} Bs\n🏦 Tasa banco (+${money(bankMargin, 1)}%): ${money(result.bank, 2)} Bs\n🔄 P2P: ${money(result.p2p, 2)} Bs${updatedLine}`;
 }
 
 export function formatSupportMessage() {
@@ -385,7 +385,7 @@ export function parseAppCallbackData(data) {
   if (trimmed.startsWith('calc:')) {
     const parts = trimmed.split(':');
     const amount = Number(parts[1]);
-    const bankId = parts.slice(2).join(':').trim() || 'bdv-fisica';
+    const bankId = parts.slice(2).join(':').trim() || 'bdv';
     if (Number.isFinite(amount) && amount > 0 && amount <= 1_000_000) {
       return withOwner({ type: 'calc', amount, bankId });
     }
