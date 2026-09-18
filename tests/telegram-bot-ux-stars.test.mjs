@@ -141,7 +141,7 @@ test('bank and amount menus are mobile-first and preserve selected bank', () => 
   assert.ok(amounts.some(button => button.callback_data === 'amount:bbva-provincial:100'));
   assert.ok(amounts.some(button => button.callback_data === 'amount:bbva-provincial:250'));
   assert.ok(amounts.some(button => button.callback_data === 'custom:bbva-provincial'));
-  assert.ok(!JSON.stringify(amounts).includes('amount:bdv-fisica'));
+  assert.ok(!JSON.stringify(amounts).includes('amount:bdv'));
 });
 
 test('navigation callbacks remain compact and include back/home/result actions', () => {
@@ -586,7 +586,7 @@ test('a different user cannot satisfy or clean up the owner custom-amount prompt
     reply_to_message: {
       message_id: 189,
       from: { is_bot: true, username: 'calcuflowbot' },
-      text: formatCustomAmountPrompt('bdv-fisica', 177, PRIVATE_CHAT_ID)
+      text: formatCustomAmountPrompt('bdv', 177, PRIVATE_CHAT_ID)
     }
   } }));
   assert.equal((await result.json()).status, 'ignored_custom_reply_wrong_user');
@@ -621,7 +621,7 @@ test('private custom replies are never deleted', async () => {
     from: { id: PRIVATE_CHAT_ID },
     chat: { id: PRIVATE_CHAT_ID, type: 'private' },
     text: '100',
-    reply_to_message: { message_id: 89, from: { is_bot: true }, text: formatCustomAmountPrompt('bdv-fisica', 77, PRIVATE_CHAT_ID) }
+    reply_to_message: { message_id: 89, from: { is_bot: true }, text: formatCustomAmountPrompt('bdv', 77, PRIVATE_CHAT_ID) }
   } }));
   assert.equal(harness.calls.filter(call => call.method === 'deleteMessage').length, 0);
 });
@@ -639,7 +639,7 @@ test('result presentation uses web bank-margin parity, the derived bank rate, an
   });
   const text = formatAppCalculationResult(
     result,
-    { id: 'bdv-fisica', name: 'Banco de Venezuela', fee: 2.5 },
+    { id: 'bdv', name: 'Banco de Venezuela', fee: 2.5 },
     { bankMargin: TELEGRAM_BANK_MARGIN }
   );
   assert.match(text, /Bolívares necesarios/);

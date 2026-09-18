@@ -214,7 +214,7 @@ test('resolveBank defaults to Banco de Venezuela when empty', () => {
   assert.deepEqual(resolveBank(''), DEFAULT_BANK);
   assert.deepEqual(resolveBank(null), DEFAULT_BANK);
   assert.deepEqual(resolveBank(undefined), DEFAULT_BANK);
-  assert.equal(resolveBank('').id, 'bdv-fisica');
+  assert.equal(resolveBank('').id, 'bdv');
   assert.equal(resolveBank('').fee, 2.5);
 });
 
@@ -279,7 +279,7 @@ test('formatCalculationResult produces required emojis and fields', () => {
 
   // Bank
   assert.ok(formatted.includes('🏦 *Banco:* Banco de Venezuela'));
-  assert.ok(formatted.includes('(2,5%)'));
+  assert.ok(formatted.includes('(1,0% + 1,5%)'));
 
   // Compra
   assert.ok(formatted.includes('💵 *Compra:* 100,00 USD'));
@@ -663,15 +663,15 @@ test('createTelegramHandler handles rate provider failure gracefully', async () 
 // ---------------------------------------------------------------------------
 
 test('buildBankInlineKeyboard builds 4 rows of bank buttons with checkmark indicator and web app link', () => {
-  const keyboard = buildBankInlineKeyboard(100, 'bdv-fisica');
+  const keyboard = buildBankInlineKeyboard(100, 'bdv');
   assert.ok(keyboard && Array.isArray(keyboard.inline_keyboard));
   assert.equal(keyboard.inline_keyboard.length, 4);
 
   // Row 1: BDV (selected) & BBVA
   const row1 = keyboard.inline_keyboard[0];
   assert.equal(row1.length, 2);
-  assert.equal(row1[0].text, '✓ BDV (2.5%)');
-  assert.equal(row1[0].callback_data, 'calc:100:bdv-fisica');
+  assert.equal(row1[0].text, '✓ BDV (1% + 1.5%)');
+  assert.equal(row1[0].callback_data, 'calc:100:bdv');
   assert.equal(row1[1].text, 'BBVA (1.5%)');
   assert.equal(row1[1].callback_data, 'calc:100:bbva-provincial');
 
@@ -703,8 +703,8 @@ test('buildBankInlineKeyboard builds 4 rows of bank buttons with checkmark indic
 test('buildBankInlineKeyboard updates checkmark for different selected banks and preserves amount', () => {
   // Test selecting BBVA with alias
   const bbvaKeyboard = buildBankInlineKeyboard(500, 'bbva');
-  assert.equal(bbvaKeyboard.inline_keyboard[0][0].text, 'BDV (2.5%)');
-  assert.equal(bbvaKeyboard.inline_keyboard[0][0].callback_data, 'calc:500:bdv-fisica');
+  assert.equal(bbvaKeyboard.inline_keyboard[0][0].text, 'BDV (1% + 1.5%)');
+  assert.equal(bbvaKeyboard.inline_keyboard[0][0].callback_data, 'calc:500:bdv');
   assert.equal(bbvaKeyboard.inline_keyboard[0][1].text, '✓ BBVA (1.5%)');
   assert.equal(bbvaKeyboard.inline_keyboard[0][1].callback_data, 'calc:500:bbva-provincial');
 
@@ -732,16 +732,16 @@ test('buildQuickAmountsInlineKeyboard opens the bank-first home flow without for
   assert.equal(keyboard.inline_keyboard[1][0].callback_data, 'rates');
   assert.equal(keyboard.inline_keyboard[2][0].callback_data, 'support');
   assert.equal(keyboard.inline_keyboard[3][0].url, CANONICAL_APP_URL);
-  assert.ok(!JSON.stringify(keyboard).includes('calc:100:bdv-fisica'));
+  assert.ok(!JSON.stringify(keyboard).includes('calc:100:bdv'));
 });
 
 test('parseCallbackData parses valid calculation and rates payloads', () => {
   assert.deepEqual(parseCallbackData('rates'), { type: 'rates' });
   assert.deepEqual(parseCallbackData('tasas'), { type: 'rates' });
-  assert.deepEqual(parseCallbackData('calc:100:bdv-fisica'), {
+  assert.deepEqual(parseCallbackData('calc:100:bdv'), {
     type: 'calc',
     amount: 100,
-    bankId: 'bdv-fisica'
+    bankId: 'bdv'
   });
   assert.deepEqual(parseCallbackData('calc:500.25:bbva-provincial'), {
     type: 'calc',
@@ -756,15 +756,15 @@ test('parseCallbackData parses valid calculation and rates payloads', () => {
   assert.deepEqual(parseCallbackData('calc:200:'), {
     type: 'calc',
     amount: 200,
-    bankId: 'bdv-fisica'
+    bankId: 'bdv'
   });
 });
 
 test('parseCallbackData safely handles invalid or malformed callback data', () => {
-  assert.deepEqual(parseCallbackData('calc:abc:bdv-fisica'), { type: 'invalid' });
-  assert.deepEqual(parseCallbackData('calc:-10:bdv-fisica'), { type: 'invalid' });
-  assert.deepEqual(parseCallbackData('calc:0:bdv-fisica'), { type: 'invalid' });
-  assert.deepEqual(parseCallbackData('calc:5000000:bdv-fisica'), { type: 'invalid' });
+  assert.deepEqual(parseCallbackData('calc:abc:bdv'), { type: 'invalid' });
+  assert.deepEqual(parseCallbackData('calc:-10:bdv'), { type: 'invalid' });
+  assert.deepEqual(parseCallbackData('calc:0:bdv'), { type: 'invalid' });
+  assert.deepEqual(parseCallbackData('calc:5000000:bdv'), { type: 'invalid' });
   assert.deepEqual(parseCallbackData('unknown_action'), { type: 'unknown' });
   assert.deepEqual(parseCallbackData(''), { type: 'unknown' });
   assert.deepEqual(parseCallbackData(null), { type: 'unknown' });
@@ -871,7 +871,7 @@ test('editTelegramMessageText calls editMessageText endpoint with markdown and r
     return mockFetchResponse({ ok: true });
   };
 
-  const keyboard = buildBankInlineKeyboard(100, 'bdv-fisica');
+  const keyboard = buildBankInlineKeyboard(100, 'bdv');
   await editTelegramMessageText({
     fetchImpl: mockFetch,
     botToken: 'bot_test_token',
@@ -1058,7 +1058,7 @@ test('createTelegramHandler rejects callback_query from unauthorized chat', asyn
           message_id: 110,
           chat: { id: -100111111 }
         },
-        data: 'calc:100:bdv-fisica'
+        data: 'calc:100:bdv'
       }
     })
   });

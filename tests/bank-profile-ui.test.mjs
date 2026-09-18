@@ -51,7 +51,7 @@ test('renders every visible profile card as one full-width native button', () =>
   assert.doesNotMatch(app, /const option = document\.createElement\('div'\)/);
   assert.doesNotMatch(app, /option\.append\(select\)/);
   assert.match(app, /option\.setAttribute\('aria-pressed', String\(isSelected\)\)/);
-  assert.match(app, /comisión \$\{formatProfileFee\(displayProfile\.fee\)\}/);
+  assert.match(app, /comisión \$\{formatProfileFee\(displayProfile\.fee, displayProfile\.feeSteps\)\}/);
   assert.match(css, /\.bank-profile-option\s*\{[\s\S]*?width:\s*100%;[\s\S]*?min-height:\s*58px;/);
   assert.match(css, /\.bank-profile-option:hover\s*\{/);
   assert.match(css, /\.bank-profile-option:active\s*\{/);

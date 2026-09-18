@@ -4,12 +4,12 @@ export const CANONICAL_APP_URL = 'https://calcu-flow.vercel.app';
 
 export const BANK_ALIASES = Object.freeze({
   // BDV
-  bdv: Object.freeze({ id: 'bdv-fisica', name: 'Banco de Venezuela', fee: 2.5, cardType: 'Física' }),
-  venezuela: Object.freeze({ id: 'bdv-fisica', name: 'Banco de Venezuela', fee: 2.5, cardType: 'Física' }),
-  'bdv-fisica': Object.freeze({ id: 'bdv-fisica', name: 'Banco de Venezuela', fee: 2.5, cardType: 'Física' }),
-  'bdv-virtual': Object.freeze({ id: 'bdv-virtual', name: 'Banco de Venezuela', fee: 2.5, cardType: 'Virtual' }),
-  'bdv virtual': Object.freeze({ id: 'bdv-virtual', name: 'Banco de Venezuela', fee: 2.5, cardType: 'Virtual' }),
-  'bdv fisica': Object.freeze({ id: 'bdv-fisica', name: 'Banco de Venezuela', fee: 2.5, cardType: 'Física' }),
+  bdv: Object.freeze({ id: 'bdv', name: 'Banco de Venezuela', fee: 2.5, feeSteps: [1, 1.5], cardType: '' }),
+  venezuela: Object.freeze({ id: 'bdv', name: 'Banco de Venezuela', fee: 2.5, feeSteps: [1, 1.5], cardType: '' }),
+  'bdv-fisica': Object.freeze({ id: 'bdv', name: 'Banco de Venezuela', fee: 2.5, feeSteps: [1, 1.5], cardType: '' }),
+  'bdv-virtual': Object.freeze({ id: 'bdv', name: 'Banco de Venezuela', fee: 2.5, feeSteps: [1, 1.5], cardType: '' }),
+  'bdv virtual': Object.freeze({ id: 'bdv', name: 'Banco de Venezuela', fee: 2.5, feeSteps: [1, 1.5], cardType: '' }),
+  'bdv fisica': Object.freeze({ id: 'bdv', name: 'Banco de Venezuela', fee: 2.5, feeSteps: [1, 1.5], cardType: '' }),
 
   // BBVA Provincial
   bbva: Object.freeze({ id: 'bbva-provincial', name: 'BBVA Provincial', fee: 1.5, cardType: '' }),
@@ -45,9 +45,10 @@ export const BANK_ALIASES = Object.freeze({
 });
 
 export const DEFAULT_BANK = Object.freeze({
-  id: 'bdv-fisica',
+  id: 'bdv',
   name: 'Banco de Venezuela',
   fee: 2.5,
+  feeSteps: [1, 1.5],
   cardType: ''
 });
 
@@ -57,6 +58,12 @@ export function formatPercent(value) {
     minimumFractionDigits: Number.isInteger(num) ? 1 : 1,
     maximumFractionDigits: 2
   }) + '%';
+}
+
+export function formatBankFee(bank) {
+  return bank?.feeSteps?.length
+    ? bank.feeSteps.map(formatPercent).join(' + ')
+    : formatPercent(bank?.fee ?? 2.5);
 }
 
 export function resolveBank(query) {
@@ -217,7 +224,7 @@ export function formatCalculationResult(result, bankInfo) {
     : resolveBank(bankInfo);
 
   const bankName = bank.name || 'Banco de Venezuela';
-  const bankFee = formatPercent(bank.fee ?? 2.5);
+  const bankFee = formatBankFee(bank);
 
   const amount = money(result.usdUsed, 2);
   const bsNeeded = money(result.vesNeeded, 2);
@@ -283,7 +290,7 @@ Calcula al instante tu operación Banco ➔ USDT con tasas actualizadas.
 💡 *O pulsa los botones de acceso rápido abajo para calcular al instante:*
 
 🏦 *Bancos soportados:*
-BDV (2,5%), BBVA (1,5%), Banesco (1,5%), BNC (1,5%), Bancamiga (5%), Tesoro (2,5%), BDT (2,5%).
+BDV (1% + 1,5%), BBVA (1,5%), Banesco (1,5%), BNC (1,5%), Bancamiga (5%), Tesoro (2,5%), BDT (2,5%).
 También puedes indicar una comisión directa (ej: \`/calc 100 3%\`).`;
 }
 
@@ -293,7 +300,7 @@ export function formatErrorMessage(error) {
 
 export const BANK_BUTTON_ROWS = Object.freeze([
   [
-    Object.freeze({ id: 'bdv-fisica', label: 'BDV (2.5%)' }),
+    Object.freeze({ id: 'bdv', label: 'BDV (1% + 1.5%)' }),
     Object.freeze({ id: 'bbva-provincial', label: 'BBVA (1.5%)' })
   ],
   [
@@ -310,11 +317,11 @@ export const BANK_BUTTON_ROWS = Object.freeze([
   ]
 ]);
 
-export function buildBankInlineKeyboard(amount, selectedBankId = 'bdv-fisica') {
+export function buildBankInlineKeyboard(amount, selectedBankId = 'bdv') {
   const currentBank = typeof selectedBankId === 'object' && selectedBankId !== null
     ? selectedBankId
     : resolveBank(selectedBankId);
-  const currentBankId = currentBank?.id || 'bdv-fisica';
+  const currentBankId = currentBank?.id || 'bdv';
 
   const inline_keyboard = BANK_BUTTON_ROWS.map(row => {
     return row.map(btn => {
@@ -358,7 +365,7 @@ export function parseCallbackData(data) {
     const parts = trimmed.split(':');
     if (parts.length >= 2) {
       const rawAmount = parts[1];
-      const bankId = parts.slice(2).join(':').trim() || 'bdv-fisica';
+      const bankId = parts.slice(2).join(':').trim() || 'bdv';
       const amount = Number(rawAmount);
 
       if (Number.isFinite(amount) && amount > 0 && amount <= 1_000_000) {

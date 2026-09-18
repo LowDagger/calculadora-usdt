@@ -29,7 +29,7 @@ function createWorker({ cachedResponse, networkResponse } = {}) {
     caches: {
       open: async () => cache,
       match: async () => cachedResponse,
-      keys: async () => ['calcuflow-v64', 'calcuflow-v65', 'calcuflow-v66'],
+      keys: async () => ['calcuflow-v64', 'calcuflow-v65', 'calcuflow-v67'],
       delete: async (name) => { deletedCaches.push(name); return true; }
     },
     fetch: async () => {

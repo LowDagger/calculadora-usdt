@@ -134,7 +134,10 @@ const ratesController = createRatesController({ calculate, saveState });
 const loadRates = showSuccessToast => ratesController.loadRates(showSuccessToast);
 const updateRelativeTime = () => ratesController.updateRelativeTime();
 
-function formatProfileFee(fee) {
+function formatProfileFee(fee, feeSteps = null) {
+  if (feeSteps?.length) {
+    return feeSteps.map(step => `${new Intl.NumberFormat('es-VE', { maximumFractionDigits: 2 }).format(step)}%`).join(' + ');
+  }
   return `${new Intl.NumberFormat('es-VE', { maximumFractionDigits: 2 }).format(fee)}%`;
 }
 
@@ -208,7 +211,7 @@ function getProfileChoiceDetail(profile, { includeTemporary = false } = {}) {
 
   return [
     profile.cardType,
-    formatProfileFee(profile.fee),
+    formatProfileFee(profile.fee, profile.feeSteps),
     includeTemporary && profile.isTemporary ? 'Solo este cálculo' : ''
   ].filter(Boolean).join(' · ');
 }
@@ -256,10 +259,10 @@ function buildBankProfileOption(profile, mode = 'select') {
   option.setAttribute(
     'aria-label',
     isModalityView
-      ? `${displayProfile.cardType || displayProfile.name}, comisión ${formatProfileFee(displayProfile.fee)}${isSelected ? ', seleccionada' : ''}`
+      ? `${displayProfile.cardType || displayProfile.name}, comisión ${formatProfileFee(displayProfile.fee, displayProfile.feeSteps)}${isSelected ? ', seleccionada' : ''}`
       : mode === 'manage'
         ? `Editar perfil ${displayProfile.name}${displayProfile.cardType ? `, ${displayProfile.cardType}` : ''}`
-        : `${displayProfile.name}${displayProfile.cardType ? `, ${displayProfile.cardType}` : ''}, comisión ${formatProfileFee(displayProfile.fee)}${isSelected ? ', seleccionado' : ''}`
+        : `${displayProfile.name}${displayProfile.cardType ? `, ${displayProfile.cardType}` : ''}, comisión ${formatProfileFee(displayProfile.fee, displayProfile.feeSteps)}${isSelected ? ', seleccionado' : ''}`
   );
 
   const copy = document.createElement('span');
@@ -273,7 +276,7 @@ function buildBankProfileOption(profile, mode = 'select') {
   const detail = document.createElement('span');
   detail.className = 'bank-profile-option-detail';
   detail.textContent = isModalityView && displayProfile.cardType
-    ? formatProfileFee(displayProfile.fee)
+    ? formatProfileFee(displayProfile.fee, displayProfile.feeSteps)
     : getProfileChoiceDetail(displayProfile);
   copy.append(detail);
 
@@ -1301,7 +1304,9 @@ function calculate() {
 
   const result = calculateValues({
     requestedUsd: els.usdToBuy.value, bcvRate: bcv, bankMargin: els.bankMargin.value,
-    p2pRate: p2p, cardFee: els.cardFee.value, bpayFee: els.bpayFee.value
+    p2pRate: p2p, cardFee: els.cardFee.value,
+    bankFeeSteps: getEffectiveSelectedBankProfile(bankProfileState, manualCardFee, temporaryCardFee)?.feeSteps,
+    bpayFee: els.bpayFee.value
   });
 
   if (!result) {
@@ -1329,7 +1334,7 @@ function getShareBankProfile() {
 function getShareBankDescription() {
   const activeProfile = getShareBankProfile();
   return activeProfile
-    ? [activeProfile.name, activeProfile.cardType, formatProfileFee(activeProfile.fee)].filter(Boolean).join(' · ')
+    ? [activeProfile.name, activeProfile.cardType, formatProfileFee(activeProfile.fee, activeProfile.feeSteps)].filter(Boolean).join(' · ')
     : `Comisión ${formatProfileFee(manualCardFee)}`;
 }
 

@@ -34,8 +34,8 @@ function mockFetchResponse(body, { status = 200, headers = {} } = {}) {
 test('DEFAULT_OPERATIONAL_CONFIG contains expected default structure and known banks', () => {
   assert.equal(DEFAULT_OPERATIONAL_CONFIG.configVersion, 1);
   assert.equal(DEFAULT_OPERATIONAL_CONFIG.defaults.bpayFee, 4.1);
-  assert.equal(Object.keys(DEFAULT_OPERATIONAL_CONFIG.bankFees).length, 9);
-  assert.equal(KNOWN_BANK_IDS.size, 9);
+  assert.equal(Object.keys(DEFAULT_OPERATIONAL_CONFIG.bankFees).length, 8);
+  assert.equal(KNOWN_BANK_IDS.size, 8);
   for (const profile of DEFAULT_BANK_PROFILES) {
     assert.ok(KNOWN_BANK_IDS.has(profile.id));
     assert.equal(DEFAULT_OPERATIONAL_CONFIG.bankFees[profile.id], profile.defaultFee);
@@ -48,7 +48,7 @@ test('validateRemoteConfig validates valid configuration object', () => {
     updatedAt: '2026-08-29T12:00:00Z',
     defaults: { bpayFee: 4.25 },
     bankFees: {
-      'bdv-fisica': 3.0,
+      'bdv': 3.0,
       'bbva-provincial': 1.8
     }
   };
@@ -58,7 +58,7 @@ test('validateRemoteConfig validates valid configuration object', () => {
   assert.equal(result.updatedAt, '2026-08-29T12:00:00Z');
   assert.equal(result.defaults.bpayFee, 4.25);
   assert.deepEqual(result.bankFees, {
-    'bdv-fisica': 3.0,
+    'bdv': 3.0,
     'bbva-provincial': 1.8
   });
 });
@@ -76,7 +76,7 @@ test('validateRemoteConfig ignores unknown bank IDs and invalid fee numbers', ()
     configVersion: 1,
     defaults: { bpayFee: 'invalid-string' },
     bankFees: {
-      'bdv-fisica': 3.0,
+      'bdv': 3.0,
       'unknown-bank-id': 2.5,
       'banco-tesoro': -1,
       'bancamiga': 150,
@@ -88,7 +88,7 @@ test('validateRemoteConfig ignores unknown bank IDs and invalid fee numbers', ()
   assert.ok(result);
   assert.equal(result.defaults, undefined);
   assert.deepEqual(result.bankFees, {
-    'bdv-fisica': 3.0
+    'bdv': 3.0
   });
 });
 
@@ -112,7 +112,7 @@ test('resolveServerConfig fetches from Edge Config URL and returns validated mer
       updatedAt: '2026-08-29T12:00:00Z',
       defaults: { bpayFee: 4.5 },
       bankFees: {
-        'bdv-fisica': 3.0
+        'bdv': 3.0
       }
     }
   };
@@ -127,7 +127,7 @@ test('resolveServerConfig fetches from Edge Config URL and returns validated mer
   assert.equal(result.cacheable, true);
   assert.equal(result.config.configVersion, 1);
   assert.equal(result.config.defaults.bpayFee, 4.5);
-  assert.equal(result.config.bankFees['bdv-fisica'], 3.0);
+  assert.equal(result.config.bankFees['bdv'], 3.0);
   assert.equal(result.config.bankFees['bbva-provincial'], 1.5); // Fallback from default
 });
 
@@ -189,7 +189,7 @@ test('fetchRemoteConfig fetches and validates configuration on client', async ()
     return mockFetchResponse({
       configVersion: 1,
       defaults: { bpayFee: 4.2 },
-      bankFees: { 'bdv-fisica': 2.8 }
+      bankFees: { 'bdv': 2.8 }
     });
   };
 
@@ -197,7 +197,7 @@ test('fetchRemoteConfig fetches and validates configuration on client', async ()
   assert.ok(config);
   assert.equal(config.configVersion, 1);
   assert.equal(config.defaults.bpayFee, 4.2);
-  assert.equal(config.bankFees['bdv-fisica'], 2.8);
+  assert.equal(config.bankFees['bdv'], 2.8);
 });
 
 test('valid remote bank fee applies to uncustomized bank profile', () => {
@@ -205,16 +205,16 @@ test('valid remote bank fee applies to uncustomized bank profile', () => {
   setRemoteBankDefaults(null);
 
   let state = sanitizeBankProfileState({});
-  const bdvInitial = getBankProfile(state, 'bdv-fisica');
+  const bdvInitial = getBankProfile(state, 'bdv');
   assert.equal(bdvInitial.fee, 2.5);
   assert.equal(bdvInitial.isModified, false);
 
   // Apply remote default BDV 2.5 -> 3.0
-  setRemoteBankDefaults({ 'bdv-fisica': 3.0 });
-  assert.equal(getPresetDefaultFee('bdv-fisica'), 3.0);
+  setRemoteBankDefaults({ 'bdv': 3.0 });
+  assert.equal(getPresetDefaultFee('bdv'), 3.0);
 
   state = sanitizeBankProfileState(state);
-  const bdvUpdated = getBankProfile(state, 'bdv-fisica');
+  const bdvUpdated = getBankProfile(state, 'bdv');
   assert.equal(bdvUpdated.fee, 3.0);
   assert.equal(bdvUpdated.defaultFee, 3.0);
   assert.equal(bdvUpdated.isModified, false);
@@ -229,28 +229,28 @@ test('explicit bank profile override wins over remote default', () => {
   let state = sanitizeBankProfileState({});
   // User explicitly sets BDV to 2.2%
   state = updateBankProfile(state, {
-    ...getBankProfile(state, 'bdv-fisica'),
+    ...getBankProfile(state, 'bdv'),
     fee: 2.2
   });
 
-  const bdvCustom = getBankProfile(state, 'bdv-fisica');
+  const bdvCustom = getBankProfile(state, 'bdv');
   assert.equal(bdvCustom.fee, 2.2);
   assert.equal(bdvCustom.isModified, true);
   assert.deepEqual(bdvCustom.overrides, ['fee']);
 
   // Remote default changes to 3.0%
-  setRemoteBankDefaults({ 'bdv-fisica': 3.0 });
-  assert.equal(getPresetDefaultFee('bdv-fisica'), 3.0);
+  setRemoteBankDefaults({ 'bdv': 3.0 });
+  assert.equal(getPresetDefaultFee('bdv'), 3.0);
 
   state = sanitizeBankProfileState(state);
-  const bdvPreserved = getBankProfile(state, 'bdv-fisica');
+  const bdvPreserved = getBankProfile(state, 'bdv');
   assert.equal(bdvPreserved.fee, 2.2); // User override preserved!
   assert.equal(bdvPreserved.defaultFee, 3.0);
   assert.equal(bdvPreserved.isModified, true);
 
   // When user restores this bank, it resets to the active remote default (3.0%)
-  state = restoreBankProfile(state, 'bdv-fisica');
-  const bdvRestored = getBankProfile(state, 'bdv-fisica');
+  state = restoreBankProfile(state, 'bdv');
+  const bdvRestored = getBankProfile(state, 'bdv');
   assert.equal(bdvRestored.fee, 3.0);
   assert.equal(bdvRestored.isModified, false);
 

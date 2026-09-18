@@ -79,19 +79,28 @@ export function floorToCurrencyCents(value) {
 }
 
 /** Models the observed bank behavior of dropping fractions below one cent. */
-export function settleBankChargeByFlooring(merchantCents, bankFeeUnits) {
-  return (merchantCents * (PERCENT_FACTOR_SCALE + bankFeeUnits)) / PERCENT_FACTOR_SCALE;
+export function settleBankChargeByFlooring(merchantCents, bankFeeUnits, bankFeeStepUnits = null) {
+  const feeSteps = bankFeeStepUnits?.length ? bankFeeStepUnits : [bankFeeUnits];
+  const factor = feeSteps.reduce(
+    (combined, feeUnits) => combined * (PERCENT_FACTOR_SCALE + feeUnits) / PERCENT_FACTOR_SCALE,
+    PERCENT_FACTOR_SCALE
+  );
+  return merchantCents * factor / PERCENT_FACTOR_SCALE;
 }
 
 export function calculateSafeGatewayAmount({
   cardBalance,
   bankFeePercent,
+  bankFeeSteps,
   gatewayFeePercent,
   targetMargin
 }) {
   const balanceUnits = parseFixed(cardBalance, 'El saldo de la tarjeta');
   const marginUnits = parseFixed(targetMargin, 'El margen');
   const bankFeeUnits = parseFixed(bankFeePercent, 'La comisión bancaria');
+  const bankFeeStepUnits = Array.isArray(bankFeeSteps)
+    ? bankFeeSteps.map(value => parseFixed(value, 'La comisión bancaria'))
+    : null;
   const gatewayFeeUnits = parseFixed(gatewayFeePercent, 'La comisión de BPay');
 
   if (balanceUnits <= 0n) throw new MoneyValidationError('El saldo debe ser mayor que cero.');
@@ -101,9 +110,14 @@ export function calculateSafeGatewayAmount({
   }
 
   const allowedUnits = balanceUnits - marginUnits;
-  const bankFactor = PERCENT_FACTOR_SCALE + bankFeeUnits;
+  const bankFactor = bankFeeStepUnits?.length
+    ? bankFeeStepUnits.reduce(
+      (combined, feeUnits) => combined * (PERCENT_FACTOR_SCALE + feeUnits) / PERCENT_FACTOR_SCALE,
+      PERCENT_FACTOR_SCALE
+    )
+    : PERCENT_FACTOR_SCALE + bankFeeUnits;
   let merchantCents = (allowedUnits * PERCENT_FACTOR_SCALE / bankFactor) / UNITS_PER_CENT;
-  let expectedDeductionCents = settleBankChargeByFlooring(merchantCents, bankFeeUnits);
+  let expectedDeductionCents = settleBankChargeByFlooring(merchantCents, bankFeeUnits, bankFeeStepUnits);
   let corrections = 0;
 
   while (expectedDeductionCents * UNITS_PER_CENT > allowedUnits) {
@@ -111,11 +125,19 @@ export function calculateSafeGatewayAmount({
       throw new MoneyValidationError('No se pudo obtener un monto seguro con estos valores.');
     }
     merchantCents -= 1n;
-    expectedDeductionCents = settleBankChargeByFlooring(merchantCents, bankFeeUnits);
+    expectedDeductionCents = settleBankChargeByFlooring(merchantCents, bankFeeUnits, bankFeeStepUnits);
     corrections += 1;
   }
 
-  const rawDeductionNumerator = merchantCents * (PERCENT_FACTOR_SCALE + bankFeeUnits);
+  while (bankFeeStepUnits?.length && corrections < MAX_CORRECTIONS) {
+    const nextDeductionCents = settleBankChargeByFlooring(merchantCents + 1n, bankFeeUnits, bankFeeStepUnits);
+    if (nextDeductionCents * UNITS_PER_CENT > allowedUnits) break;
+    merchantCents += 1n;
+    expectedDeductionCents = nextDeductionCents;
+    corrections += 1;
+  }
+
+  const rawDeductionNumerator = merchantCents * bankFactor;
   const rawDeductionUnits = rawDeductionNumerator * UNITS_PER_CENT / PERCENT_FACTOR_SCALE;
   const remainingUnits = balanceUnits - expectedDeductionCents * UNITS_PER_CENT;
   const gatewayNumerator = merchantCents * (PERCENT_FACTOR_SCALE - gatewayFeeUnits);
@@ -136,7 +158,7 @@ export function currentBankRate(bcvRate, bankMargin) {
   return n(bcvRate) * (1 + n(bankMargin) / 100);
 }
 
-export function calculateValues({ requestedUsd, bcvRate, bankMargin, p2pRate, cardFee, bpayFee }) {
+export function calculateValues({ requestedUsd, bcvRate, bankMargin, p2pRate, cardFee, bankFeeSteps, bpayFee }) {
   const amountValidation = validateRequestedUsd(requestedUsd);
   const requested = amountValidation.value;
   const bcv = n(bcvRate);
@@ -150,6 +172,7 @@ export function calculateValues({ requestedUsd, bcvRate, bankMargin, p2pRate, ca
   const safeGateway = calculateSafeGatewayAmount({
     cardBalance: requested,
     bankFeePercent: cardFee,
+    bankFeeSteps,
     gatewayFeePercent: bpayFee,
     targetMargin: '0.01'
   });
@@ -166,7 +189,7 @@ export function calculateValues({ requestedUsd, bcvRate, bankMargin, p2pRate, ca
   const totalFeesUsd = cardFeeUsd + bpayFeeUsd;
 
   return {
-    requestedUsd: requested, bcv, bank, p2p, cardPct, bpayPct,
+    requestedUsd: requested, bcv, bank, p2p, cardPct, bankFeeSteps, bpayPct,
     usdUsed, vesNeeded, cardFeeUsd, afterCard, bpayFeeUsd,
     usdtFinal, vesReturn, profitVes, profitUsdt, roi, totalFeesUsd,
     safeGateway
