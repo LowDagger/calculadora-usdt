@@ -53,20 +53,35 @@ npx.cmd --yes vercel@latest dev --listen 5500
 
 Abre: <http://localhost:5500>
 
-No se necesita ninguna variable de entorno. `python -m http.server 5500` o
+El calculador principal no necesita secretos. `python -m http.server 5500` o
 `npx.cmd serve -p 5500 .` siguen siendo útiles para revisar la interfaz/offline,
-pero no ejecutan `/api/rates`.
+pero no ejecutan las rutas bajo `/api/`.
 
 ---
 
 ## Desplegar en Vercel
 
-La interfaz es estática y Vercel detecta automáticamente la Function bajo
-`api/`; no requiere configuración adicional:
+La interfaz es estática y Vercel detecta automáticamente las Functions bajo
+`api/`:
 
 1. Conecta el repositorio
 2. Vercel detecta automáticamente que es un sitio estático
-3. No agregar variables de entorno (no se necesitan)
+3. El calculador funciona normalmente sin variables secretas
+
+### Bot de Telegram opcional
+
+El bot y su webhook requieren configurar en Vercel las variables que
+correspondan al entorno:
+
+- `TELEGRAM_BOT_TOKEN`: credencial privada del bot.
+- `TELEGRAM_BOT_USERNAME`: nombre público del bot.
+- `TELEGRAM_ALLOWED_CHAT_ID`: chat autorizado.
+- `TELEGRAM_ALLOWED_THREAD_ID`: tema autorizado principal.
+- `TELEGRAM_ALLOWED_THREADS`: lista de temas autorizados.
+
+No son necesarias para usar el calculador principal. El webhook de producción
+es <https://calcu-flow.vercel.app/api/telegram>. No publiques valores reales en
+el repositorio.
 
 Producción: https://calcu-flow.vercel.app
 
@@ -77,8 +92,13 @@ Producción: https://calcu-flow.vercel.app
 ```
 calculadora-usdt/
 ├── api/
-│   ├── rate-providers.mjs # Proveedores, validación y mediana P2P
-│   └── rates.mjs          # Vercel Function same-origin
+│   ├── config.mjs             # Configuración segura del bot
+│   ├── rate-providers.mjs     # Proveedores, validación y mediana P2P
+│   ├── rates.mjs              # Vercel Function same-origin
+│   ├── telegram-app-handler.mjs
+│   ├── telegram-formatter.mjs
+│   ├── telegram-ui.mjs
+│   └── telegram.mjs           # Webhook opcional de Telegram
 ├── assets/
 │   └── icon.svg
 ├── css/

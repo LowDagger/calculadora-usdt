@@ -5,6 +5,8 @@ import { existsSync, readFileSync } from 'node:fs';
 const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 const manifestContent = readFileSync(new URL('../manifest.json', import.meta.url), 'utf8');
 const manifest = JSON.parse(manifestContent);
+const canonicalUrl = 'https://calcu-flow.vercel.app/';
+const oldProductionDomain = 'calculadora-banco-usdt.vercel.app';
 
 test('index.html contains complete branding and SEO meta tags', () => {
   // Title
@@ -35,8 +37,23 @@ test('index.html contains complete branding and SEO meta tags', () => {
 
   // Twitter Cards
   assert.match(html, /<meta property="twitter:card" content="summary_large_image" \/>/);
+  assert.match(html, /<meta property="twitter:url" content="https:\/\/calcu-flow\.vercel\.app\/" \/>/);
   assert.match(html, /<meta property="twitter:title" content="CalcuFlow — Banco → USDT" \/>/);
   assert.match(html, /<meta property="twitter:image" content="https:\/\/calcu-flow\.vercel\.app\/preview\.png" \/>/);
+});
+
+test('active production metadata and analytics stay on the canonical setup', () => {
+  assert.doesNotMatch(html, new RegExp(oldProductionDomain.replaceAll('.', '\\.')));
+  assert.doesNotMatch(html, /PASTE_CLOUDFLARE_BEACON_TOKEN_HERE|static\.cloudflareinsights\.com/);
+  assert.match(html, /<script defer src="\/_vercel\/insights\/script\.js"><\/script>/);
+  assert.match(html, /<script defer src="\/_vercel\/speed-insights\/script\.js"><\/script>/);
+
+  const jsonLdMatch = html.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/);
+  assert.ok(jsonLdMatch, 'JSON-LD script block must exist');
+  const structuredData = JSON.parse(jsonLdMatch[1]);
+
+  assert.match(html, new RegExp(`<link rel="canonical" href="${canonicalUrl.replaceAll('.', '\\.')}" \\/>`));
+  assert.equal(structuredData.url, canonicalUrl);
 });
 
 test('index.html contains valid, parseable JSON-LD structured data', () => {
