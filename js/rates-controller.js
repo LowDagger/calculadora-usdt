@@ -59,9 +59,9 @@ export function parseLastUpdate(str) {
 
 export function formatRelativeTime(date) {
   if (!date) return 'Sin actualizar';
-  const diffSec = Math.max(0, Math.floor((new Date() - date) / 1000));
-  if (diffSec < 60) return `Actualizado hace ${diffSec} s`;
-  const diffMin = Math.floor(diffSec / 60);
+  const diffMs = Math.max(0, new Date() - date);
+  if (diffMs < 60000) return 'Hace <1 min';
+  const diffMin = Math.floor(diffMs / 60000);
   if (diffMin < 60) return `Actualizado hace ${diffMin} min`;
   const diffHour = Math.floor(diffMin / 60);
   if (diffHour < 24) return `Actualizado hace ${diffHour} h`;

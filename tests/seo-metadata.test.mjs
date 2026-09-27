@@ -10,7 +10,7 @@ const legacyProductionDomains = ['calcu-flow.vercel.app', 'calculadora-banco-usd
 
 test('index.html contains complete branding and SEO meta tags', () => {
   // Title
-  assert.match(html, /<title>CalcuFlow — Banco → USDT<\/title>/);
+  assert.match(html, /<title>CalcuFlow — Calculadora de USDT en Venezuela<\/title>/);
 
   // Canonical URL
   assert.match(html, /<link rel="canonical" href="https:\/\/calcuflow\.live\/" \/>/);
@@ -30,7 +30,7 @@ test('index.html contains complete branding and SEO meta tags', () => {
   assert.match(html, /<meta property="og:locale" content="es_VE" \/>/);
   assert.match(html, /<meta property="og:site_name" content="CalcuFlow" \/>/);
   assert.match(html, /<meta property="og:url" content="https:\/\/calcuflow\.live\/" \/>/);
-  assert.match(html, /<meta property="og:title" content="CalcuFlow — Banco → USDT" \/>/);
+  assert.match(html, /<meta property="og:title" content="Calcula tu compra de USDT con CalcuFlow" \/>/);
   assert.match(html, /<meta property="og:image" content="https:\/\/calcuflow\.live\/preview\.png" \/>/);
   assert.match(html, /<meta property="og:image:width" content="1200" \/>/);
   assert.match(html, /<meta property="og:image:height" content="630" \/>/);
@@ -38,7 +38,7 @@ test('index.html contains complete branding and SEO meta tags', () => {
   // Twitter Cards
   assert.match(html, /<meta property="twitter:card" content="summary_large_image" \/>/);
   assert.match(html, /<meta property="twitter:url" content="https:\/\/calcuflow\.live\/" \/>/);
-  assert.match(html, /<meta property="twitter:title" content="CalcuFlow — Banco → USDT" \/>/);
+  assert.match(html, /<meta property="twitter:title" content="Calcula tu compra de USDT con CalcuFlow" \/>/);
   assert.match(html, /<meta property="twitter:image" content="https:\/\/calcuflow\.live\/preview\.png" \/>/);
 });
 
@@ -65,7 +65,7 @@ test('index.html contains valid, parseable JSON-LD structured data', () => {
   const website = entities.find(entity => entity['@type'] === 'WebSite');
   assert.equal(structuredData['@context'], 'https://schema.org');
   assert.equal(structuredData.name, 'CalcuFlow');
-  assert.equal(structuredData.alternateName, 'Calculadora Banco → USDT');
+  assert.equal(structuredData.alternateName, 'Calculadora de USDT en Venezuela');
   assert.equal(structuredData.url, 'https://calcuflow.live/');
   assert.equal(structuredData.inLanguage, 'es-VE');
   assert.equal(structuredData.applicationCategory, 'FinanceApplication');
@@ -80,7 +80,7 @@ test('index.html contains valid, parseable JSON-LD structured data', () => {
 });
 
 test('manifest.json provides required PWA metadata, categories, and orientation', () => {
-  assert.equal(manifest.name, 'CalcuFlow — Banco → USDT');
+  assert.equal(manifest.name, 'CalcuFlow');
   assert.equal(manifest.short_name, 'CalcuFlow');
   assert.equal(manifest.display, 'standalone');
   assert.equal(manifest.orientation, 'portrait-primary');

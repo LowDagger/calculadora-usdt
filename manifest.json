@@ -1,7 +1,7 @@
 {
-  "name": "CalcuFlow — Banco → USDT",
+  "name": "CalcuFlow",
   "short_name": "CalcuFlow",
-  "description": "Calcula compra de USD en banco venezolano, comisiones BPay y retorno en USDT con tasas oficiales y paralelas en tiempo real.",
+  "description": "Calcula bolívares, comisiones, USDT finales y ganancia estimada con tasas BCV y Binance P2P.",
   "id": "/",
   "start_url": "/",
   "scope": "/",

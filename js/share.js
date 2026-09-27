@@ -31,7 +31,7 @@ export function buildShareText(result, bankProfileOrDescription) {
   const bankRate = money(result.bank, 2);
   const p2p = money(result.p2p, 2);
 
-  return `CalcuFlow — Banco → USDT
+  return `CalcuFlow — Cálculo de USDT
 
 Compra: ${amount} USD
 Banco: ${bankDescription}

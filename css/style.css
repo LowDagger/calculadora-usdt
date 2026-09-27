@@ -197,35 +197,22 @@ textarea,
   font-weight: 300;
 }
 
-.subtitle-row {
-  position: relative;
-  width: max-content;
-  max-width: 100%;
-  padding-right: 30px;
+.section-heading-row {
   display: flex;
   align-items: center;
-  gap: 4px;
-  flex-wrap: nowrap;
-  white-space: nowrap;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 1px 2px -5px;
 }
 
-.subtitle-divider {
-  color: var(--muted);
-  opacity: 0.5;
-  font-size: 0.7rem;
-}
-
-.header-update {
+.rates-updated-status {
   display: inline-flex;
   align-items: center;
-  gap: 3px;
+  gap: 2px;
   font-size: 0.62rem;
   font-weight: 600;
   color: var(--muted);
-}
-
-.header-update .pulse-dot {
-  margin-top: 1px;
+  white-space: nowrap;
 }
 
 .subtitle {
@@ -234,20 +221,9 @@ textarea,
   font-weight: 500;
 }
 
-/* Brand descriptor: "Banco → USDT" shown below the CalcuFlow h1 */
-.brand-subtitle {
-  font-size: 0.6rem;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  text-transform: none;
-}
-
 .rates-refresh-btn {
-  position: absolute;
-  top: 50%;
-  right: -8px;
-  width: 44px;
-  height: 44px;
+  width: 30px;
+  height: 30px;
   margin: 0;
   border: 0;
   border-radius: 50%;
@@ -256,7 +232,6 @@ textarea,
   display: grid;
   place-items: center;
   cursor: pointer;
-  transform: translateY(-50%);
   transition: background-color 150ms ease, color 150ms ease, transform 150ms ease;
 }
 
@@ -270,7 +245,7 @@ textarea,
 }
 
 .rates-refresh-btn:active:not(:disabled) {
-  transform: translateY(-50%) scale(0.96);
+  transform: scale(0.96);
 }
 
 .rates-refresh-btn:focus {
@@ -348,7 +323,7 @@ textarea,
 }
 
 .section-label {
-  margin: 1px 2px -5px;
+  margin: 0;
   color: var(--muted);
   font-size: 0.68rem;
   font-weight: 800;
@@ -3127,15 +3102,6 @@ footer {
   .brand-title {
     font-size: 1.08rem;
     line-height: 1.05;
-  }
-
-  .subtitle-row {
-    gap: 3px;
-  }
-
-  .brand-subtitle,
-  .header-update {
-    font-size: 0.58rem;
   }
 
   .layout {

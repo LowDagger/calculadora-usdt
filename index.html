@@ -9,7 +9,7 @@
   <meta name="author" content="CalcuFlow" />
   <meta name="robots" content="index, follow" />
   <meta name="keywords" content="calculadora usdt, bcv venezuela, bpay, tasa bcv, dolar paralelo venezuela, usdt ves, binance p2p venezuela, tasa bcv anunciada, calculadora banco usdt" />
-  <title>CalcuFlow — Banco → USDT</title>
+  <title>CalcuFlow — Calculadora de USDT en Venezuela</title>
   <link rel="canonical" href="https://calcuflow.live/" />
   <script>
     (function () {
@@ -26,19 +26,20 @@
   </script>
 
   <!-- Primary Meta Tags -->
-  <meta name="title" content="CalcuFlow — Banco → USDT" />
+  <meta name="title" content="CalcuFlow — Calculadora de USDT en Venezuela" />
   <meta name="description"
-    content="CalcuFlow: calcula cuánto pagar en bolívares, ganancia, ROI y USDT finales con la última tasa BCV anunciada." />
+    content="Calcula cuántos bolívares necesitas, comisiones, USDT finales y ganancia estimada con tasas BCV y referencia Binance P2P." />
 
   <!-- Open Graph / Facebook -->
   <meta property="og:type" content="website" />
   <meta property="og:locale" content="es_VE" />
   <meta property="og:site_name" content="CalcuFlow" />
   <meta property="og:url" content="https://calcuflow.live/" />
-  <meta property="og:title" content="CalcuFlow — Banco → USDT" />
+  <meta property="og:title" content="Calcula tu compra de USDT con CalcuFlow" />
   <meta property="og:description"
-    content="CalcuFlow: calcula cuánto pagar en bolívares, ganancia, ROI y USDT finales con la última tasa BCV anunciada." />
+    content="Calcula Bs necesarios, comisiones, USDT finales y ganancia estimada con BCV y Binance P2P." />
   <meta property="og:image" content="https://calcuflow.live/preview.png" />
+  <meta property="og:image:alt" content="CalcuFlow, calculadora de compra de USDT con BCV, bancos y Binance P2P" />
   <meta property="og:image:width" content="1200" />
   <meta property="og:image:height" content="630" />
   <meta property="og:image:type" content="image/png" />
@@ -46,10 +47,11 @@
   <!-- Twitter -->
   <meta property="twitter:card" content="summary_large_image" />
   <meta property="twitter:url" content="https://calcuflow.live/" />
-  <meta property="twitter:title" content="CalcuFlow — Banco → USDT" />
+  <meta property="twitter:title" content="Calcula tu compra de USDT con CalcuFlow" />
   <meta property="twitter:description"
-    content="CalcuFlow: calcula cuánto pagar en bolívares, ganancia, ROI y USDT finales con la última tasa BCV anunciada." />
+    content="Calcula Bs necesarios, comisiones, USDT finales y ganancia estimada con BCV y Binance P2P." />
   <meta property="twitter:image" content="https://calcuflow.live/preview.png" />
+  <meta property="twitter:image:alt" content="CalcuFlow, calculadora de compra de USDT con BCV, bancos y Binance P2P" />
 
   <!-- JSON-LD Structured Data -->
   <script type="application/ld+json">
@@ -57,7 +59,7 @@
     "@context": "https://schema.org",
     "@type": "WebApplication",
     "name": "CalcuFlow",
-    "alternateName": "Calculadora Banco → USDT",
+    "alternateName": "Calculadora de USDT en Venezuela",
     "url": "https://calcuflow.live/",
     "description": "Calculadora financiera para estimar compra de USD en banco venezolano, comisiones BPay y retorno en USDT con tasas BCV y paralelo en tiempo real.",
     "applicationCategory": "FinanceApplication",
@@ -125,18 +127,6 @@
           <img src="/assets/icon.svg" alt="CalcuFlow" class="header-icon" />
           CalcuFlow
         </h1>
-        <div class="subtitle-row">
-          <span class="subtitle brand-subtitle">Banco → USDT</span>
-          <span class="subtitle-divider">·</span>
-          <span class="header-update">
-            <span class="pulse-dot" aria-hidden="true"></span>
-            <span id="lastUpdate" class="updated-time">Sin actualizar</span>
-            <button class="rates-refresh-btn" id="loadRatesBtn" type="button" title="Actualizar tasas"
-              aria-label="Actualizar tasas">
-              <span class="material-symbols-rounded" aria-hidden="true">refresh</span>
-            </button>
-          </span>
-        </div>
       </div>
       <div class="icon-actions">
         <button class="icon-btn" id="installHeaderBtn" type="button"
@@ -201,7 +191,16 @@
       </section>
 
       <!-- Card 2: Reference rates (BCV, spread, P2P) -->
-      <h2 class="section-label">Tasas de referencia</h2>
+      <div class="section-heading-row">
+        <h2 class="section-label">Tasas de referencia</h2>
+        <span class="rates-updated-status">
+          <span id="lastUpdate" class="updated-time">Sin actualizar</span>
+          <button class="rates-refresh-btn" id="loadRatesBtn" type="button" title="Actualizar tasas"
+            aria-label="Actualizar tasas">
+            <span class="material-symbols-rounded" aria-hidden="true">refresh</span>
+          </button>
+        </span>
+      </div>
       <div class="rates-grid">
         <button class="rate-card rate-card--editable" id="openBcvEditorBtn" type="button"
           aria-label="Editar tasa BCV" aria-controls="bcvEditorPanel" aria-expanded="false"
@@ -810,15 +809,15 @@
             </svg>
             <span>Comunidad</span>
           </span>
-          <h2 class="modal-title community-promo-title" id="communityPromoTitle">CalcuFlow ahora es calcuflow.live</h2>
+          <h2 class="modal-title community-promo-title" id="communityPromoTitle">Nuevo link oficial</h2>
         </div>
         <button class="modal-close icon-btn" id="closeCommunityPromoBtn" type="button" title="Cerrar"
           aria-label="Cerrar invitación a la comunidad"><span class="material-symbols-rounded" aria-hidden="true">close</span></button>
       </div>
 
       <div class="modal-content community-promo-content">
-        <p class="modal-description community-promo-desc" id="communityPromoDesc">Tenemos nuevo dominio. Los enlaces anteriores seguirán funcionando y te redirigirán automáticamente.</p>
-        <p class="community-promo-subtext">Gracias por apoyar CalcuFlow. Únete a la comunidad para compartir bancos, operaciones e ideas.</p>
+        <p class="modal-description community-promo-desc" id="communityPromoDesc"><strong>calcuflow.live</strong> es el nuevo link oficial. Los enlaces anteriores seguirán funcionando.</p>
+        <p class="community-promo-subtext">Únete al grupo y usa el bot de Telegram. ¡Gracias por apoyar CalcuFlow!</p>
         <div class="community-promo-actions">
           <a class="bank-profile-action bank-profile-action--primary community-primary-action community-promo-cta"
             id="communityPromoCta" href="https://t.me/CalcuFlow" target="_blank" rel="noopener noreferrer">

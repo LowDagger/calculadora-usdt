@@ -78,7 +78,7 @@ test("buildShareText formats Telegram/WhatsApp-friendly summary with positive an
   };
 
   const positiveText = buildShareText(positiveResult, "Banco de Venezuela · Virtual · 2,50%");
-  assert.match(positiveText, /CalcuFlow — Banco → USDT/);
+  assert.match(positiveText, /CalcuFlow — Cálculo de USDT/);
   assert.match(positiveText, /Compra: 500,00 USD/);
   assert.match(positiveText, /Banco: Banco de Venezuela · Virtual · 2,50%/);
   assert.match(positiveText, /BCV: 622,31/);

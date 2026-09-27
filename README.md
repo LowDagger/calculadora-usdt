@@ -1,4 +1,4 @@
-# CalcuFlow — Banco → USDT
+# CalcuFlow — Calculadora de USDT en Venezuela
 
 PWA estática para calcular compra de USD en banco venezolano, comisiones y retorno estimado vendiendo USDT en el mercado paralelo.
 
@@ -75,9 +75,9 @@ correspondan al entorno:
 
 - `TELEGRAM_BOT_TOKEN`: credencial privada del bot.
 - `TELEGRAM_BOT_USERNAME`: nombre público del bot.
-- `TELEGRAM_ALLOWED_CHAT_ID`: chat autorizado.
-- `TELEGRAM_ALLOWED_THREAD_ID`: tema autorizado principal.
-- `TELEGRAM_ALLOWED_THREADS`: lista de temas autorizados.
+- `TELEGRAM_ALLOWED_CHAT_ID`: uno o varios IDs de grupo autorizados, separados por comas. No restringe los chats privados, que siempre están permitidos.
+- `TELEGRAM_ALLOWED_THREAD_ID`: ID del tema autorizado para el grupo principal. Si se configura, el bot solo opera en ese tema dentro del grupo.
+- `TELEGRAM_ALLOWED_THREADS`: mapeo opcional `chatId:threadId`, separado por comas, para controlar temas en varios grupos (por ejemplo, `-100123:42,-100456:7`). Un grupo permitido sin tema asociado acepta comandos en todo el grupo.
 
 No son necesarias para usar el calculador principal. El webhook de producción
 es <https://calcuflow.live/api/telegram>. No publiques valores reales en

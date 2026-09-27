@@ -256,6 +256,11 @@ export function createTelegramAppHandler({
     if (typeof logger?.error === 'function') logger.error(entry);
   }
 
+  function logWebhookEvent(level, entry) {
+    const method = logger?.[level];
+    if (typeof method === 'function') method.call(logger, entry);
+  }
+
   async function safeSend(options) {
     try {
       await api.sendTelegramMessage({ fetchImpl, timeoutMs, testMode: useTestApi(), ...options });
@@ -888,14 +893,29 @@ export function createTelegramAppHandler({
       }
 
       const env = typeof getEnv === 'function' ? getEnv() : process.env;
-      const botToken = env?.TELEGRAM_BOT_TOKEN;
-      if (!botToken) return json({ error: 'TELEGRAM_BOT_TOKEN no configurado.' }, { status: 500 });
+      const botToken = String(env?.TELEGRAM_BOT_TOKEN || '').trim();
+      if (!botToken) {
+        logWebhookEvent('error', { event: 'telegram_config_error', missing: 'TELEGRAM_BOT_TOKEN' });
+        return json({ error: 'TELEGRAM_BOT_TOKEN no configurado.' }, { status: 500 });
+      }
 
-      if (update?.pre_checkout_query) return handlePreCheckout(update, botToken);
-      if (update?.callback_query) return handleCallback(update.callback_query, env, botToken);
-      const message = update?.message || update?.edited_message;
-      if (!message || typeof message !== 'object') return json({ ok: true, status: 'ignored_no_message' });
-      return handleMessage(message, env, botToken);
+      try {
+        if (update?.pre_checkout_query) return await handlePreCheckout(update, botToken);
+        if (update?.callback_query) return await handleCallback(update.callback_query, env, botToken);
+        const message = update?.message || update?.edited_message;
+        if (!message || typeof message !== 'object') {
+          logWebhookEvent('info', { event: 'telegram_update_ignored', updateId: update?.update_id ?? null });
+          return json({ ok: true, status: 'ignored_no_message' });
+        }
+        return await handleMessage(message, env, botToken);
+      } catch (error) {
+        logWebhookEvent('error', {
+          event: 'telegram_webhook_failure',
+          updateId: update?.update_id ?? null,
+          errorName: typeof error?.name === 'string' ? error.name : 'Error'
+        });
+        return json({ ok: true, status: 'internal_error' });
+      }
     }
   };
 }

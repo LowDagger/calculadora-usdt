@@ -77,7 +77,7 @@ test('marks result-card symbols as decorative and bumps the PWA cache', () => {
   assert.match(ui, /btn\.setAttribute\('aria-pressed', String\(isActive\)\)/);
   assert.match(settingsController, /btn\.setAttribute\('aria-pressed', String\(isActive\)\)/);
   assert.match(html, /data-theme-val="system" aria-pressed="true"/);
-  assert.match(serviceWorker, /const APP_VERSION\s+= '68';/);
+  assert.match(serviceWorker, /const APP_VERSION\s+= '69';/);
   assert.match(serviceWorker, /'\/js\/bcv-rates\.js'/);
   for (const moduleName of ['modal-controller', 'rates-controller', 'settings-controller', 'share']) {
     assert.match(serviceWorker, new RegExp(`'/js/${moduleName}\\.js'`));
@@ -245,7 +245,7 @@ test('uses icon-only profile editing while preserving the row accessibility cont
 });
 
 test('shares the current calculation hierarchy with bank context and keeps both delivery paths', () => {
-  assert.match(share, /CalcuFlow — Banco → USDT/);
+  assert.match(share, /CalcuFlow — Cálculo de USDT/);
   assert.match(share, /Compra: \$\{amount\} USD[\s\S]*?Banco: \$\{bankDescription\}/);
   assert.match(share, /BCV: \$\{bcv\}[\s\S]*?Banco: \$\{bankRate\}[\s\S]*?P2P: \$\{p2p\}/);
   assert.match(share, /Bs necesarios: \$\{bsNeeded\} Bs[\s\S]*?Monto en BPay: \$\{bpayAmount\} USD[\s\S]*?USDT finales: \$\{finalUsdt\} USDT/);
