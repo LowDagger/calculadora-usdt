@@ -229,7 +229,8 @@ export function createTelegramAppHandler({
   getEnv = () => process.env,
   now = () => new Date(),
   timeoutMs,
-  api
+  api,
+  logger = console
 } = {}) {
   if (!api) throw new Error('Telegram API helpers are required');
 
@@ -238,11 +239,29 @@ export function createTelegramAppHandler({
     return /^(1|true|yes)$/i.test(String(env?.TELEGRAM_BOT_API_TEST_MODE || '').trim());
   };
 
+  function logTelegramFailure(operation, method, error, botToken = '') {
+    const entry = {
+      event: 'telegram_api_failure',
+      operation,
+      method,
+      errorName: typeof error?.name === 'string' ? error.name : 'Error'
+    };
+    if (Number.isInteger(error?.status)) entry.httpStatus = error.status;
+    if (Number.isInteger(error?.errorCode)) entry.telegramErrorCode = error.errorCode;
+    if (typeof error?.description === 'string' && error.description) {
+      entry.telegramDescription = botToken
+        ? error.description.split(String(botToken)).join('[REDACTED]')
+        : error.description;
+    }
+    if (typeof logger?.error === 'function') logger.error(entry);
+  }
+
   async function safeSend(options) {
     try {
       await api.sendTelegramMessage({ fetchImpl, timeoutMs, testMode: useTestApi(), ...options });
       return true;
-    } catch {
+    } catch (error) {
+      logTelegramFailure('send', 'sendMessage', error, options.botToken);
       return false;
     }
   }
@@ -251,7 +270,8 @@ export function createTelegramAppHandler({
     try {
       await api.editTelegramMessageText({ fetchImpl, timeoutMs, testMode: useTestApi(), ...options });
       return true;
-    } catch {
+    } catch (error) {
+      logTelegramFailure('edit', 'editMessageText', error, options.botToken);
       return false;
     }
   }
@@ -259,8 +279,21 @@ export function createTelegramAppHandler({
   async function safeAnswerCallback(options) {
     try {
       await api.answerTelegramCallbackQuery({ fetchImpl, timeoutMs, testMode: useTestApi(), ...options });
-    } catch {
+      return true;
+    } catch (error) {
+      logTelegramFailure('callback_answer', 'answerCallbackQuery', error, options.botToken);
       // Telegram will eventually clear the client spinner; webhook processing continues.
+      return false;
+    }
+  }
+
+  async function safeDelete(options) {
+    try {
+      await api.deleteTelegramMessage({ fetchImpl, timeoutMs, testMode: useTestApi(), ...options });
+      return true;
+    } catch (error) {
+      logTelegramFailure('delete', 'deleteMessage', error, options.botToken);
+      return false;
     }
   }
 
@@ -290,8 +323,8 @@ export function createTelegramAppHandler({
       });
       if (ephemeralSent) return 'ephemeral_redirect';
     }
-    await safeSend({ ...baseOptions, replyToMessageId });
-    return 'redirect_sent';
+    const sent = await safeSend({ ...baseOptions, replyToMessageId });
+    return sent ? 'redirect_sent' : 'telegram_send_failed';
   }
 
   async function sendPrivateAccess({ botToken, env, chat, messageThreadId, fromUserId, replyToMessageId }) {
@@ -309,8 +342,8 @@ export function createTelegramAppHandler({
       });
       if (ephemeralSent) return 'ephemeral_private_access';
     }
-    await safeSend({ ...baseOptions, replyToMessageId });
-    return 'private_access_sent';
+    const sent = await safeSend({ ...baseOptions, replyToMessageId });
+    return sent ? 'private_access_sent' : 'telegram_send_failed';
   }
 
   async function sendPrivateSupport({ botToken, env, chat, messageThreadId, fromUserId, replyToMessageId, callbackQueryId }) {
@@ -334,8 +367,8 @@ export function createTelegramAppHandler({
       });
       if (ephemeralSent) return 'ephemeral_support_redirect';
     }
-    await safeSend({ ...baseOptions, replyToMessageId });
-    return 'support_redirect_sent';
+    const sent = await safeSend({ ...baseOptions, replyToMessageId });
+    return sent ? 'support_redirect_sent' : 'telegram_send_failed';
   }
 
   async function loadRates() {
@@ -383,17 +416,22 @@ export function createTelegramAppHandler({
   async function sendSupportInvoice({ botToken, chatId, amount, custom = false }) {
     const payload = buildSupportPayload(amount, { custom });
     if (!payload) throw new Error('Invalid support amount');
-    await api.sendTelegramInvoice({
-      fetchImpl,
-      botToken,
-      chatId,
-      title: 'Apoyo a CalcuFlow',
-      description: 'Apoyo voluntario para el mantenimiento y desarrollo de CalcuFlow.',
-      payload,
-      amount,
-      testMode: useTestApi(),
-      timeoutMs
-    });
+    try {
+      await api.sendTelegramInvoice({
+        fetchImpl,
+        botToken,
+        chatId,
+        title: 'Apoyo a CalcuFlow',
+        description: 'Apoyo voluntario para el mantenimiento y desarrollo de CalcuFlow.',
+        payload,
+        amount,
+        testMode: useTestApi(),
+        timeoutMs
+      });
+    } catch (error) {
+      logTelegramFailure('invoice', 'sendInvoice', error, botToken);
+      throw error;
+    }
   }
 
   async function handlePreCheckout(update, botToken) {
@@ -409,7 +447,8 @@ export function createTelegramAppHandler({
         testMode: useTestApi(),
         timeoutMs
       });
-    } catch {
+    } catch (error) {
+      logTelegramFailure('pre_checkout_answer', 'answerPreCheckoutQuery', error, botToken);
       return json({ ok: true, status: 'pre_checkout_answer_failed' });
     }
     return json({ ok: true, status: validation.ok ? 'pre_checkout_approved' : 'pre_checkout_rejected' });
@@ -453,17 +492,17 @@ export function createTelegramAppHandler({
 
     const edit = (text, replyMarkup) => safeEdit({ botToken, chatId, messageId, text, replyMarkup });
     if (parsed.type === 'home') {
-      await edit(formatHomeMessage(), buildHomeInlineKeyboard({ isPrivate: access.isPrivate, botUsername: env.TELEGRAM_BOT_USERNAME, ownerId }));
-      return json({ ok: true, status: 'home_sent' });
+      const edited = await edit(formatHomeMessage(), buildHomeInlineKeyboard({ isPrivate: access.isPrivate, botUsername: env.TELEGRAM_BOT_USERNAME, ownerId }));
+      return json({ ok: true, status: edited ? 'home_sent' : 'telegram_edit_failed' });
     }
     if (parsed.type === 'show_banks') {
-      await edit(formatBankSelectionMessage(), buildBankMenuInlineKeyboard(ownerId));
-      return json({ ok: true, status: 'banks_sent' });
+      const edited = await edit(formatBankSelectionMessage(), buildBankMenuInlineKeyboard(ownerId));
+      return json({ ok: true, status: edited ? 'banks_sent' : 'telegram_edit_failed' });
     }
     if (parsed.type === 'select_bank') {
       const bank = resolveBank(parsed.bankId);
-      await edit(formatAmountSelectionMessage(bank), buildAmountMenuInlineKeyboard(bank.id, ownerId));
-      return json({ ok: true, status: 'amounts_sent' });
+      const edited = await edit(formatAmountSelectionMessage(bank), buildAmountMenuInlineKeyboard(bank.id, ownerId));
+      return json({ ok: true, status: edited ? 'amounts_sent' : 'telegram_edit_failed' });
     }
     if (parsed.type === 'custom_amount') {
       const bank = resolveBank(parsed.bankId);
@@ -489,8 +528,8 @@ export function createTelegramAppHandler({
           await edit(formatErrorMessage('No se pudieron consultar las tasas en este momento. Intenta de nuevo en unos minutos.'), buildRatesInlineKeyboard(ownerId));
           return json({ ok: true, status: 'rates_unavailable' });
         }
-        await edit(formatRatesMessage({ bcv: rates.bcv.rate, p2p: rates.p2p.rate, bcvDate: rates.bcv.effectiveDate }), buildRatesInlineKeyboard(ownerId));
-        return json({ ok: true, status: 'rates_sent' });
+        const edited = await edit(formatRatesMessage({ bcv: rates.bcv.rate, p2p: rates.p2p.rate, bcvDate: rates.bcv.effectiveDate }), buildRatesInlineKeyboard(ownerId));
+        return json({ ok: true, status: edited ? 'rates_sent' : 'telegram_edit_failed' });
       } catch {
         await edit(formatErrorMessage('Error al consultar los proveedores de tasas.'), buildRatesInlineKeyboard(ownerId));
         return json({ ok: true, status: 'rates_error' });
@@ -499,8 +538,8 @@ export function createTelegramAppHandler({
     if (parsed.type === 'calc') {
       try {
         const calculation = await calculate(parsed.amount, parsed.bankId, ownerId);
-        await edit(calculation.ok ? calculation.text : formatErrorMessage(calculation.error), calculation.ok ? calculation.replyMarkup : buildAmountMenuInlineKeyboard(parsed.bankId, ownerId));
-        return json({ ok: true, status: calculation.ok ? 'calc_sent' : 'calc_failed' });
+        const edited = await edit(calculation.ok ? calculation.text : formatErrorMessage(calculation.error), calculation.ok ? calculation.replyMarkup : buildAmountMenuInlineKeyboard(parsed.bankId, ownerId));
+        return json({ ok: true, status: edited ? (calculation.ok ? 'calc_sent' : 'calc_failed') : 'telegram_edit_failed' });
       } catch {
         await edit(formatErrorMessage('Error interno al procesar el cálculo.'), buildAmountMenuInlineKeyboard(parsed.bankId, ownerId));
         return json({ ok: true, status: 'calc_error' });
@@ -591,11 +630,7 @@ export function createTelegramAppHandler({
       });
       if (calculation.ok && edited && !access.isPrivate && access.isOfficialGroup && access.isAllowedThread) {
         for (const messageId of [message.message_id, customReply.promptMessageId]) {
-          try {
-            await api.deleteTelegramMessage({ fetchImpl, botToken, chatId, messageId, timeoutMs, testMode: useTestApi() });
-          } catch {
-            // Cleanup is best-effort and must never break the calculation.
-          }
+          await safeDelete({ botToken, chatId, messageId });
         }
       }
       return json({ ok: true, status: calculation.ok ? 'custom_calc_sent' : 'calc_failed' });
@@ -749,18 +784,14 @@ export function createTelegramAppHandler({
 
     const cleanupCommandMessage = async () => {
       if (!access.isPrivate && access.isOfficialGroup && access.isAllowedThread && String(message.text || '').trim().startsWith('/')) {
-        try {
-          await api.deleteTelegramMessage({ fetchImpl, botToken, chatId, messageId: message.message_id, timeoutMs, testMode: useTestApi() });
-        } catch {
-          // Cleanup is best-effort and must never break functionality.
-        }
+        await safeDelete({ botToken, chatId, messageId: message.message_id });
       }
     };
 
     if (parsed.type === 'home') {
-      await safeSend({ ...common, text: formatHomeMessage(), replyMarkup: buildHomeInlineKeyboard({ isPrivate: access.isPrivate, botUsername: env.TELEGRAM_BOT_USERNAME, ownerId }) });
-      await cleanupCommandMessage();
-      return json({ ok: true, status: 'home_sent' });
+      const sent = await safeSend({ ...common, text: formatHomeMessage(), replyMarkup: buildHomeInlineKeyboard({ isPrivate: access.isPrivate, botUsername: env.TELEGRAM_BOT_USERNAME, ownerId }) });
+      if (sent) await cleanupCommandMessage();
+      return json({ ok: true, status: sent ? 'home_sent' : 'telegram_send_failed' });
     }
     if (parsed.type === 'help') {
       await safeSend({ ...common, text: formatHelpMessage(), replyMarkup: buildHomeInlineKeyboard({ isPrivate: access.isPrivate, botUsername: env.TELEGRAM_BOT_USERNAME, ownerId }) });
@@ -768,9 +799,9 @@ export function createTelegramAppHandler({
       return json({ ok: true, status: 'help_sent' });
     }
     if (parsed.type === 'show_banks') {
-      await safeSend({ ...common, text: formatBankSelectionMessage(), replyMarkup: buildBankMenuInlineKeyboard(ownerId) });
-      await cleanupCommandMessage();
-      return json({ ok: true, status: 'banks_sent' });
+      const sent = await safeSend({ ...common, text: formatBankSelectionMessage(), replyMarkup: buildBankMenuInlineKeyboard(ownerId) });
+      if (sent) await cleanupCommandMessage();
+      return json({ ok: true, status: sent ? 'banks_sent' : 'telegram_send_failed' });
     }
     if (parsed.type === 'private_access') {
       if (access.isPrivate) {
@@ -818,9 +849,9 @@ export function createTelegramAppHandler({
         const text = rates
           ? formatRatesMessage({ bcv: rates.bcv.rate, p2p: rates.p2p.rate, bcvDate: rates.bcv.effectiveDate })
           : formatErrorMessage('No se pudieron consultar las tasas en este momento. Intenta de nuevo en unos minutos.');
-        await safeSend({ ...common, text, replyMarkup: buildRatesInlineKeyboard(ownerId) });
-        await cleanupCommandMessage();
-        return json({ ok: true, status: rates ? 'rates_sent' : 'rates_unavailable' });
+        const sent = await safeSend({ ...common, text, replyMarkup: buildRatesInlineKeyboard(ownerId) });
+        if (sent) await cleanupCommandMessage();
+        return json({ ok: true, status: sent ? (rates ? 'rates_sent' : 'rates_unavailable') : 'telegram_send_failed' });
       } catch {
         await safeSend({ ...common, text: formatErrorMessage('Error al consultar los proveedores de tasas.'), replyMarkup: buildRatesInlineKeyboard(ownerId) });
         return json({ ok: true, status: 'rates_error' });
@@ -830,12 +861,12 @@ export function createTelegramAppHandler({
       try {
         const bank = resolveBank(parsed.bankQuery);
         const calculation = await calculate(parsed.amount, bank.id === 'custom' ? parsed.bankQuery : bank.id, ownerId);
-        await safeSend({
+        const sent = await safeSend({
           ...common,
           text: calculation.ok ? calculation.text : formatErrorMessage(calculation.error),
           replyMarkup: calculation.ok ? calculation.replyMarkup : buildBankMenuInlineKeyboard(ownerId)
         });
-        return json({ ok: true, status: calculation.ok ? 'calc_sent' : 'calc_failed' });
+        return json({ ok: true, status: sent ? (calculation.ok ? 'calc_sent' : 'calc_failed') : 'telegram_send_failed' });
       } catch {
         await safeSend({ ...common, text: formatErrorMessage('Error interno al procesar el cálculo.') });
         return json({ ok: true, status: 'calc_error' });

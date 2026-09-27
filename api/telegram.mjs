@@ -7,18 +7,40 @@ function telegramMethodUrl(botToken, method, testMode = false) {
   return `https://api.telegram.org/bot${botToken}${environmentPath}/${method}`;
 }
 
-class TelegramApiError extends Error {
-  constructor(method, status = null) {
+function sanitizeTelegramDescription(value) {
+  if (typeof value !== 'string') return null;
+  const description = value
+    .replace(/https:\/\/api\.telegram\.org\/bot[^/\s]+/gi, 'https://api.telegram.org/bot[REDACTED]')
+    .replace(/[\r\n\t]+/g, ' ')
+    .trim();
+  return description ? description.slice(0, 500) : null;
+}
+
+export class TelegramApiError extends Error {
+  constructor(method, status = null, { errorCode = null, description = null, cause = null } = {}) {
     const statusSuffix = Number.isInteger(status) ? ` (HTTP ${status})` : '';
     super(`Telegram ${method} failed${statusSuffix}.`);
     this.name = 'TelegramApiError';
+    this.method = method;
     this.status = status;
+    this.errorCode = Number.isInteger(errorCode) ? errorCode : null;
+    this.description = sanitizeTelegramDescription(description);
+    if (cause?.name) this.causeName = String(cause.name).slice(0, 100);
   }
 }
 
-function requireTelegramSuccess(response, method) {
+async function requireTelegramSuccess(response, method) {
   if (!response?.ok) {
-    throw new TelegramApiError(method, response?.status);
+    let details = null;
+    try {
+      details = await response.json();
+    } catch {
+      // Telegram may return a proxy/non-JSON response; HTTP status remains useful.
+    }
+    throw new TelegramApiError(method, response?.status, {
+      errorCode: details?.error_code,
+      description: details?.description
+    });
   }
   return response;
 }
@@ -103,13 +125,13 @@ export async function sendTelegramMessage({
           body: JSON.stringify(plainPayload),
           signal: controller.signal
         });
-        return requireTelegramSuccess(fallbackResponse, 'sendMessage');
+        return await requireTelegramSuccess(fallbackResponse, 'sendMessage');
       }
     }
-    return requireTelegramSuccess(response, 'sendMessage');
+    return await requireTelegramSuccess(response, 'sendMessage');
   } catch (error) {
     if (error instanceof TelegramApiError) throw error;
-    throw new TelegramApiError('sendMessage');
+    throw new TelegramApiError('sendMessage', null, { cause: error });
   } finally {
     clearTimeout(timeout);
   }
@@ -151,10 +173,10 @@ export async function answerTelegramCallbackQuery({
       body: JSON.stringify(payload),
       signal: controller.signal
     });
-    return requireTelegramSuccess(response, 'answerCallbackQuery');
+    return await requireTelegramSuccess(response, 'answerCallbackQuery');
   } catch (error) {
     if (error instanceof TelegramApiError) throw error;
-    throw new TelegramApiError('answerCallbackQuery');
+    throw new TelegramApiError('answerCallbackQuery', null, { cause: error });
   } finally {
     clearTimeout(timeout);
   }
@@ -221,13 +243,13 @@ export async function editTelegramMessageText({
           body: JSON.stringify(plainPayload),
           signal: controller.signal
         });
-        return requireTelegramSuccess(fallbackResponse, 'editMessageText');
+        return await requireTelegramSuccess(fallbackResponse, 'editMessageText');
       }
     }
-    return requireTelegramSuccess(response, 'editMessageText');
+    return await requireTelegramSuccess(response, 'editMessageText');
   } catch (error) {
     if (error instanceof TelegramApiError) throw error;
-    throw new TelegramApiError('editMessageText');
+    throw new TelegramApiError('editMessageText', null, { cause: error });
   } finally {
     clearTimeout(timeout);
   }
@@ -254,10 +276,10 @@ async function postTelegramMethod({
       body: JSON.stringify(payload),
       signal: controller.signal
     });
-    return requireTelegramSuccess(response, method);
+    return await requireTelegramSuccess(response, method);
   } catch (error) {
     if (error instanceof TelegramApiError) throw error;
-    throw new TelegramApiError(method);
+    throw new TelegramApiError(method, null, { cause: error });
   } finally {
     clearTimeout(timeout);
   }
