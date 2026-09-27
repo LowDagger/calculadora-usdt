@@ -279,7 +279,8 @@ test('formatCalculationResult produces required emojis and fields', () => {
 
   // Bank
   assert.ok(formatted.includes('🏦 *Banco:* Banco de Venezuela'));
-  assert.ok(formatted.includes('(1,0% + 1,5%)'));
+  assert.ok(formatted.includes('(2,5%)'));
+  assert.ok(!formatted.includes('1,0% + 1,5%'));
 
   // Compra
   assert.ok(formatted.includes('💵 *Compra:* 100,00 USD'));
@@ -670,7 +671,7 @@ test('buildBankInlineKeyboard builds 4 rows of bank buttons with checkmark indic
   // Row 1: BDV (selected) & BBVA
   const row1 = keyboard.inline_keyboard[0];
   assert.equal(row1.length, 2);
-  assert.equal(row1[0].text, '✓ BDV (1% + 1.5%)');
+  assert.equal(row1[0].text, '✓ BDV (2.5%)');
   assert.equal(row1[0].callback_data, 'calc:100:bdv');
   assert.equal(row1[1].text, 'BBVA (1.5%)');
   assert.equal(row1[1].callback_data, 'calc:100:bbva-provincial');
@@ -703,7 +704,7 @@ test('buildBankInlineKeyboard builds 4 rows of bank buttons with checkmark indic
 test('buildBankInlineKeyboard updates checkmark for different selected banks and preserves amount', () => {
   // Test selecting BBVA with alias
   const bbvaKeyboard = buildBankInlineKeyboard(500, 'bbva');
-  assert.equal(bbvaKeyboard.inline_keyboard[0][0].text, 'BDV (1% + 1.5%)');
+  assert.equal(bbvaKeyboard.inline_keyboard[0][0].text, 'BDV (2.5%)');
   assert.equal(bbvaKeyboard.inline_keyboard[0][0].callback_data, 'calc:500:bdv');
   assert.equal(bbvaKeyboard.inline_keyboard[0][1].text, '✓ BBVA (1.5%)');
   assert.equal(bbvaKeyboard.inline_keyboard[0][1].callback_data, 'calc:500:bbva-provincial');

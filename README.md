@@ -80,10 +80,12 @@ correspondan al entorno:
 - `TELEGRAM_ALLOWED_THREADS`: lista de temas autorizados.
 
 No son necesarias para usar el calculador principal. El webhook de producción
-es <https://calcu-flow.vercel.app/api/telegram>. No publiques valores reales en
+es <https://calcuflow.live/api/telegram>. No publiques valores reales en
 el repositorio.
 
-Producción: https://calcu-flow.vercel.app
+Producción: https://calcuflow.live
+
+Dominios anteriores (redireccionan a producción): https://calcu-flow.vercel.app y https://calculadora-banco-usdt.vercel.app
 
 ---
 

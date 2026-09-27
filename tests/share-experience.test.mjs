@@ -59,9 +59,9 @@ const share = readFileSync(new URL("../js/share.js", import.meta.url), "utf8");
 const shareCard = readFileSync(new URL("../js/share-card.js", import.meta.url), "utf8");
 
 test("canonical URL and domain are unified and consistent", () => {
-  assert.equal(CANONICAL_SHARE_URL, "https://calcu-flow.vercel.app");
-  assert.equal(CANONICAL_SHARE_DOMAIN, "calcu-flow.vercel.app");
-  assert.match(html, /<link rel="canonical" href="https:\/\/calcu-flow\.vercel\.app\/" \/>/);
+  assert.equal(CANONICAL_SHARE_URL, "https://calcuflow.live");
+  assert.equal(CANONICAL_SHARE_DOMAIN, "calcuflow.live");
+  assert.match(html, /<link rel="canonical" href="https:\/\/calcuflow\.live\/" \/>/);
 });
 
 test("buildShareText formats Telegram/WhatsApp-friendly summary with positive and negative returns", () => {
@@ -89,7 +89,7 @@ test("buildShareText formats Telegram/WhatsApp-friendly summary with positive an
   assert.match(positiveText, /USDT finales: 534,61 USDT/);
   assert.match(positiveText, /Ganancia estimada: \+34,61 USD/);
   assert.match(positiveText, /Retorno: \+6,92%/);
-  assert.match(positiveText, /https:\/\/calcu-flow\.vercel\.app/);
+  assert.match(positiveText, /https:\/\/calcuflow\.live/);
 
   const negativeResult = {
     usdUsed: 100,
@@ -231,7 +231,7 @@ test("renderShareCard uses required wording: Bolívares necesarios, BPay, USDT f
   assert.ok(drawnOperations.some(op => op.includes("fillText(Ganancia estimada (+11,61%)")));
   assert.ok(drawnOperations.some(op => op.includes("fillText(+48,68 USD")));
   assert.ok(drawnOperations.some(op => op.includes("fillText(Otro banco / Manual · 2,5%")));
-  assert.ok(drawnOperations.some(op => op.includes("fillText(calcu-flow.vercel.app")));
+  assert.ok(drawnOperations.some(op => op.includes("fillText(calcuflow.live")));
 
   // Verify separate right-side Retorno (ROI) block header was removed
   assert.ok(!drawnOperations.some(op => op.includes("fillText(Retorno (ROI)")));

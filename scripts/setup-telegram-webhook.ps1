@@ -4,7 +4,7 @@ param(
   [System.Security.SecureString]$BotToken,
 
   [Parameter(Mandatory = $false)]
-  [string]$WebhookUrl = 'https://calcu-flow.vercel.app/api/telegram',
+  [string]$WebhookUrl = 'https://calcuflow.live/api/telegram',
 
   [Parameter(Mandatory = $false)]
   [System.Security.SecureString]$VercelBypassSecret,
@@ -149,13 +149,13 @@ try {
   $WebhookUri = $null
   if (-not [Uri]::TryCreate($WebhookUrl, [UriKind]::Absolute, [ref]$WebhookUri) -or
       $WebhookUri.Scheme -cne [Uri]::UriSchemeHttps -or
-      $WebhookUri.DnsSafeHost -notmatch '(?i)(^|\.)vercel\.app$' -or
+      ($WebhookUri.DnsSafeHost -cne 'calcuflow.live' -and $WebhookUri.DnsSafeHost -notmatch '(?i)^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.vercel\.app$') -or
       (-not $WebhookUri.IsDefaultPort -and $WebhookUri.Port -ne 443) -or
       -not [string]::IsNullOrEmpty($WebhookUri.UserInfo) -or
       $WebhookUri.AbsolutePath -cne '/api/telegram' -or
       -not [string]::IsNullOrEmpty($WebhookUri.Query) -or
       -not [string]::IsNullOrEmpty($WebhookUri.Fragment)) {
-    throw 'WebhookUrl debe ser una URL HTTPS de vercel.app con la ruta exacta /api/telegram y sin credenciales, query ni fragmento.'
+    throw 'WebhookUrl debe usar HTTPS en calcuflow.live o un host Preview *.vercel.app, con la ruta exacta /api/telegram y sin credenciales, query ni fragmento.'
   }
   $WebhookBaseUrl = $WebhookUri.GetLeftPart([UriPartial]::Path)
 

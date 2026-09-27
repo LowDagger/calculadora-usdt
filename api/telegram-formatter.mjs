@@ -1,6 +1,6 @@
 import { money } from '../js/utils.js';
 
-export const CANONICAL_APP_URL = 'https://calcu-flow.vercel.app';
+export const CANONICAL_APP_URL = 'https://calcuflow.live';
 
 export const BANK_ALIASES = Object.freeze({
   // BDV
@@ -61,9 +61,7 @@ export function formatPercent(value) {
 }
 
 export function formatBankFee(bank) {
-  return bank?.feeSteps?.length
-    ? bank.feeSteps.map(formatPercent).join(' + ')
-    : formatPercent(bank?.fee ?? 2.5);
+  return formatPercent(bank?.fee ?? 2.5);
 }
 
 export function resolveBank(query) {
@@ -290,7 +288,7 @@ Calcula al instante tu operación Banco ➔ USDT con tasas actualizadas.
 💡 *O pulsa los botones de acceso rápido abajo para calcular al instante:*
 
 🏦 *Bancos soportados:*
-BDV (1% + 1,5%), BBVA (1,5%), Banesco (1,5%), BNC (1,5%), Bancamiga (5%), Tesoro (2,5%), BDT (2,5%).
+BDV (2,5%), BBVA (1,5%), Banesco (1,5%), BNC (1,5%), Bancamiga (5%), Tesoro (2,5%), BDT (2,5%).
 También puedes indicar una comisión directa (ej: \`/calc 100 3%\`).`;
 }
 
@@ -300,7 +298,7 @@ export function formatErrorMessage(error) {
 
 export const BANK_BUTTON_ROWS = Object.freeze([
   [
-    Object.freeze({ id: 'bdv', label: 'BDV (1% + 1.5%)' }),
+    Object.freeze({ id: 'bdv', label: 'BDV (2.5%)' }),
     Object.freeze({ id: 'bbva-provincial', label: 'BBVA (1.5%)' })
   ],
   [

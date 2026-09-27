@@ -1,7 +1,7 @@
 export const DEFAULT_TELEGRAM_CAMPAIGN = Object.freeze({
   enabled: true,
-  campaignId: 'telegram-community-2026-09',
-  endsAt: '2026-10-17T00:00:00.000Z'
+  campaignId: 'domain-migration-2026-09',
+  endsAt: '2026-11-11T00:00:00.000Z'
 });
 
 export function getPromoDismissalKey(campaignId) {

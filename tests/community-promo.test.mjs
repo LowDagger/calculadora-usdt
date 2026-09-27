@@ -40,11 +40,11 @@ function createMockStorage(initial = {}) {
 
 test('DEFAULT_TELEGRAM_CAMPAIGN has exact 45-day duration and required properties', () => {
   assert.equal(DEFAULT_TELEGRAM_CAMPAIGN.enabled, true);
-  assert.equal(DEFAULT_TELEGRAM_CAMPAIGN.campaignId, 'telegram-community-2026-09');
-  assert.equal(DEFAULT_TELEGRAM_CAMPAIGN.endsAt, '2026-10-17T00:00:00.000Z');
+  assert.equal(DEFAULT_TELEGRAM_CAMPAIGN.campaignId, 'domain-migration-2026-09');
+  assert.equal(DEFAULT_TELEGRAM_CAMPAIGN.endsAt, '2026-11-11T00:00:00.000Z');
 
-  // Exact 45-day calculation from 2026-09-02T00:00:00.000Z
-  const startDate = new Date('2026-09-02T00:00:00.000Z');
+  // Exact 45-day calculation from 2026-09-27T00:00:00.000Z
+  const startDate = new Date('2026-09-27T00:00:00.000Z');
   const endDate = new Date(DEFAULT_TELEGRAM_CAMPAIGN.endsAt);
   const durationMs = endDate.getTime() - startDate.getTime();
   const durationDays = durationMs / (1000 * 60 * 60 * 24);
@@ -52,7 +52,7 @@ test('DEFAULT_TELEGRAM_CAMPAIGN has exact 45-day duration and required propertie
 });
 
 test('getPromoDismissalKey scopes correctly by campaignId', () => {
-  assert.equal(getPromoDismissalKey('telegram-community-2026-09'), 'calcuflow.telegramCommunityPromo.telegram-community-2026-09');
+  assert.equal(getPromoDismissalKey('domain-migration-2026-09'), 'calcuflow.telegramCommunityPromo.domain-migration-2026-09');
   assert.equal(getPromoDismissalKey('other-campaign'), 'calcuflow.telegramCommunityPromo.other-campaign');
   assert.equal(getPromoDismissalKey(''), '');
   assert.equal(getPromoDismissalKey(null), '');
@@ -60,12 +60,12 @@ test('getPromoDismissalKey scopes correctly by campaignId', () => {
 
 test('isCampaignDismissed and dismissCampaign interact with storage correctly', () => {
   const storage = createMockStorage();
-  const id = 'telegram-community-2026-09';
+  const id = 'domain-migration-2026-09';
 
   assert.equal(isCampaignDismissed(id, storage), false);
   dismissCampaign(id, storage);
   assert.equal(isCampaignDismissed(id, storage), true);
-  assert.ok(storage.getItem('calcuflow.telegramCommunityPromo.telegram-community-2026-09'));
+  assert.ok(storage.getItem('calcuflow.telegramCommunityPromo.domain-migration-2026-09'));
 
   // Another campaign is not dismissed
   assert.equal(isCampaignDismissed('future-campaign', storage), false);
@@ -79,11 +79,22 @@ test('campaign ID scopes dismissal correctly without cross-campaign pollution', 
   assert.equal(isCampaignDismissed('campaign-b', storage), false);
 
   const eligibleB = isCampaignEligible({
-    promoConfig: { enabled: true, campaignId: 'campaign-b', endsAt: '2026-10-17T00:00:00.000Z' },
+    promoConfig: { enabled: true, campaignId: 'campaign-b', endsAt: '2026-11-11T00:00:00.000Z' },
     now: new Date('2026-09-15T00:00:00.000Z'),
     storage
   });
   assert.equal(eligibleB, true);
+});
+
+test('old Telegram campaign dismissal does not suppress migration campaign', () => {
+  const oldCampaignId = 'telegram-community-2026-09';
+  assert.notEqual(DEFAULT_TELEGRAM_CAMPAIGN.campaignId, oldCampaignId);
+  const storage = createMockStorage({ [getPromoDismissalKey(oldCampaignId)]: '2026-09-20T00:00:00.000Z' });
+  assert.equal(isCampaignEligible({
+    promoConfig: DEFAULT_TELEGRAM_CAMPAIGN,
+    now: new Date('2026-09-27T12:00:00.000Z'),
+    storage
+  }), true);
 });
 
 test('qualifying first visitor before campaign end is eligible', () => {
@@ -100,7 +111,7 @@ test('at campaign end -> hidden', () => {
   const storage = createMockStorage();
   const eligible = isCampaignEligible({
     promoConfig: DEFAULT_TELEGRAM_CAMPAIGN,
-    now: new Date('2026-10-17T00:00:00.000Z'),
+    now: new Date('2026-11-11T00:00:00.000Z'),
     storage
   });
   assert.equal(eligible, false);
@@ -110,7 +121,7 @@ test('after campaign end -> hidden', () => {
   const storage = createMockStorage();
   const eligible = isCampaignEligible({
     promoConfig: DEFAULT_TELEGRAM_CAMPAIGN,
-    now: new Date('2026-10-17T00:00:01.000Z'),
+    now: new Date('2026-11-11T00:00:01.000Z'),
     storage
   });
   assert.equal(eligible, false);
@@ -183,8 +194,8 @@ test('does not show popup if another modal is active or user is actively typing'
 test('DEFAULT_OPERATIONAL_CONFIG includes valid telegramCommunityPromo', () => {
   assert.ok(DEFAULT_OPERATIONAL_CONFIG.telegramCommunityPromo);
   assert.equal(DEFAULT_OPERATIONAL_CONFIG.telegramCommunityPromo.enabled, true);
-  assert.equal(DEFAULT_OPERATIONAL_CONFIG.telegramCommunityPromo.campaignId, 'telegram-community-2026-09');
-  assert.equal(DEFAULT_OPERATIONAL_CONFIG.telegramCommunityPromo.endsAt, '2026-10-17T00:00:00.000Z');
+  assert.equal(DEFAULT_OPERATIONAL_CONFIG.telegramCommunityPromo.campaignId, 'domain-migration-2026-09');
+  assert.equal(DEFAULT_OPERATIONAL_CONFIG.telegramCommunityPromo.endsAt, '2026-11-11T00:00:00.000Z');
   assert.deepEqual(DEFAULT_OPERATIONAL_CONFIG.telegramCommunityPromo, DEFAULT_TELEGRAM_COMMUNITY_PROMO);
 });
 
@@ -335,9 +346,9 @@ test('centered community promo modal markup exists with exact specifications', (
   assert.match(html, /aria-labelledby="communityPromoTitle"/);
   assert.match(html, /aria-describedby="communityPromoDesc"/);
   assert.match(html, /id="closeCommunityPromoBtn"[^>]*aria-label="Cerrar invitación a la comunidad"/);
-  assert.match(html, /id="communityPromoTitle">Únete a la comunidad CalcuFlow<\/h2>/);
-  assert.match(html, /id="communityPromoDesc">Habla con otros usuarios sobre bancos, compra de divisas, comisiones, oportunidades, experiencias, ideas y operaciones Banco → USDT\.<\/p>/);
-  assert.match(html, /class="community-promo-subtext">Comparte información y mantente al día con lo que está pasando entre los bancos\.<\/p>/);
+  assert.match(html, /id="communityPromoTitle">CalcuFlow ahora es calcuflow\.live<\/h2>/);
+  assert.match(html, /id="communityPromoDesc">Tenemos nuevo dominio\. Los enlaces anteriores seguirán funcionando y te redirigirán automáticamente\.<\/p>/);
+  assert.match(html, /class="community-promo-subtext">Gracias por apoyar CalcuFlow\. Únete a la comunidad para compartir bancos, operaciones e ideas\.<\/p>/);
   assert.match(html, /id="communityPromoCta"[^>]*href="https:\/\/t\.me\/CalcuFlow"[^>]*target="_blank"[^>]*rel="noopener noreferrer"/);
   assert.match(html, /id="communityPromoCta"[\s\S]*?<span>Unirme al grupo<\/span>/);
   assert.match(html, /class="community-promo-badge"[\s\S]*?class="community-telegram-icon"/);
@@ -408,8 +419,8 @@ test('calculator formulas and calculations remain unchanged', () => {
   assert.ok(Number.isFinite(result.profitVes));
 });
 
-test('service-worker pre-caches community-promo.js and bumps APP_VERSION to 67', () => {
-  assert.match(serviceWorker, /const APP_VERSION\s+= '67';/);
+test('service-worker pre-caches community-promo.js and bumps APP_VERSION to 68', () => {
+  assert.match(serviceWorker, /const APP_VERSION\s+= '68';/);
   assert.match(serviceWorker, /'\/js\/community-promo\.js'/);
 });
 

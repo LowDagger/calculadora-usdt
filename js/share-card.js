@@ -1,7 +1,7 @@
 import { money } from "./utils.js";
 
-export const CANONICAL_SHARE_URL = "https://calcu-flow.vercel.app";
-export const CANONICAL_SHARE_DOMAIN = "calcu-flow.vercel.app";
+export const CANONICAL_SHARE_URL = "https://calcuflow.live";
+export const CANONICAL_SHARE_DOMAIN = "calcuflow.live";
 export const SHARE_CARD_FILENAME = "calcuflow-resultado.png";
 
 export const CARD_DIMENSIONS = Object.freeze({

@@ -96,5 +96,5 @@ test('activation deletes old versioned caches and retains the current cache', as
   worker.listeners.activate({ waitUntil: (promise) => { activation = promise; } });
   await activation;
 
-  assert.deepEqual(worker.deletedCaches, ['calcuflow-v64', 'calcuflow-v65']);
+  assert.deepEqual(worker.deletedCaches, ['calcuflow-v64', 'calcuflow-v65', 'calcuflow-v67']);
 });
