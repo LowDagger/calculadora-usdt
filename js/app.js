@@ -2329,7 +2329,7 @@ setupKeyboardUX();
 initInstallPrompt();
 initCommunityPromoLifecycle();
 updateRelativeTime();
-setInterval(updateRelativeTime, 1000);
+setInterval(updateRelativeTime, 60000);
 registerServiceWorker();
 
 

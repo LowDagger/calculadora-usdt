@@ -1,6 +1,6 @@
 export const DEFAULT_TELEGRAM_CAMPAIGN = Object.freeze({
   enabled: true,
-  campaignId: 'domain-migration-2026-09',
+  campaignId: 'welcome-domain-telegram-v2',
   endsAt: '2026-11-11T00:00:00.000Z'
 });
 
