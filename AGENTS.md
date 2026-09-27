@@ -2,13 +2,16 @@
 
 ## Project
 
-This repository is a production, static, mobile-first PWA for calculating
-Banco → USDT operations using BCV, bank, and P2P rates.
+This repository is a production, mobile-first PWA for calculating Banco →
+USDT operations using BCV, bank, and P2P rates. The interface is static, with
+focused Vercel serverless API routes for rates and optional Telegram bot
+functionality.
 
-- Production: https://calculadora-banco-usdt.vercel.app
-- There is no build step, backend, database, authentication, or required
-  environment variable.
-- Keep the product simple, one-screen, and mobile-first.
+- Production: https://calcu-flow.vercel.app
+- The core calculator has no build step, database, authentication, or required
+  secret. Telegram bot functionality requires Telegram-related environment
+  variables in Vercel.
+- Keep the product simple, fast, one-screen, and mobile-first.
 
 ## Non-negotiable behavior
 
@@ -17,13 +20,15 @@ Banco → USDT operations using BCV, bank, and P2P rates.
   requests it.
 - Preserve sequential commission logic.
 - Do not add bank limits back to the application.
-- Do not add login, accounts, a backend, a database, or user tracking.
+- Do not add login, accounts, a database, or user tracking. Keep serverless
+  routes narrowly scoped.
 - Avoid new frameworks and unnecessary dependencies.
 - Do not overbuild the requested change.
 
 ## Repository map
 
 - `index.html`: application markup.
+- `api/`: Vercel serverless routes for rates and the optional Telegram bot.
 - `css/style.css`: all application styling.
 - `js/api.js`: DolarAPI Venezuela rate retrieval and validation.
 - `js/app.js`: application orchestration.
