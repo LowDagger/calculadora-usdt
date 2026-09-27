@@ -134,10 +134,7 @@ const ratesController = createRatesController({ calculate, saveState });
 const loadRates = showSuccessToast => ratesController.loadRates(showSuccessToast);
 const updateRelativeTime = () => ratesController.updateRelativeTime();
 
-function formatProfileFee(fee, feeSteps = null) {
-  if (feeSteps?.length) {
-    return feeSteps.map(step => `${new Intl.NumberFormat('es-VE', { maximumFractionDigits: 2 }).format(step)}%`).join(' + ');
-  }
+function formatProfileFee(fee) {
   return `${new Intl.NumberFormat('es-VE', { maximumFractionDigits: 2 }).format(fee)}%`;
 }
 

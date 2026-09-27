@@ -16,9 +16,10 @@ test('Telegram webhook helper keeps credentials external and validates token pla
 });
 
 test('Telegram webhook helper accepts a validated Preview URL and builds the Vercel bypass securely', () => {
-  assert.match(script, /\[string\]\$WebhookUrl = 'https:\/\/calcu-flow\.vercel\.app\/api\/telegram'/);
+  assert.match(script, /\[string\]\$WebhookUrl = 'https:\/\/calcuflow\.live\/api\/telegram'/);
   assert.match(script, /\$WebhookUri\.Scheme -cne \[Uri\]::UriSchemeHttps/);
-  assert.match(script, /\$WebhookUri\.DnsSafeHost -notmatch/);
+  assert.match(script, /\$WebhookUri\.DnsSafeHost -cne 'calcuflow\.live'/);
+  assert.match(script, /\*\.vercel\.app/);
   assert.match(script, /vercel\\\.app\$/);
   assert.match(script, /\$WebhookUri\.AbsolutePath -cne '\/api\/telegram'/);
   assert.match(script, /\$WebhookUri\.Query/);
@@ -48,7 +49,7 @@ test('Telegram webhook helper calls authenticated POST methods in the required o
   assert.match(script, /-Method Post/);
   assert.match(script, /-MaximumRedirection 0/);
   assert.match(script, /HTTP 200 directo/);
-  assert.match(script, /https:\/\/calcu-flow\.vercel\.app\/api\/telegram/);
+  assert.match(script, /https:\/\/calcuflow\.live\/api\/telegram/);
   assert.match(script, /-Uri \$EffectiveWebhookUrl/);
   assert.match(script, /url = \$EffectiveWebhookUrl/);
   assert.match(script, /No se intentó setWebhook/);

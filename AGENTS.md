@@ -7,7 +7,8 @@ USDT operations using BCV, bank, and P2P rates. The interface is static, with
 focused Vercel serverless API routes for rates and optional Telegram bot
 functionality.
 
-- Production: https://calcu-flow.vercel.app
+- Production: https://calcuflow.live
+- Legacy redirects: https://calcu-flow.vercel.app and https://calculadora-banco-usdt.vercel.app
 - The core calculator has no build step, database, authentication, or required
   secret. Telegram bot functionality requires Telegram-related environment
   variables in Vercel.

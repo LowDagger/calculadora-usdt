@@ -5,15 +5,15 @@ import { existsSync, readFileSync } from 'node:fs';
 const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 const manifestContent = readFileSync(new URL('../manifest.json', import.meta.url), 'utf8');
 const manifest = JSON.parse(manifestContent);
-const canonicalUrl = 'https://calcu-flow.vercel.app/';
-const oldProductionDomain = 'calculadora-banco-usdt.vercel.app';
+const canonicalUrl = 'https://calcuflow.live/';
+const legacyProductionDomains = ['calcu-flow.vercel.app', 'calculadora-banco-usdt.vercel.app'];
 
 test('index.html contains complete branding and SEO meta tags', () => {
   // Title
   assert.match(html, /<title>CalcuFlow — Banco → USDT<\/title>/);
 
   // Canonical URL
-  assert.match(html, /<link rel="canonical" href="https:\/\/calcu-flow\.vercel\.app\/" \/>/);
+  assert.match(html, /<link rel="canonical" href="https:\/\/calcuflow\.live\/" \/>/);
 
   // Viewport & theme
   assert.match(html, /<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" \/>/);
@@ -29,21 +29,21 @@ test('index.html contains complete branding and SEO meta tags', () => {
   assert.match(html, /<meta property="og:type" content="website" \/>/);
   assert.match(html, /<meta property="og:locale" content="es_VE" \/>/);
   assert.match(html, /<meta property="og:site_name" content="CalcuFlow" \/>/);
-  assert.match(html, /<meta property="og:url" content="https:\/\/calcu-flow\.vercel\.app\/" \/>/);
+  assert.match(html, /<meta property="og:url" content="https:\/\/calcuflow\.live\/" \/>/);
   assert.match(html, /<meta property="og:title" content="CalcuFlow — Banco → USDT" \/>/);
-  assert.match(html, /<meta property="og:image" content="https:\/\/calcu-flow\.vercel\.app\/preview\.png" \/>/);
+  assert.match(html, /<meta property="og:image" content="https:\/\/calcuflow\.live\/preview\.png" \/>/);
   assert.match(html, /<meta property="og:image:width" content="1200" \/>/);
   assert.match(html, /<meta property="og:image:height" content="630" \/>/);
 
   // Twitter Cards
   assert.match(html, /<meta property="twitter:card" content="summary_large_image" \/>/);
-  assert.match(html, /<meta property="twitter:url" content="https:\/\/calcu-flow\.vercel\.app\/" \/>/);
+  assert.match(html, /<meta property="twitter:url" content="https:\/\/calcuflow\.live\/" \/>/);
   assert.match(html, /<meta property="twitter:title" content="CalcuFlow — Banco → USDT" \/>/);
-  assert.match(html, /<meta property="twitter:image" content="https:\/\/calcu-flow\.vercel\.app\/preview\.png" \/>/);
+  assert.match(html, /<meta property="twitter:image" content="https:\/\/calcuflow\.live\/preview\.png" \/>/);
 });
 
 test('active production metadata and analytics stay on the canonical setup', () => {
-  assert.doesNotMatch(html, new RegExp(oldProductionDomain.replaceAll('.', '\\.')));
+  for (const domain of legacyProductionDomains) assert.doesNotMatch(html, new RegExp(domain.replaceAll('.', '\\.')));
   assert.doesNotMatch(html, /PASTE_CLOUDFLARE_BEACON_TOKEN_HERE|static\.cloudflareinsights\.com/);
   assert.match(html, /<script defer src="\/_vercel\/insights\/script\.js"><\/script>/);
   assert.match(html, /<script defer src="\/_vercel\/speed-insights\/script\.js"><\/script>/);
@@ -57,18 +57,26 @@ test('active production metadata and analytics stay on the canonical setup', () 
 });
 
 test('index.html contains valid, parseable JSON-LD structured data', () => {
-  const jsonLdMatch = html.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/);
-  assert.ok(jsonLdMatch, 'JSON-LD script block must exist');
+  const jsonLdMatches = [...html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)];
+  assert.equal(jsonLdMatches.length, 2, 'WebApplication and WebSite JSON-LD blocks must exist');
 
-  const structuredData = JSON.parse(jsonLdMatch[1]);
+  const entities = jsonLdMatches.map(match => JSON.parse(match[1]));
+  const structuredData = entities.find(entity => entity['@type'] === 'WebApplication');
+  const website = entities.find(entity => entity['@type'] === 'WebSite');
   assert.equal(structuredData['@context'], 'https://schema.org');
-  assert.equal(structuredData['@type'], 'WebApplication');
   assert.equal(structuredData.name, 'CalcuFlow');
   assert.equal(structuredData.alternateName, 'Calculadora Banco → USDT');
-  assert.equal(structuredData.url, 'https://calcu-flow.vercel.app/');
+  assert.equal(structuredData.url, 'https://calcuflow.live/');
   assert.equal(structuredData.inLanguage, 'es-VE');
   assert.equal(structuredData.applicationCategory, 'FinanceApplication');
   assert.equal(structuredData.offers?.price, '0');
+  assert.deepEqual(website, {
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    name: 'CalcuFlow',
+    alternateName: 'Calcu Flow',
+    url: 'https://calcuflow.live/'
+  });
 });
 
 test('manifest.json provides required PWA metadata, categories, and orientation', () => {
