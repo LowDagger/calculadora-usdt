@@ -7,282 +7,123 @@ function telegramMethodUrl(botToken, method, testMode = false) {
   return `https://api.telegram.org/bot${botToken}${environmentPath}/${method}`;
 }
 
-function sanitizeTelegramDescription(value) {
-  if (typeof value !== 'string') return null;
-  const description = value
-    .replace(/https:\/\/api\.telegram\.org\/bot[^/\s]+/gi, 'https://api.telegram.org/bot[REDACTED]')
-    .replace(/[\r\n\t]+/g, ' ')
-    .trim();
-  return description ? description.slice(0, 500) : null;
-}
-
 export class TelegramApiError extends Error {
-  constructor(method, status = null, { errorCode = null, description = null, cause = null } = {}) {
-    const statusSuffix = Number.isInteger(status) ? ` (HTTP ${status})` : '';
-    super(`Telegram ${method} failed${statusSuffix}.`);
+  constructor(method, status = null, { errorCode = null, category = 'unknown', retryAfter = null } = {}) {
+    super(`Telegram ${method} failed${Number.isInteger(status) ? ` (HTTP ${status})` : ''}.`);
     this.name = 'TelegramApiError';
-    this.method = method;
-    this.status = status;
-    this.errorCode = Number.isInteger(errorCode) ? errorCode : null;
-    this.description = sanitizeTelegramDescription(description);
-    if (cause?.name) this.causeName = String(cause.name).slice(0, 100);
+    Object.assign(this, { method, status, errorCode, category, retryAfter });
   }
 }
 
-async function requireTelegramSuccess(response, method) {
-  if (!response?.ok) {
-    let details = null;
-    try {
-      details = await response.json();
-    } catch {
-      // Telegram may return a proxy/non-JSON response; HTTP status remains useful.
-    }
-    throw new TelegramApiError(method, response?.status, {
-      errorCode: details?.error_code,
-      description: details?.description
-    });
-  }
-  return response;
+export function classifyTelegramError(status, body = {}) {
+  const code = body.error_code;
+  const description = String(body.description || '').toLowerCase();
+  if (status === 429 || code === 429) return 'rate_limited';
+  if (status >= 500 || code >= 500) return 'server';
+  if (status === 401 || status === 403 || code === 401 || code === 403 || /not enough rights|have no rights|bot was blocked|chat_write_forbidden/.test(description)) return 'permission';
+  if (/message is not modified/.test(description)) return 'not_modified';
+  if (/can't parse entities|cannot parse entities|can't find end of|unsupported start tag|entity.*(offset|length)/.test(description)) return 'formatting';
+  if (/message thread not found|topic_closed|topic_deleted/.test(description)) return 'missing_thread';
+  if (/message to edit not found|message can't be edited|message_id_invalid/.test(description)) return 'missing_message';
+  if (/message to be replied not found|reply message not found/.test(description)) return 'missing_reply';
+  return 'unknown';
 }
 
-export async function sendTelegramMessage({
-  fetchImpl = globalThis.fetch,
-  botToken,
-  chatId,
-  text,
-  replyToMessageId = null,
-  replyMarkup = null,
-  messageThreadId = null,
-  linkPreviewOptions = { is_disabled: true },
-  ephemeralMessageParameters = null,
-  testMode = false,
-  timeoutMs = REQUEST_TIMEOUT_MS
-}) {
-  if (!botToken || !chatId || !text) {
-    throw new Error('Missing required Telegram sendMessage parameters');
-  }
-
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), timeoutMs);
-
-  const payload = {
-    chat_id: chatId,
-    text,
-    parse_mode: 'Markdown'
-  };
-  if (replyToMessageId) {
-    payload.reply_to_message_id = replyToMessageId;
-  }
-  if (replyMarkup) {
-    payload.reply_markup = replyMarkup;
-  }
-  if (messageThreadId) {
-    payload.message_thread_id = messageThreadId;
-  }
-  if (linkPreviewOptions) {
-    payload.link_preview_options = linkPreviewOptions;
-  }
-  if (ephemeralMessageParameters) {
-    payload.ephemeral_message_parameters = ephemeralMessageParameters;
-  }
-
-  try {
-    const response = await fetchImpl(telegramMethodUrl(botToken, 'sendMessage', testMode), {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json; charset=utf-8',
-        accept: 'application/json'
-      },
-      body: JSON.stringify(payload),
-      signal: controller.signal
-    });
-
-    if (!response.ok) {
-      // If Markdown formatting failed upstream, attempt plain-text fallback
-      if (response.status === 400) {
-        const plainPayload = {
-          chat_id: chatId,
-          text: text.replace(/[*_`]/g, '')
-        };
-        if (replyToMessageId) {
-          plainPayload.reply_to_message_id = replyToMessageId;
-        }
-        if (replyMarkup) {
-          plainPayload.reply_markup = replyMarkup;
-        }
-        if (messageThreadId) {
-          plainPayload.message_thread_id = messageThreadId;
-        }
-        if (linkPreviewOptions) {
-          plainPayload.link_preview_options = linkPreviewOptions;
-        }
-        if (ephemeralMessageParameters) {
-          plainPayload.ephemeral_message_parameters = ephemeralMessageParameters;
-        }
-        const fallbackResponse = await fetchImpl(telegramMethodUrl(botToken, 'sendMessage', testMode), {
-          method: 'POST',
-          headers: { 'content-type': 'application/json; charset=utf-8' },
-          body: JSON.stringify(plainPayload),
-          signal: controller.signal
-        });
-        return await requireTelegramSuccess(fallbackResponse, 'sendMessage');
-      }
-    }
-    return await requireTelegramSuccess(response, 'sendMessage');
-  } catch (error) {
-    if (error instanceof TelegramApiError) throw error;
-    throw new TelegramApiError('sendMessage', null, { cause: error });
-  } finally {
-    clearTimeout(timeout);
-  }
-}
-
-export async function answerTelegramCallbackQuery({
-  fetchImpl = globalThis.fetch,
-  botToken,
-  callbackQueryId,
-  text = null,
-  showAlert = false,
-  testMode = false,
-  timeoutMs = REQUEST_TIMEOUT_MS
-}) {
-  if (!botToken || !callbackQueryId) {
-    throw new Error('Missing required Telegram answerCallbackQuery parameters');
-  }
-
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), timeoutMs);
-
-  const payload = {
-    callback_query_id: callbackQueryId
-  };
-  if (text) {
-    payload.text = text;
-  }
-  if (showAlert) {
-    payload.show_alert = true;
-  }
-
-  try {
-    const response = await fetchImpl(telegramMethodUrl(botToken, 'answerCallbackQuery', testMode), {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json; charset=utf-8',
-        accept: 'application/json'
-      },
-      body: JSON.stringify(payload),
-      signal: controller.signal
-    });
-    return await requireTelegramSuccess(response, 'answerCallbackQuery');
-  } catch (error) {
-    if (error instanceof TelegramApiError) throw error;
-    throw new TelegramApiError('answerCallbackQuery', null, { cause: error });
-  } finally {
-    clearTimeout(timeout);
-  }
-}
-
-export async function editTelegramMessageText({
-  fetchImpl = globalThis.fetch,
-  botToken,
-  chatId,
-  messageId,
-  text,
-  replyMarkup = null,
-  linkPreviewOptions = { is_disabled: true },
-  testMode = false,
-  timeoutMs = REQUEST_TIMEOUT_MS
-}) {
-  if (!botToken || !chatId || !messageId || !text) {
-    throw new Error('Missing required Telegram editMessageText parameters');
-  }
-
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), timeoutMs);
-
-  const payload = {
-    chat_id: chatId,
-    message_id: messageId,
-    text,
-    parse_mode: 'Markdown'
-  };
-  if (replyMarkup) {
-    payload.reply_markup = replyMarkup;
-  }
-  if (linkPreviewOptions) {
-    payload.link_preview_options = linkPreviewOptions;
-  }
-
-  try {
-    const response = await fetchImpl(telegramMethodUrl(botToken, 'editMessageText', testMode), {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json; charset=utf-8',
-        accept: 'application/json'
-      },
-      body: JSON.stringify(payload),
-      signal: controller.signal
-    });
-
-    if (!response.ok) {
-      if (response.status === 400) {
-        const plainPayload = {
-          chat_id: chatId,
-          message_id: messageId,
-          text: text.replace(/[*_`]/g, '')
-        };
-        if (replyMarkup) {
-          plainPayload.reply_markup = replyMarkup;
-        }
-        if (linkPreviewOptions) {
-          plainPayload.link_preview_options = linkPreviewOptions;
-        }
-        const fallbackResponse = await fetchImpl(telegramMethodUrl(botToken, 'editMessageText', testMode), {
-          method: 'POST',
-          headers: { 'content-type': 'application/json; charset=utf-8' },
-          body: JSON.stringify(plainPayload),
-          signal: controller.signal
-        });
-        return await requireTelegramSuccess(fallbackResponse, 'editMessageText');
-      }
-    }
-    return await requireTelegramSuccess(response, 'editMessageText');
-  } catch (error) {
-    if (error instanceof TelegramApiError) throw error;
-    throw new TelegramApiError('editMessageText', null, { cause: error });
-  } finally {
-    clearTimeout(timeout);
-  }
-}
-
-async function postTelegramMethod({
-  fetchImpl = globalThis.fetch,
-  botToken,
-  method,
-  payload,
-  testMode = false,
-  timeoutMs = REQUEST_TIMEOUT_MS
-}) {
+// One deadline covers retries AND response-body reads. Never repeat an ambiguous send.
+async function postTelegramMethod({ fetchImpl = globalThis.fetch, botToken, method, payload,
+  testMode = false, timeoutMs = REQUEST_TIMEOUT_MS }) {
   if (!botToken || !method) throw new Error('Missing required Telegram API parameters');
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    const response = await fetchImpl(telegramMethodUrl(botToken, method, testMode), {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json; charset=utf-8',
-        accept: 'application/json'
-      },
-      body: JSON.stringify(payload),
-      signal: controller.signal
-    });
-    return await requireTelegramSuccess(response, method);
-  } catch (error) {
-    if (error instanceof TelegramApiError) throw error;
-    throw new TelegramApiError(method, null, { cause: error });
-  } finally {
-    clearTimeout(timeout);
+  const deadline = Date.now() + timeoutMs;
+  const createsMessage = method === 'sendMessage' || method === 'sendInvoice';
+  let current = { ...payload };
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const controller = new AbortController();
+    const remaining = deadline - Date.now();
+    if (remaining <= 0) throw new TelegramApiError(method, null, { category: 'timeout' });
+    let timer;
+    let error;
+    try {
+      const timeout = new Promise((_, reject) => {
+        timer = setTimeout(() => {
+          controller.abort();
+          reject(new TelegramApiError(method, null, { category: 'timeout' }));
+        }, remaining);
+      });
+      const result = await Promise.race([(async () => {
+        const response = await fetchImpl(telegramMethodUrl(botToken, method, testMode), {
+          method: 'POST', headers: { 'content-type': 'application/json; charset=utf-8', accept: 'application/json' },
+          body: JSON.stringify(current), signal: controller.signal
+        });
+        let body;
+        try { body = await response.json(); } catch { body = null; }
+        if (response.ok && body?.ok === true) return body;
+        const category = classifyTelegramError(response.status, body || {});
+        throw new TelegramApiError(method, response.status, {
+          errorCode: body?.error_code ?? null,
+          category: body || category !== 'unknown' ? category : 'invalid_response',
+          retryAfter: Number.isFinite(body?.parameters?.retry_after) ? body.parameters.retry_after : null
+        });
+      })(), timeout]);
+      return result;
+    } catch (caught) {
+      error = caught instanceof TelegramApiError ? caught : new TelegramApiError(method, null, {
+        category: caught?.name === 'AbortError' ? 'timeout' : 'network'
+      });
+    } finally { clearTimeout(timer); }
+    if (method === 'editMessageText' && error.category === 'not_modified') return { ok: true, noOp: true };
+    if (attempt === 2) throw error;
+    if (error.category === 'formatting' && current.parse_mode) {
+      delete current.parse_mode;
+      current.text = current.text.replace(/[*_`]/g, '');
+      continue;
+    }
+    if (method === 'sendMessage' && error.category === 'missing_reply' && current.reply_to_message_id) {
+      delete current.reply_to_message_id;
+      continue;
+    }
+    if (method === 'sendMessage' && error.category === 'missing_thread' && current.message_thread_id) {
+      delete current.message_thread_id;
+      delete current.reply_to_message_id;
+      continue;
+    }
+    const safeTransient = error.category === 'rate_limited' ||
+      (!createsMessage && ['server', 'network', 'timeout'].includes(error.category));
+    const delay = error.category === 'rate_limited' ? Math.max(0, (error.retryAfter ?? 1) * 1000) : 100;
+    if (!safeTransient || delay > 1000 || deadline - Date.now() < delay + 100) throw error;
+    await new Promise(resolve => setTimeout(resolve, delay));
   }
+}
+
+export async function sendTelegramMessage({ fetchImpl = globalThis.fetch, botToken, chatId, text,
+  replyToMessageId = null, replyMarkup = null, messageThreadId = null,
+  linkPreviewOptions = { is_disabled: true }, ephemeralMessageParameters = null,
+  testMode = false, timeoutMs = REQUEST_TIMEOUT_MS }) {
+  if (!botToken || !chatId || !text) throw new Error('Missing required Telegram sendMessage parameters');
+  const payload = { chat_id: chatId, text, parse_mode: 'Markdown' };
+  if (replyToMessageId) payload.reply_to_message_id = replyToMessageId;
+  if (replyMarkup) payload.reply_markup = replyMarkup;
+  if (messageThreadId) payload.message_thread_id = messageThreadId;
+  if (linkPreviewOptions) payload.link_preview_options = linkPreviewOptions;
+  if (ephemeralMessageParameters) payload.ephemeral_message_parameters = ephemeralMessageParameters;
+  return postTelegramMethod({ fetchImpl, botToken, method: 'sendMessage', payload, testMode, timeoutMs });
+}
+
+export async function editTelegramMessageText({ fetchImpl = globalThis.fetch, botToken, chatId, messageId, text,
+  replyMarkup = null, linkPreviewOptions = { is_disabled: true }, testMode = false, timeoutMs = REQUEST_TIMEOUT_MS }) {
+  if (!botToken || !chatId || !messageId || !text) throw new Error('Missing required Telegram editMessageText parameters');
+  const payload = { chat_id: chatId, message_id: messageId, text, parse_mode: 'Markdown' };
+  if (replyMarkup) payload.reply_markup = replyMarkup;
+  if (linkPreviewOptions) payload.link_preview_options = linkPreviewOptions;
+  return postTelegramMethod({ fetchImpl, botToken, method: 'editMessageText', payload, testMode, timeoutMs });
+}
+
+export async function answerTelegramCallbackQuery({ fetchImpl = globalThis.fetch, botToken, callbackQueryId,
+  text = null, showAlert = false, testMode = false, timeoutMs = REQUEST_TIMEOUT_MS }) {
+  if (!botToken || !callbackQueryId) throw new Error('Missing required Telegram answerCallbackQuery parameters');
+  const payload = { callback_query_id: callbackQueryId };
+  if (text) payload.text = text;
+  if (showAlert) payload.show_alert = true;
+  return postTelegramMethod({ fetchImpl, botToken, method: 'answerCallbackQuery', payload, testMode, timeoutMs });
 }
 
 export async function deleteTelegramMessage({

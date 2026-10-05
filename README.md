@@ -74,10 +74,107 @@ El bot y su webhook requieren configurar en Vercel las variables que
 correspondan al entorno:
 
 - `TELEGRAM_BOT_TOKEN`: credencial privada del bot.
-- `TELEGRAM_BOT_USERNAME`: nombre público del bot.
-- `TELEGRAM_ALLOWED_CHAT_ID`: uno o varios IDs de grupo autorizados, separados por comas. No restringe los chats privados, que siempre están permitidos.
-- `TELEGRAM_ALLOWED_THREAD_ID`: ID del tema autorizado para el grupo principal. Si se configura, el bot solo opera en ese tema dentro del grupo.
-- `TELEGRAM_ALLOWED_THREADS`: mapeo opcional `chatId:threadId`, separado por comas, para controlar temas en varios grupos (por ejemplo, `-100123:42,-100456:7`). Un grupo permitido sin tema asociado acepta comandos en todo el grupo.
+- `TELEGRAM_BOT_USERNAME`: `calcuflowbot`, usado para enlaces privados y comandos dirigidos. Los comandos dirigidos a otro bot se ignoran.
+- `TELEGRAM_ALLOWED_CHAT_ID`: IDs adicionales de grupos autorizados, separados por comas. El grupo oficial `-1003824051698` siempre está autorizado; los chats privados también. Una variable vacía **no** abre el bot a otros grupos. Para operar exclusivamente en el grupo oficial, dejar únicamente ese ID o quitar la variable.
+- `TELEGRAM_ALLOWED_THREAD_ID` y `TELEGRAM_ALLOWED_THREADS`: obsoletas e ignoradas. Quitarlas de Vercel para evitar confusión. No pueden reactivar el requisito del tema eliminado 555.
+- `TELEGRAM_BOT_API_TEST_MODE`: omitir o desactivar en producción. El modo de prueba requiere un bot/token del entorno de prueba de Telegram.
+
+El bot funciona en todo el grupo autorizado, sin temas o en General. Los temas
+existentes mantienen su contexto; no se adjunta el tema eliminado 555 del grupo
+oficial. Los mensajes/paneles que Telegram declara inexistentes se recuperan
+con una respuesta sin referencia o un panel nuevo. Las referencias de monto
+incluyen banco, panel y propietario: otra invocación puede continuar el cálculo
+sin conservarlo en memoria de proceso. Las respuestas entre temas distintos o
+de otro propietario se ignoran.
+
+### Flujo público del grupo
+
+- `/calc` o `/calcular`: banco → monto → resultado en el mismo panel propio.
+- `/calc 500 bdv`: resultado público directo. En Privacy Mode también se puede usar `/calc@calcuflowbot 500 bdv`.
+- `/tasas`: referencias públicas con fuente y fecha; `/ayuda` explica los comandos y las respuestas de monto.
+- «Nuevo cálculo» es una entrada compartida que crea otro panel para quien la pulsa. Los controles para cambiar banco/monto pertenecen al iniciador; otros miembros reciben una indicación para abrir el suyo.
+- Los textos ordinarios, palabras sueltas y números en el grupo se ignoran. Un monto sin comando solo se procesa como respuesta a una solicitud de este bot, con banco/panel/propietario válidos. En privado se mantiene la entrada directa y la navegación por botones.
+- «Otro monto» usa ForceReply selectivo y explica que hay que responder a ese mensaje. Si la solicitud desapareció y no queda referencia, abrir `/calc` otra vez. Un update pendiente que conserva la referencia puede continuar; un panel eliminado se reemplaza.
+- No se borran comandos, montos, solicitudes ni mensajes del usuario. El flujo principal no usa mensajes efímeros ni requiere permisos de administrador.
+- El resultado incluye banco, monto, bolívares, BPay, USDT, ganancia, ROI y tasas con sus fuentes y fechas. El respaldo DolarAPI se identifica como tal. Stars permanece en privado, fuera de los botones principales del grupo.
+
+[Ejemplos antes/después y comprobaciones de cliente pendientes](docs/telegram-public-flow.md).
+
+### Entrega, reintentos y diagnóstico
+
+Se valida tanto HTTP como `ok`, `error_code`, `description` y `retry_after` del
+[Bot API](https://core.telegram.org/bots/api#making-requests). Una edición sin
+cambios es un éxito sin operación. Solo los errores de formato activan el
+respaldo de texto plano. Los callbacks se contestan antes de consultar tasas;
+el fallo de esa respuesta no invalida una entrega. No se realizan borrados.
+
+Cada operación permite como máximo tres intentos dentro de su mismo plazo.
+Se espera `retry_after` solo si cabe en el plazo y es de hasta un segundo.
+Ediciones y respuestas de callback pueden repetir fallos transitorios; envíos
+de mensajes y facturas no se repiten después de 5xx, fallo de red o timeout,
+porque podrían haber sido entregados. Las operaciones Telegram normales tienen
+un plazo de cuatro segundos y los callbacks de un segundo. Los proveedores de
+tasas mantienen su plazo de siete segundos por consulta, reducido únicamente si
+queda menos tiempo de invocación. El presupuesto total de operaciones es de
+25 segundos: verificar en Vercel que `/api/telegram` disponga de al menos
+30 segundos de duración máxima. No se agregó configuración ni dependencia nueva.
+
+| Resultado del webhook | HTTP | Entrega / acción |
+|---|---|---|
+| Estado normal `*_sent` | 200 | Operación requerida confirmada |
+| `delivery_failed`, `ok:false` | 200 | Rechazo definitivo; revisar categoría y permisos/configuración |
+| `delivery_unknown`, `ok:false` | 200 | Resultado ambiguo; no provocar otro envío automático |
+| `partial_delivery`, `ok:false` | 200 | Alguna operación requerida se completó; no repetir toda la interacción |
+| `delivery_failed`, `retry:true` | 503 | Solo 429 explícito, sin operación requerida previa; permite reentrega de Telegram |
+
+HTTP 200 significa reconocimiento del update, no garantiza entrega. Una consulta
+de tasas fallida puede devolver un error visible al usuario y un estado
+`rates_unavailable` o `calc_failed`. No se calcula con valores inventados.
+Los logs registran operación, resultado, duración, categoría y códigos de error;
+no registran tokens, nombres, textos, descripciones completas ni montos.
+
+No hay deduplicación distribuida: ni un `Map` ni el contexto temporal de una
+invocación garantizan procesamiento único entre instancias. Los updates repetidos
+por Telegram, clics repetidos, mensajes editados o una interrupción después de
+enviar pero antes de reconocer pueden duplicar respuestas. Los reconocimientos
+conservadores reducen ese riesgo a cambio de no recuperar automáticamente un
+envío ambiguo. No se agregó base de datos.
+
+### Verificación del bot
+
+CI usa Node 20 y `node --test tests/*.test.mjs`; no hay instalación ni build.
+Para la suite Telegram: `node --test tests/telegram*.test.mjs`. Incluye simulaciones
+de permisos, formato, mensajes/temas inexistentes, 429, 5xx, red, timeouts,
+entregas parciales y flujo de montos entre handlers nuevos.
+
+Los defectos confirmados en el código anterior eran el requisito/fallback del
+tema 555, comandos destinados a otros bots aceptados, errores ocultos por
+helpers y respaldo de formato ante cualquier 400. No prueban la causa de todos
+los reportes. Permanecen por verificar con evidencia de producción: permisos,
+privacidad del bot, webhook pendiente/protegido, 429, fallos de red y proveedores.
+
+Después de un despliegue autorizado, revisar `getWebhookInfo` (pendientes y último
+error), logs sanitizados de Vercel, membresía/permisos del bot y duración máxima.
+Probar privado, grupo sin temas/General, comandos `@calcuflowbot`, montos
+100/500/1000, monto personalizado y callback antiguo; comprobar que otro grupo
+y comandos `@otro_bot` no ejecuten funciones. La privacidad de BotFather puede
+impedir recibir textos ordinarios del grupo: el flujo usa comandos explícitos,
+callbacks y ForceReply y no requiere desactivarla. Revisar las fuentes y fallbacks de
+tasas sin reemplazar proveedores. Estas comprobaciones requieren acceso real;
+las simulaciones locales no acreditan disponibilidad en producción.
+
+`scripts/setup-telegram-webhook.ps1` ya apunta a `calcuflow.live`, valida `getMe`
+y salud sin redirecciones antes de `setWebhook`, y conserva updates pendientes.
+Es una herramienta que cambia el webhook: no ejecutarla para pruebas locales ni
+redirigir el bot de producción a Preview. El script de configuración y CI no se
+modificaron para esta corrección.
+
+Para diagnóstico sin mutaciones, usar `scripts/diagnose-telegram.ps1`; sin token
+solo comprueba la salud pública. Con token de entorno o `-PromptForToken`, consulta
+identidad, webhook y membresía/permisos propios, con salida sanitizada. No consulta
+updates ni envía mensajes. [QA, despliegue, validación de dos usuarios y rollback](docs/telegram-release.md)
+y [descripción del PR](docs/telegram-pr-description.md) separan pruebas simuladas
+de las comprobaciones reales pendientes.
 
 No son necesarias para usar el calculador principal. El webhook de producción
 es <https://calcuflow.live/api/telegram>. No publiques valores reales en

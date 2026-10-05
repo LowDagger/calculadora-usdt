@@ -73,20 +73,14 @@ test('send failure stays HTTP 200, reports an explicit status, and logs sanitize
   });
 
   assert.equal(response.status, 200);
-  assert.equal((await response.json()).status, 'telegram_send_failed');
-  assert.deepEqual(logged, [{
-    event: 'telegram_api_failure',
-    operation: 'send',
-    method: 'sendMessage',
-    errorName: 'TelegramApiError',
-    httpStatus: 401,
-    telegramErrorCode: 401,
-    telegramDescription: 'Unauthorized via https://api.telegram.org/bot[REDACTED]/sendMessage'
-  }]);
+  assert.equal((await response.json()).status, 'delivery_failed');
+  assert.equal(logged[0].category, 'permission');
+  assert.equal(logged[0].httpStatus, 401);
+  assert.ok(logged.every(entry => !('telegramDescription' in entry)));
   assert.doesNotMatch(JSON.stringify(logged), new RegExp(token));
 });
 
-test('edit failure stays HTTP 200 and reports telegram_edit_failed', async () => {
+test('unchanged edit is a successful no-op', async () => {
   const logged = [];
   const handler = createTelegramHandler({
     fetchImpl: async url => String(url).endsWith('/answerCallbackQuery')
@@ -106,9 +100,8 @@ test('edit failure stays HTTP 200 and reports telegram_edit_failed', async () =>
   });
 
   assert.equal(response.status, 200);
-  assert.equal((await response.json()).status, 'telegram_edit_failed');
-  assert.equal(logged.at(-1).operation, 'edit');
-  assert.equal(logged.at(-1).telegramErrorCode, 400);
+  assert.equal((await response.json()).status, 'banks_sent');
+  assert.equal(logged.length, 0);
 });
 
 test('TelegramApiError preserves safe Telegram response diagnostics', async () => {
@@ -128,7 +121,8 @@ test('TelegramApiError preserves safe Telegram response diagnostics', async () =
       assert.equal(error.method, 'sendMessage');
       assert.equal(error.status, 403);
       assert.equal(error.errorCode, 403);
-      assert.equal(error.description, 'Forbidden: bot was blocked by the user');
+      assert.equal(error.category, 'permission');
+      assert.equal(error.description, undefined);
       assert.doesNotMatch(error.message, /test_token/);
       return true;
     }

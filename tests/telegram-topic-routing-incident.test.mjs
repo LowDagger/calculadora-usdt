@@ -11,14 +11,13 @@ import {
 } from '../js/bcv-rates.js';
 import {
   OFFICIAL_COMMUNITY_CHAT_ID,
-  OFFICIAL_BOTS_THREAD_ID,
   getTelegramAccessContext,
   getConfiguredThreadId
 } from '../api/telegram-app-handler.mjs';
 import { isValidBankSlug } from '../api/telegram-formatter.mjs';
 
 const CONFIRMED_CHAT_ID = Number(OFFICIAL_COMMUNITY_CHAT_ID); // -1003824051698
-const CONFIRMED_THREAD_ID = Number(OFFICIAL_BOTS_THREAD_ID);   // 555
+const CONFIRMED_THREAD_ID = 555;   // 555
 const INCIDENT_USER_ID = 601194849;
 const SECOND_USER_ID = 987654321;
 const PRIVATE_CHAT_ID = 123456789;
@@ -97,206 +96,31 @@ function createHandler(harness, env = {}) {
 // CENTRAL ROUTING GUARD TESTS
 // ─────────────────────────────────────────────────────────────────────────────
 
-test('central routing guard: official group strictly requires thread 555', () => {
-  const env = {
-    TELEGRAM_ALLOWED_CHAT_ID: String(CONFIRMED_CHAT_ID),
-    TELEGRAM_ALLOWED_THREAD_ID: String(CONFIRMED_THREAD_ID)
-  };
-
-  // Topic 555 -> allowed
-  assert.equal(getTelegramAccessContext({ id: CONFIRMED_CHAT_ID, type: 'supergroup' }, 555, env).allowed, true);
-  assert.equal(getTelegramAccessContext({ id: CONFIRMED_CHAT_ID, type: 'supergroup' }, '555', env).allowed, true);
-
-  // General (thread 1, null, undefined) -> BLOCKED
-  assert.equal(getTelegramAccessContext({ id: CONFIRMED_CHAT_ID, type: 'supergroup' }, 1, env).allowed, false);
-  assert.equal(getTelegramAccessContext({ id: CONFIRMED_CHAT_ID, type: 'supergroup' }, null, env).allowed, false);
-  assert.equal(getTelegramAccessContext({ id: CONFIRMED_CHAT_ID, type: 'supergroup' }, undefined, env).allowed, false);
-
-  // Other topics -> BLOCKED
-  assert.equal(getTelegramAccessContext({ id: CONFIRMED_CHAT_ID, type: 'supergroup' }, 999, env).allowed, false);
-
-  // Even if TELEGRAM_ALLOWED_THREAD_ID is omitted in env, confirmed official group defaults to 555
-  const emptyEnv = { TELEGRAM_ALLOWED_CHAT_ID: String(CONFIRMED_CHAT_ID) };
-  assert.equal(getTelegramAccessContext({ id: CONFIRMED_CHAT_ID, type: 'supergroup' }, 555, emptyEnv).allowed, true);
-  assert.equal(getTelegramAccessContext({ id: CONFIRMED_CHAT_ID, type: 'supergroup' }, 1, emptyEnv).allowed, false);
-  assert.equal(getTelegramAccessContext({ id: CONFIRMED_CHAT_ID, type: 'supergroup' }, null, emptyEnv).allowed, false);
-});
-
-// ─────────────────────────────────────────────────────────────────────────────
-// GENERAL TOPIC ISOLATION TESTS
-// ─────────────────────────────────────────────────────────────────────────────
-
-test('GENERAL: numeric message "200" is completely ignored with NO bot response', async () => {
-  const harness = createHarness();
-  const handler = createHandler(harness);
-
-  const res = await handler.fetch(webhookRequest({
-    message: {
-      message_id: 1001,
-      message_thread_id: 1, // General
-      from: { id: INCIDENT_USER_ID },
-      chat: { id: CONFIRMED_CHAT_ID, type: 'supergroup' },
-      text: '200'
+test('official group ignores legacy topic variables and allows all group contexts', () => {
+  for (const env of [{}, { TELEGRAM_ALLOWED_THREAD_ID: '555' }, { TELEGRAM_ALLOWED_THREADS: `${CONFIRMED_CHAT_ID}:555` }]) {
+    assert.equal(getConfiguredThreadId(CONFIRMED_CHAT_ID, env), '');
+    for (const thread of [undefined, null, 1, 555, 999]) {
+      assert.equal(getTelegramAccessContext({ id: CONFIRMED_CHAT_ID, type: 'supergroup' }, thread, env).allowed, true);
     }
-  }));
-
-  assert.equal(res.status, 200);
-  const data = await res.json();
-  assert.equal(data.status, 'ignored_general_message');
-  assert.equal(harness.calls.length, 0); // NO calls made to Telegram API!
+    assert.equal(getTelegramAccessContext({ id: -1000000000000, type: 'supergroup' }, 555, env).allowed, false);
+  }
 });
 
-test('GENERAL: numeric message "200" with undefined message_thread_id is ignored', async () => {
-  const harness = createHarness();
-  const handler = createHandler(harness);
+for (const thread of [undefined, 1, 555]) {
+  test(`official group command works without deleted topic routing: ${thread}`, async () => {
+    const harness = createHarness();
+    const res = await createHandler(harness).fetch(webhookRequest({ message: {
+      message_id: 1005, message_thread_id: thread, from: { id: INCIDENT_USER_ID },
+      chat: { id: CONFIRMED_CHAT_ID, type: 'supergroup' }, text: '/calcular@calcuflowbot'
+    } }));
+    assert.equal((await res.json()).status, 'banks_sent');
+    const send = harness.calls.find(call => call.method === 'sendMessage');
+    assert.equal(send.payload.message_thread_id, undefined);
+    assert.doesNotMatch(JSON.stringify(send.payload), /3824051698\/555|tema Bots/);
+  });
+}
 
-  const res = await handler.fetch(webhookRequest({
-    message: {
-      message_id: 1002,
-      // message_thread_id is absent
-      from: { id: INCIDENT_USER_ID },
-      chat: { id: CONFIRMED_CHAT_ID, type: 'supergroup' },
-      text: '200'
-    }
-  }));
-
-  assert.equal(res.status, 200);
-  const data = await res.json();
-  assert.equal(data.status, 'ignored_general_message');
-  assert.equal(harness.calls.length, 0);
-});
-
-test('GENERAL: shortcut "500 bdv" does not calculate and is completely ignored', async () => {
-  const harness = createHarness();
-  const handler = createHandler(harness);
-
-  const res = await handler.fetch(webhookRequest({
-    message: {
-      message_id: 1003,
-      message_thread_id: 1,
-      from: { id: INCIDENT_USER_ID },
-      chat: { id: CONFIRMED_CHAT_ID, type: 'supergroup' },
-      text: '500 bdv'
-    }
-  }));
-
-  assert.equal(res.status, 200);
-  const data = await res.json();
-  assert.equal(data.status, 'ignored_general_message');
-  assert.equal(harness.calls.length, 0);
-});
-
-test('GENERAL: reply to a custom-amount prompt does not calculate in General', async () => {
-  const harness = createHarness();
-  const handler = createHandler(harness);
-
-  const res = await handler.fetch(webhookRequest({
-    message: {
-      message_id: 1004,
-      message_thread_id: 1, // Replied in General
-      from: { id: INCIDENT_USER_ID },
-      chat: { id: CONFIRMED_CHAT_ID, type: 'supergroup' },
-      text: '200',
-      reply_to_message: {
-        message_id: 579,
-        from: { id: 999999, is_bot: true },
-        text: '✏️ *Escribe el monto en USD*\n\nEjemplo: 375\n\nReferencia: CF-MONTO:bbva-provincial:579:601194849'
-      }
-    }
-  }));
-
-  assert.equal(res.status, 200);
-  const data = await res.json();
-  assert.equal(data.status, 'ignored_general_message');
-  assert.equal(harness.calls.length, 0); // No message sent, no message edited!
-});
-
-test('GENERAL: /calcular redirects instead of calculating', async () => {
-  const harness = createHarness();
-  const handler = createHandler(harness);
-
-  const res = await handler.fetch(webhookRequest({
-    message: {
-      message_id: 1005,
-      message_thread_id: 1,
-      from: { id: INCIDENT_USER_ID },
-      chat: { id: CONFIRMED_CHAT_ID, type: 'supergroup' },
-      text: '/calcular@calcuflowbot'
-    }
-  }));
-
-  assert.equal(res.status, 200);
-  const data = await res.json();
-  assert.equal(data.status, 'ephemeral_redirect');
-  const send = harness.calls.find(call => call.method === 'sendMessage');
-  assert.ok(send);
-  assert.match(send.payload.text, /Los bots se usan en el tema Bots/);
-  assert.ok(JSON.stringify(send.payload.reply_markup).includes('https://t.me/c/3824051698/555'));
-});
-
-test('GENERAL: /tasas redirects instead of showing rates', async () => {
-  const harness = createHarness();
-  const handler = createHandler(harness);
-
-  const res = await handler.fetch(webhookRequest({
-    message: {
-      message_id: 1006,
-      message_thread_id: 1,
-      from: { id: INCIDENT_USER_ID },
-      chat: { id: CONFIRMED_CHAT_ID, type: 'supergroup' },
-      text: '/tasas'
-    }
-  }));
-
-  assert.equal(res.status, 200);
-  const data = await res.json();
-  assert.equal(data.status, 'ephemeral_redirect');
-  const send = harness.calls.find(call => call.method === 'sendMessage');
-  assert.ok(send);
-  assert.match(send.payload.text, /Los bots se usan en el tema Bots/);
-});
-
-test('GENERAL: callback from old General panel cannot mutate message or open menus', async () => {
-  const harness = createHarness();
-  const handler = createHandler(harness);
-
-  const res = await handler.fetch(webhookRequest({
-    callback_query: {
-      id: 'cb_general_stale',
-      from: { id: INCIDENT_USER_ID },
-      message: {
-        message_id: 578,
-        message_thread_id: 1, // On a message in General
-        chat: { id: CONFIRMED_CHAT_ID, type: 'supergroup' }
-      },
-      data: 'custom:bbva-provincial|u:601194849'
-    }
-  }));
-
-  assert.equal(res.status, 200);
-  const data = await res.json();
-  assert.equal(data.status, 'ephemeral_redirect');
-
-  // answerCallbackQuery called with warning text
-  const answer = harness.calls.find(call => call.method === 'answerCallbackQuery');
-  assert.ok(answer);
-  assert.equal(answer.payload.callback_query_id, 'cb_general_stale');
-  assert.equal(answer.payload.text, 'Usa el tema Bots para interactuar con CalcuFlow.');
-
-  // Crucial: NO editMessageText calls made (old message not mutated!)
-  const edits = harness.calls.filter(call => call.method === 'editMessageText');
-  assert.equal(edits.length, 0);
-
-  // Crucial: NO persistent sendMessage calls made to General!
-  const sends = harness.calls.filter(call => call.method === 'sendMessage');
-  assert.equal(sends.length, 0);
-});
-
-// ─────────────────────────────────────────────────────────────────────────────
-// BOTS #555 TOPIC TESTS
-// ─────────────────────────────────────────────────────────────────────────────
-
-test('BOTS #555: /calcular works and stays in thread 555', async () => {
+test('DELETED TOPIC: /calcular recovers without attaching thread 555', async () => {
   const harness = createHarness();
   const handler = createHandler(harness);
 
@@ -315,11 +139,11 @@ test('BOTS #555: /calcular works and stays in thread 555', async () => {
   assert.equal(data.status, 'banks_sent');
   const send = harness.calls.find(call => call.method === 'sendMessage');
   assert.ok(send);
-  assert.equal(send.payload.message_thread_id, CONFIRMED_THREAD_ID);
+  assert.equal(send.payload.message_thread_id, undefined);
   assert.match(send.payload.text, /Elige un banco/);
 });
 
-test('BOTS #555: callback opens custom amount prompt in thread 555', async () => {
+test('DELETED TOPIC: callback opens custom prompt without attaching thread 555', async () => {
   const harness = createHarness();
   const handler = createHandler(harness);
 
@@ -340,10 +164,10 @@ test('BOTS #555: callback opens custom amount prompt in thread 555', async () =>
   const data = await res.json();
   assert.equal(data.status, 'custom_amount_prompt_sent');
 
-  // Prompt sent to thread 555
+  // Prompt never attaches the deleted thread ID
   const send = harness.calls.find(call => call.method === 'sendMessage');
   assert.ok(send);
-  assert.equal(send.payload.message_thread_id, CONFIRMED_THREAD_ID);
+  assert.equal(send.payload.message_thread_id, undefined);
   assert.match(send.payload.text, /Referencia: CF-MONTO:bbva-provincial:579:601194849/);
 });
 
@@ -366,7 +190,7 @@ test('BANK REGRESSION: reference bbva-provincial + amount 200 produces BBVA Prov
         message_id: 579,
         message_thread_id: CONFIRMED_THREAD_ID,
         chat: { id: CONFIRMED_CHAT_ID },
-        from: { id: 999999, is_bot: true },
+        from: { id: 999999, is_bot: true, username: 'calcuflowbot' },
         text: '✏️ *Escribe el monto en USD*\n\nEjemplo: 375\n\nReferencia: CF-MONTO:bbva-provincial:579:601194849'
       }
     }
@@ -382,7 +206,7 @@ test('BANK REGRESSION: reference bbva-provincial + amount 200 produces BBVA Prov
   assert.equal(edit.payload.message_id, 579);
 
   // STRICT ASSERTION: Result MUST be BBVA Provincial, NEVER Banco de Venezuela!
-  assert.match(edit.payload.text, /BBVA Provincial · 1,5%/);
+  assert.match(edit.payload.text, /BBVA Provincial\* · comisión 1,5%/);
   assert.doesNotMatch(edit.payload.text, /Banco de Venezuela/);
 
   // Reply markup points back to bbva-provincial
@@ -404,7 +228,7 @@ test('BANK REGRESSION: reference with invalid bank slug is rejected and never fa
         message_id: 579,
         message_thread_id: CONFIRMED_THREAD_ID,
         chat: { id: CONFIRMED_CHAT_ID },
-        from: { id: 999999, is_bot: true },
+        from: { id: 999999, is_bot: true, username: 'calcuflowbot' },
         text: '✏️ *Escribe el monto en USD*\n\nEjemplo: 375\n\nReferencia: CF-MONTO:fake-bank-xyz:579:601194849'
       }
     }
@@ -453,7 +277,7 @@ test('FORCEREPLY: response outside topic 555 is rejected', async () => {
         message_id: 579,
         message_thread_id: CONFIRMED_THREAD_ID, // Prompt was in 555
         chat: { id: CONFIRMED_CHAT_ID },
-        from: { id: 999999, is_bot: true },
+        from: { id: 999999, is_bot: true, username: 'calcuflowbot' },
         text: '✏️ *Escribe el monto en USD*\n\nEjemplo: 375\n\nReferencia: CF-MONTO:bbva-provincial:579:601194849'
       }
     }
@@ -461,7 +285,7 @@ test('FORCEREPLY: response outside topic 555 is rejected', async () => {
 
   assert.equal(res.status, 200);
   const data = await res.json();
-  assert.equal(data.status, 'ignored_general_message');
+  assert.equal(data.status, 'ignored_custom_reply_invalid_context');
   assert.equal(harness.calls.length, 0);
 });
 
@@ -480,7 +304,7 @@ test('FORCEREPLY: prompt from different thread is rejected even if reply is in 5
         message_id: 579,
         message_thread_id: 1, // Prompt was in General (thread 1)
         chat: { id: CONFIRMED_CHAT_ID },
-        from: { id: 999999, is_bot: true },
+        from: { id: 999999, is_bot: true, username: 'calcuflowbot' },
         text: '✏️ *Escribe el monto en USD*\n\nEjemplo: 375\n\nReferencia: CF-MONTO:bbva-provincial:579:601194849'
       }
     }
@@ -507,7 +331,7 @@ test('FORCEREPLY: wrong owner reply is rejected', async () => {
         message_id: 579,
         message_thread_id: CONFIRMED_THREAD_ID,
         chat: { id: CONFIRMED_CHAT_ID },
-        from: { id: 999999, is_bot: true },
+        from: { id: 999999, is_bot: true, username: 'calcuflowbot' },
         text: '✏️ *Escribe el monto en USD*\n\nEjemplo: 375\n\nReferencia: CF-MONTO:bbva-provincial:579:601194849'
       }
     }
@@ -534,7 +358,7 @@ test('FORCEREPLY: malformed reference token is rejected and does not calculate',
         message_id: 579,
         message_thread_id: CONFIRMED_THREAD_ID,
         chat: { id: CONFIRMED_CHAT_ID },
-        from: { id: 999999, is_bot: true },
+        from: { id: 999999, is_bot: true, username: 'calcuflowbot' },
         text: '✏️ *Escribe el monto en USD*\n\nReferencia: CF-MONTO:malformed'
       }
     }
@@ -563,7 +387,7 @@ test('PRIVATE: custom amount flow remains fully supported without thread require
       reply_to_message: {
         message_id: 1019,
         chat: { id: PRIVATE_CHAT_ID },
-        from: { id: 999999, is_bot: true },
+        from: { id: 999999, is_bot: true, username: 'calcuflowbot' },
         text: `✏️ *Escribe el monto en USD*\n\nEjemplo: 375\n\nReferencia: CF-MONTO:bbva-provincial:1018:${PRIVATE_CHAT_ID}`
       }
     }
@@ -576,6 +400,6 @@ test('PRIVATE: custom amount flow remains fully supported without thread require
   const edit = harness.calls.find(call => call.method === 'editMessageText');
   assert.ok(edit);
   assert.equal(edit.payload.message_id, 1018);
-  assert.match(edit.payload.text, /BBVA Provincial · 1,5%/);
+  assert.match(edit.payload.text, /BBVA Provincial\* · comisión 1,5%/);
   assert.match(edit.payload.text, /350,00 USD/);
 });

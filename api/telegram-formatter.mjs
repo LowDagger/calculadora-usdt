@@ -256,40 +256,30 @@ export function formatCalculationResult(result, bankInfo) {
 💰 *Ganancia estimada:* ${profitUsd} USD (${roi}%)`;
 }
 
-export function formatRatesMessage({ bcv, p2p, bcvDate = null }) {
-  const bcvFormatted = money(bcv, 2);
-  const p2pFormatted = money(p2p, 2);
+export function formatRateProvenance(record, kind) {
+  const sources = {
+    'bcv.today': 'BCV Today',
+    'binance-p2p': 'Binance P2P (SELL USDT/VES)',
+    'dolarapi-oficial': 'DolarAPI oficial (respaldo)',
+    'dolarapi-paralelo': 'DolarAPI paralelo (respaldo)'
+  };
+  const source = sources[record?.source] || 'Fuente no disponible';
+  const cached = record?.status === 'cached' ? ' · tasa guardada' : '';
+  const dates = kind === 'bcv'
+    ? [record?.effectiveDate ? `vigencia ${record.effectiveDate}` : '', record?.publishedAt ? `publicada ${record.publishedAt}` : '']
+    : [record?.publishedAt ? `publicada ${record.publishedAt}` : '', record?.fetchedAt ? `consulta ${record.fetchedAt}` : ''];
+  const dateText = dates.filter(Boolean).join(' · ');
+  return `${source}${cached} · ${dateText || 'fecha no disponible'}`;
+}
+
+export function formatRatesMessage({ bcv, p2p, bcvDate = null, bcvRecord = null, p2pRecord = null }) {
   const brechaVal = bcv > 0 ? ((p2p - bcv) / bcv) * 100 : 0;
   const brechaSign = brechaVal >= 0 ? '+' : '';
-  const brechaFormatted = brechaSign + money(brechaVal, 2) + '%';
-  const dateInfo = bcvDate ? ` (${bcvDate})` : '';
-
-  return `📈 *Tasas de referencia — CalcuFlow*
-
-🏦 *BCV:* ${bcvFormatted} Bs/USD${dateInfo}
-🔄 *P2P:* ${p2pFormatted} Bs/USDT
-📊 *Brecha:* ${brechaFormatted}`;
+  return `*Tasas de referencia — CalcuFlow*\n\nBCV: ${money(bcv, 2)} Bs/USD\n${formatRateProvenance(bcvRecord || { effectiveDate: bcvDate }, 'bcv')}\n\nP2P: ${money(p2p, 2)} Bs/USDT\n${formatRateProvenance(p2pRecord, 'p2p')}\n\nBrecha: ${brechaSign}${money(brechaVal, 2)}%`;
 }
 
 export function formatHelpMessage() {
-  return `🤖 *Bot de CalcuFlow — Banco ➔ USDT*
-
-Calcula al instante tu operación Banco ➔ USDT con tasas actualizadas.
-
-📌 *Comandos:*
-• \`/calcular\` o \`/calc <monto> [banco]\` — Abre o calcula una operación
-• \`/bancos\` — Abre la selección de banco
-• \`<monto>\` — Envía solo el monto (ej: \`100\`, \`500\`)
-• \`/tasas\` — Consulta las tasas BCV y P2P en tiempo real
-• \`/privado\` — Abre CalcuFlow en privado
-• \`/ayuda\` — Muestra este mensaje de ayuda
-• \`/start\` — Abre el inicio de CalcuFlow
-
-💡 *O pulsa los botones de acceso rápido abajo para calcular al instante:*
-
-🏦 *Bancos soportados:*
-BDV (2,5%), BBVA (1,5%), Banesco (1,5%), BNC (1,5%), Bancamiga (5%), Tesoro (2,5%), BDT (2,5%).
-También puedes indicar una comisión directa (ej: \`/calc 100 3%\`).`;
+  return `*CalcuFlow — Banco → USDT*\n\n• \`/calc\` o \`/calcular\`: elige banco y monto.\n• \`/calc 500 bdv\`: cálculo completo en un mensaje.\n• \`/tasas\`: tasas de referencia, fuentes y fechas.\n\nEn el grupo puedes usar \`/calc@calcuflowbot 500 bdv\` o \`/calcular@calcuflowbot\`, y \`/tasas@calcuflowbot\`.\n\nPara «Otro monto», responde a la solicitud del bot con \`375,50\` o \`375.50\`. Los números sueltos en el grupo se ignoran. Si ya no ves la solicitud, abre \`/calc@calcuflowbot\` otra vez.\n\nSolo quien inicia un cálculo puede cambiarlo. «Nuevo cálculo» abre un panel propio sin reemplazar resultados anteriores.\n\nEn privado también puedes enviar \`500 bdv\`. Usa /privado para abrir el bot; /apoyar mantiene el apoyo por Stars en privado.`;
 }
 
 export function formatErrorMessage(error) {

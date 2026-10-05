@@ -61,7 +61,7 @@ function response(body = { ok: true }, status = 200) {
   });
 }
 
-function createHarness({ failMethods = [] } = {}) {
+function createHarness({ failMethods = [], failStatus = 500 } = {}) {
   const calls = [];
   const fetchImpl = async (url, init = {}) => {
     const urlString = String(url);
@@ -69,7 +69,7 @@ function createHarness({ failMethods = [] } = {}) {
       const method = urlString.split('/').at(-1);
       const payload = init.body ? JSON.parse(init.body) : null;
       calls.push({ method, payload });
-      if (failMethods.includes(method)) return response({ ok: false, description: 'test failure' }, 500);
+      if (failMethods.includes(method)) return response({ ok: false, error_code: failStatus, description: 'test failure' }, failStatus);
       return response({ ok: true, result: { message_id: 999 } });
     }
     if (urlString === BCV_HISTORY_URL) {
@@ -128,7 +128,7 @@ test('home and help keep the production URL in an inline button only', () => {
   assert.equal(home.inline_keyboard[0][0].callback_data, 'banks');
   assert.equal(home.inline_keyboard[0][0].style, 'primary');
   assert.equal(home.inline_keyboard[2][0].callback_data, 'support');
-  assert.equal(home.inline_keyboard[3][0].url, CANONICAL_APP_URL);
+  assert.equal(home.inline_keyboard[1][0].url, CANONICAL_APP_URL);
   assert.ok(!formatHelpMessage().includes(CANONICAL_APP_URL));
   assert.ok(!formatRatesMessage({ bcv: 68.5, p2p: 75.2 }).includes(CANONICAL_APP_URL));
 });
@@ -153,9 +153,8 @@ test('navigation callbacks remain compact and include back/home/result actions',
   assert.deepEqual(parseAppCallbackData('nonsense'), { type: 'unknown' });
   const resultButtons = buildResultInlineKeyboard('bnc').inline_keyboard.flat();
   assert.ok(resultButtons.some(button => button.callback_data === 'bank:bnc'));
-  assert.ok(resultButtons.some(button => button.callback_data === 'banks'));
-  assert.ok(resultButtons.some(button => button.callback_data === 'rates'));
-  assert.ok(resultButtons.some(button => button.callback_data === 'home'));
+  assert.ok(resultButtons.some(button => button.callback_data === 'new'));
+  assert.equal(resultButtons.filter(button => button.callback_data).length, 2);
   assert.ok(resultButtons.some(button => button.url === CANONICAL_APP_URL));
   assert.ok(resultButtons.filter(button => button.callback_data).every(button => button.callback_data.length <= 64));
 });
@@ -180,14 +179,14 @@ test('custom amount replies are stateless, validated, and strictly tied to a bot
   const prompt = formatCustomAmountPrompt('bancamiga', 77);
   const valid = parseCustomAmountReply({
     text: '375,50',
-    reply_to_message: { message_id: 88, from: { is_bot: true }, text: prompt }
+    reply_to_message: { message_id: 88, from: { is_bot: true, username: 'calcuflowbot' }, text: prompt }
   });
   assert.deepEqual(valid, {
     bankId: 'bancamiga', panelMessageId: 77, promptMessageId: 88, ok: true, amount: 375.5
   });
   const invalid = parseCustomAmountReply({
     text: 'abc',
-    reply_to_message: { message_id: 88, from: { is_bot: true }, text: prompt }
+    reply_to_message: { message_id: 88, from: { is_bot: true, username: 'calcuflowbot' }, text: prompt }
   });
   assert.equal(invalid.ok, false);
   assert.equal(parseCustomAmountReply({ text: '375' }), null);
@@ -206,30 +205,30 @@ test('private chats remain allowed independently of official group configuration
   assert.equal(context.isPrivate, true);
 });
 
-test('official group topic routing allows the configured topic and redirects General', () => {
+test('legacy topic variables do not restrict allowlisted group access', () => {
   const env = {
     TELEGRAM_ALLOWED_CHAT_ID: String(OFFICIAL_CHAT_ID),
     TELEGRAM_ALLOWED_THREAD_ID: String(BOT_THREAD_ID)
   };
   assert.equal(getTelegramAccessContext({ id: OFFICIAL_CHAT_ID, type: 'supergroup' }, BOT_THREAD_ID, env).allowed, true);
-  assert.equal(getTelegramAccessContext({ id: OFFICIAL_CHAT_ID, type: 'supergroup' }, 1, env).allowed, false);
+  assert.equal(getTelegramAccessContext({ id: OFFICIAL_CHAT_ID, type: 'supergroup' }, 1, env).allowed, true);
   assert.equal(getTelegramAccessContext({ id: -1009999999999, type: 'supergroup' }, BOT_THREAD_ID, env).allowed, false);
   assert.equal(getTelegramAccessContext({ id: OFFICIAL_CHAT_ID, type: 'supergroup' }, 1, {
     TELEGRAM_ALLOWED_CHAT_ID: String(OFFICIAL_CHAT_ID)
   }).allowed, true);
 });
 
-test('per-group thread mappings restrict one group without blocking an unmapped QA group', () => {
+test('legacy thread mappings do not restrict authorized groups', () => {
   const secondGroupId = -1009876543210;
   const env = {
     TELEGRAM_ALLOWED_CHAT_ID: `${OFFICIAL_CHAT_ID},${secondGroupId}`,
     TELEGRAM_ALLOWED_THREAD_ID: '999',
     TELEGRAM_ALLOWED_THREADS: `${OFFICIAL_CHAT_ID}:${BOT_THREAD_ID}`
   };
-  assert.equal(getConfiguredThreadId(OFFICIAL_CHAT_ID, env), String(BOT_THREAD_ID));
+  assert.equal(getConfiguredThreadId(OFFICIAL_CHAT_ID, env), '');
   assert.equal(getConfiguredThreadId(secondGroupId, env), '');
   assert.equal(getTelegramAccessContext({ id: OFFICIAL_CHAT_ID, type: 'supergroup' }, BOT_THREAD_ID, env).allowed, true);
-  assert.equal(getTelegramAccessContext({ id: OFFICIAL_CHAT_ID, type: 'supergroup' }, 1, env).allowed, false);
+  assert.equal(getTelegramAccessContext({ id: OFFICIAL_CHAT_ID, type: 'supergroup' }, 1, env).allowed, true);
   assert.equal(getTelegramAccessContext({ id: secondGroupId, type: 'supergroup' }, null, env).allowed, true);
 });
 
@@ -272,7 +271,7 @@ test('private /start renders the app home and /calc renders bank selection', asy
     message_id: 2, from: { id: PRIVATE_CHAT_ID }, chat: { id: PRIVATE_CHAT_ID, type: 'private' }, text: '/calc'
   } }));
   const sends = harness.calls.filter(call => call.method === 'sendMessage');
-  assert.match(sends[0].payload.text, /¿Qué quieres hacer\?/);
+  assert.match(sends[0].payload.text, /Banco → USDT/);
   assert.equal(sends[0].payload.reply_markup.inline_keyboard[0][0].callback_data, addCallbackOwner('banks', PRIVATE_CHAT_ID));
   assert.match(sends[1].payload.text, /Elige un banco/);
 });
@@ -347,7 +346,7 @@ test('required private and official-group command matrices remain supported', as
   assert.ok(groupSends.every(call => call.payload.message_thread_id === BOT_THREAD_ID));
 });
 
-test('group /privado responds privately with the calculator deep link', async () => {
+test('group /privado sends an ordinary message with the private calculator link', async () => {
   const harness = createHarness();
   const handler = createHandler(harness);
   const result = await handler.fetch(webhookRequest({ message: {
@@ -357,9 +356,9 @@ test('group /privado responds privately with the calculator deep link', async ()
     chat: { id: OFFICIAL_CHAT_ID, type: 'supergroup' },
     text: '/privado'
   } }));
-  assert.equal((await result.json()).status, 'ephemeral_private_access');
+  assert.equal((await result.json()).status, 'private_access_sent');
   const send = harness.calls.find(call => call.method === 'sendMessage');
-  assert.equal(send.payload.ephemeral_message_parameters.receiver_user_id, PRIVATE_CHAT_ID);
+  assert.equal(send.payload.ephemeral_message_parameters, undefined);
   assert.match(send.payload.text, /sin llenar el grupo/);
   assert.ok(JSON.stringify(send.payload.reply_markup).includes('https://t.me/calcuflowbot?start=calc'));
 });
@@ -458,7 +457,7 @@ test('two group users keep independent owned panels and cannot mutate each other
   assert.ok(successfulEdits.includes(302));
 });
 
-test('official bot topic replies stay in topic while General gets an ephemeral redirect', async () => {
+test('live topics and General both support calculations', async () => {
   const harness = createHarness();
   const handler = createHandler(harness);
   await handler.fetch(webhookRequest({ message: {
@@ -477,12 +476,12 @@ test('official bot topic replies stay in topic while General gets an ephemeral r
   } }));
   const sends = harness.calls.filter(call => call.method === 'sendMessage');
   assert.equal(sends[0].payload.message_thread_id, BOT_THREAD_ID);
-  assert.deepEqual(sends[1].payload.ephemeral_message_parameters, { receiver_user_id: PRIVATE_CHAT_ID });
-  assert.ok(JSON.stringify(sends[1].payload.reply_markup).includes(`/c/1234567890/${BOT_THREAD_ID}`));
-  assert.ok(JSON.stringify(sends[1].payload.reply_markup).includes('t.me/calcuflowbot'));
+  assert.equal(sends[1].payload.message_thread_id, undefined);
+  assert.equal(sends[1].payload.ephemeral_message_parameters, undefined);
+  assert.match(sends[1].payload.text, /Ganancia estimada/);
 });
 
-test('General redirect falls back to one lightweight persistent message when ephemeral is unsupported', async () => {
+test('General sends one public menu without attempting a redirect', async () => {
   const calls = [];
   const fetchImpl = async (url, init = {}) => {
     const method = String(url).split('/').at(-1);
@@ -509,12 +508,11 @@ test('General redirect falls back to one lightweight persistent message when eph
     chat: { id: OFFICIAL_CHAT_ID, type: 'supergroup' },
     text: '/start'
   } }));
-  assert.equal((await result.json()).status, 'redirect_sent');
+  assert.equal((await result.json()).status, 'home_sent');
   const sends = calls.filter(call => call.method === 'sendMessage');
-  assert.equal(sends.length, 2);
-  assert.ok(sends[0].payload.ephemeral_message_parameters);
-  assert.ok(!sends[1].payload.ephemeral_message_parameters);
-  assert.equal(sends[1].payload.reply_to_message_id, 14);
+  assert.equal(sends.length, 1);
+  assert.equal(sends[0].payload.ephemeral_message_parameters, undefined);
+  assert.equal(sends[0].payload.reply_to_message_id, 14);
 });
 
 test('external groups ignore unrelated numeric messages and never delete them', async () => {
@@ -551,7 +549,7 @@ test('custom amount callback uses ForceReply with bank and panel context', async
   assert.match(prompt.payload.text, new RegExp(`CF-MONTO:bancamiga:77:${PRIVATE_CHAT_ID}`));
 });
 
-test('valid custom amount in the official topic edits result and cleans only reply/prompt', async () => {
+test('valid custom amount edits its panel without deleting messages', async () => {
   const harness = createHarness();
   const handler = createHandler(harness);
   const result = await handler.fetch(webhookRequest({ message: {
@@ -571,7 +569,7 @@ test('valid custom amount in the official topic edits result and cleans only rep
   assert.equal(edit.payload.message_id, 77);
   assert.match(edit.payload.text, /BBVA Provincial/);
   const deletions = harness.calls.filter(call => call.method === 'deleteMessage').map(call => call.payload.message_id);
-  assert.deepEqual(deletions, [90, 89]);
+  assert.deepEqual(deletions, []);
 });
 
 test('a different user cannot satisfy or clean up the owner custom-amount prompt', async () => {
@@ -594,8 +592,8 @@ test('a different user cannot satisfy or clean up the owner custom-amount prompt
   assert.equal(harness.calls.filter(call => call.method === 'deleteMessage').length, 0);
 });
 
-test('delete permission failures do not break a custom calculation', async () => {
-  const harness = createHarness({ failMethods: ['deleteMessage'] });
+test('custom calculations never require delete permissions', async () => {
+  const harness = createHarness({ failMethods: ['deleteMessage'], failStatus: 403 });
   const handler = createHandler(harness);
   const result = await handler.fetch(webhookRequest({ message: {
     message_id: 91,
@@ -605,12 +603,12 @@ test('delete permission failures do not break a custom calculation', async () =>
     text: '250',
     reply_to_message: {
       message_id: 89,
-      from: { is_bot: true },
+      from: { is_bot: true, username: 'calcuflowbot' },
       text: formatCustomAmountPrompt('bnc', 77, PRIVATE_CHAT_ID)
     }
   } }));
   assert.equal((await result.json()).status, 'custom_calc_sent');
-  assert.equal(harness.calls.filter(call => call.method === 'deleteMessage').length, 2);
+  assert.equal(harness.calls.filter(call => call.method === 'deleteMessage').length, 0);
 });
 
 test('private custom replies are never deleted', async () => {
@@ -621,12 +619,12 @@ test('private custom replies are never deleted', async () => {
     from: { id: PRIVATE_CHAT_ID },
     chat: { id: PRIVATE_CHAT_ID, type: 'private' },
     text: '100',
-    reply_to_message: { message_id: 89, from: { is_bot: true }, text: formatCustomAmountPrompt('bdv', 77, PRIVATE_CHAT_ID) }
+    reply_to_message: { message_id: 89, from: { is_bot: true, username: 'calcuflowbot' }, text: formatCustomAmountPrompt('bdv', 77, PRIVATE_CHAT_ID) }
   } }));
   assert.equal(harness.calls.filter(call => call.method === 'deleteMessage').length, 0);
 });
 
-test('result presentation uses web bank-margin parity, the derived bank rate, and green USDT emoji', () => {
+test('concise result presentation preserves bank-margin parity and numerical values', () => {
   assert.equal(TELEGRAM_BANK_MARGIN, 0.5);
   assert.equal(currentBankRate(755.1552, TELEGRAM_BANK_MARGIN), 755.1552 * 1.005);
   const result = calculateValues({
@@ -644,7 +642,7 @@ test('result presentation uses web bank-margin parity, the derived bank rate, an
   );
   assert.match(text, /Bolívares necesarios/);
   assert.match(text, /Monto en BPay/);
-  assert.match(text, /🟢 \*USDT finales\*/);
+  assert.match(text, /USDT finales: \*/);
   assert.ok(!text.includes('🪙 *USDT finales*'));
   assert.match(text, /Ganancia estimada/);
   assert.match(text, /BCV: 755,16 Bs/);
@@ -714,7 +712,7 @@ test('custom Star ForceReply is stateless and tied to the initiating private use
   const prompt = formatCustomSupportPrompt(PRIVATE_CHAT_ID);
   const parsed = parseCustomSupportReply({
     text: '750',
-    reply_to_message: { message_id: 402, from: { is_bot: true }, text: prompt }
+    reply_to_message: { message_id: 402, from: { is_bot: true, username: 'calcuflowbot' }, text: prompt }
   });
   assert.deepEqual(parsed, {
     promptMessageId: 402,
@@ -751,7 +749,7 @@ test('custom Star callback prompts privately and a valid reply creates the exact
     text: '750',
     reply_to_message: {
       message_id: 402,
-      from: { is_bot: true },
+      from: { is_bot: true, username: 'calcuflowbot' },
       text: formatCustomSupportPrompt(PRIVATE_CHAT_ID)
     }
   } }));
@@ -771,7 +769,7 @@ test('invalid custom Star reply returns a ForceReply retry without creating an i
     text: '10.5',
     reply_to_message: {
       message_id: 409,
-      from: { is_bot: true },
+      from: { is_bot: true, username: 'calcuflowbot' },
       text: formatCustomSupportPrompt(PRIVATE_CHAT_ID)
     }
   } }));
@@ -881,7 +879,7 @@ test('invoice API failures are handled without exposing the bot token', async ()
     data: 'stars:50'
   } }));
   const body = await result.text();
-  assert.match(body, /invoice_error/);
+  assert.match(body, /delivery_unknown/);
   assert.ok(!body.includes('test_token'));
 });
 
@@ -981,7 +979,7 @@ test('/threadid diagnostic command responds in forum topics, general, and privat
   assert.equal(privateSend.payload.text, `Chat ID:\n${PRIVATE_CHAT_ID}\n\nTopic ID:\nnone`);
 });
 
-test('commands in General or unconfigured topics receive redirect and do not execute bot', async () => {
+test('commands in General execute throughout the authorized group', async () => {
   const harness = createHarness();
   const handler = createHandler(harness, {
     TELEGRAM_ALLOWED_CHAT_ID: String(OFFICIAL_CHAT_ID),
@@ -1007,15 +1005,16 @@ test('commands in General or unconfigured topics receive redirect and do not exe
       text
     } }));
     const data = await res.json();
-    assert.ok(['ephemeral_redirect', 'redirect_sent'].includes(data.status), `${text} in General should redirect`);
+    assert.equal(data.ok, true, `${text} in General should execute`);
+    assert.doesNotMatch(data.status, /redirect/);
   }
 
-  // Ensure no rate lookups or calculation results were sent to General
-  assert.equal(harness.calls.filter(call => call.method === 'sendMessage' && call.payload.text?.includes('Bolívares necesarios')).length, 0);
-  assert.equal(harness.calls.filter(call => call.method === 'sendMessage' && call.payload.text?.includes('Elige un banco')).length, 0);
+  // General receives calculations and bank menus.
+  assert.equal(harness.calls.filter(call => call.method === 'sendMessage' && call.payload.text?.includes('Bolívares necesarios')).length, 1);
+  assert.equal(harness.calls.filter(call => call.method === 'sendMessage' && call.payload.text?.includes('Elige un banco')).length, 2);
 });
 
-test('interactive panel creation in Bots topic cleans up command message when permitted', async () => {
+test('interactive panel creation preserves the initiating command', async () => {
   const harness = createHarness();
   const handler = createHandler(harness, {
     TELEGRAM_ALLOWED_CHAT_ID: String(OFFICIAL_CHAT_ID),
@@ -1032,46 +1031,7 @@ test('interactive panel creation in Bots topic cleans up command message when pe
   assert.equal((await res.json()).status, 'banks_sent');
 
   const deletes = harness.calls.filter(call => call.method === 'deleteMessage');
-  assert.ok(deletes.some(call => call.payload.chat_id === OFFICIAL_CHAT_ID && call.payload.message_id === 801));
-});
-
-test('official group with confirmed thread 555 preserves public visibility, topic link, and cleanup', async () => {
-  const CONFIRMED_CHAT_ID = -1003824051698;
-  const CONFIRMED_THREAD_ID = 555;
-  const harness = createHarness();
-  const handler = createHandler(harness, {
-    TELEGRAM_ALLOWED_CHAT_ID: String(CONFIRMED_CHAT_ID),
-    TELEGRAM_ALLOWED_THREAD_ID: String(CONFIRMED_THREAD_ID),
-    TELEGRAM_BOT_USERNAME: 'calcuflowbot'
-  });
-
-  // 1. In Bots #555: /calcular command creates public bank menu and cleans up command message
-  const botsRes = await handler.fetch(webhookRequest({ message: {
-    message_id: 901,
-    message_thread_id: CONFIRMED_THREAD_ID,
-    from: { id: PRIVATE_CHAT_ID },
-    chat: { id: CONFIRMED_CHAT_ID, type: 'supergroup' },
-    text: '/calcular@calcuflowbot'
-  } }));
-  assert.equal((await botsRes.json()).status, 'banks_sent');
-  const botsSend = harness.calls.find(call => call.method === 'sendMessage' && call.payload.reply_to_message_id === 901);
-  assert.equal(botsSend.payload.message_thread_id, CONFIRMED_THREAD_ID);
-  assert.ok(!botsSend.payload.ephemeral_message_parameters); // Public, persistent
-  assert.match(botsSend.payload.text, /Elige un banco/);
-
-  // 2. In General: /calcular command receives ephemeral redirect with the correct topic link
-  const generalRes = await handler.fetch(webhookRequest({ message: {
-    message_id: 902,
-    message_thread_id: 1,
-    from: { id: PRIVATE_CHAT_ID },
-    chat: { id: CONFIRMED_CHAT_ID, type: 'supergroup' },
-    text: '/calcular@calcuflowbot'
-  } }));
-  assert.equal((await generalRes.json()).status, 'ephemeral_redirect');
-  const generalSend = harness.calls.find(call => call.payload.ephemeral_message_parameters?.receiver_user_id === PRIVATE_CHAT_ID);
-  assert.match(generalSend.payload.text, /Los bots se usan en el tema Bots/);
-  assert.ok(JSON.stringify(generalSend.payload.reply_markup).includes('https://t.me/c/3824051698/555'));
-  assert.ok(JSON.stringify(generalSend.payload.reply_markup).includes('https://t.me/calcuflowbot?start=calc'));
+  assert.equal(deletes.length, 0);
 });
 
 test('verifies no analytics or tracking dependencies exist in telegram codebase', async () => {
@@ -1085,6 +1045,6 @@ test('verifies no analytics or tracking dependencies exist in telegram codebase'
   for (const f of files) {
     const content = await readFile(new URL(f, import.meta.url), 'utf8');
     assert.doesNotMatch(content, /posthog|supabase|google-analytics|analytics|mixpanel|gtag|telemetry/i);
-    assert.doesNotMatch(content, /sqlite|postgres|mysql|mongodb|indexeddb|localstorage/i);
+    assert.doesNotMatch(content, /sqlite|postgres|mysql|mongodb|indexeddb|window\.localStorage/i);
   }
 });

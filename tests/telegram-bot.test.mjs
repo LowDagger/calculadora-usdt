@@ -313,19 +313,20 @@ test('formatRatesMessage presents BCV, P2P, and Spread (brecha)', () => {
     bcvDate: '2026-08-31'
   });
 
-  assert.ok(formatted.includes('📈 *Tasas de referencia — CalcuFlow*'));
-  assert.ok(formatted.includes('🏦 *BCV:* 68,50 Bs/USD (2026-08-31)'));
-  assert.ok(formatted.includes('🔄 *P2P:* 75,20 Bs/USDT'));
-  assert.ok(formatted.includes('📊 *Brecha:* +9,78%'));
+  assert.ok(formatted.includes('*Tasas de referencia — CalcuFlow*'));
+  assert.ok(formatted.includes('BCV: 68,50 Bs/USD'));
+  assert.ok(formatted.includes('P2P: 75,20 Bs/USDT'));
+  assert.ok(formatted.includes('Brecha: +9,78%'));
   assert.ok(!formatted.includes(CANONICAL_APP_URL));
 });
 
 test('formatHelpMessage and formatErrorMessage provide friendly user output', () => {
   const help = formatHelpMessage();
-  assert.ok(help.includes('🤖 *Bot de CalcuFlow — Banco ➔ USDT*'));
+  assert.ok(help.includes('*CalcuFlow — Banco → USDT*'));
   assert.ok(help.includes('/calc'));
   assert.ok(help.includes('/tasas'));
-  assert.ok(help.includes('/ayuda'));
+  assert.ok(help.includes('/calcular@calcuflowbot'));
+  assert.ok(help.includes('Los números sueltos en el grupo se ignoran'));
   assert.ok(!help.includes(CANONICAL_APP_URL));
 
   const error = formatErrorMessage('Monto no válido');
@@ -435,10 +436,8 @@ test('createTelegramHandler warns unauthorized chat and returns 200', async () =
   const response = await handler.fetch(request);
   assert.equal(response.status, 200);
   const data = await response.json();
-  assert.equal(data.status, 'redirect_sent');
-  assert.ok(sentPayload);
-  assert.equal(sentPayload.chat_id, -100111111);
-  assert.ok(sentPayload.text.includes('mantener limpio el grupo'));
+  assert.equal(data.status, 'ignored_external_group_message');
+  assert.equal(sentPayload, null);
 });
 
 test('createTelegramHandler ignores casual chat message without sending reply', async () => {
@@ -504,7 +503,7 @@ test('createTelegramHandler responds to /help with help text', async () => {
   assert.ok(sentPayload);
   assert.equal(sentPayload.chat_id, 12345);
   assert.equal(sentPayload.reply_to_message_id, 10);
-  assert.ok(sentPayload.text.includes('Bot de CalcuFlow'));
+  assert.ok(sentPayload.text.includes('CalcuFlow — Banco → USDT'));
 });
 
 test('createTelegramHandler responds to /tasas with real-time rates', async () => {
@@ -541,8 +540,8 @@ test('createTelegramHandler responds to /tasas with real-time rates', async () =
   assert.equal(response.status, 200);
   assert.ok(sentPayload);
   assert.ok(sentPayload.text.includes('Tasas de referencia'));
-  assert.ok(sentPayload.text.includes('*BCV:* 68,50'));
-  assert.ok(sentPayload.text.includes('*P2P:* 75,20'));
+  assert.ok(sentPayload.text.includes('BCV: 68,50'));
+  assert.ok(sentPayload.text.includes('P2P: 75,20'));
 });
 
 test('createTelegramHandler calculates /calc 500 bbva successfully', async () => {
@@ -955,8 +954,8 @@ test('createTelegramHandler processes callback_query for rates and edits message
   assert.equal(editedMessages[0].chat_id, 12345);
   assert.equal(editedMessages[0].message_id, 100);
   assert.ok(editedMessages[0].text.includes('Tasas de referencia'));
-  assert.ok(editedMessages[0].text.includes('*BCV:* 68,50'));
-  assert.ok(editedMessages[0].text.includes('*P2P:* 75,20'));
+  assert.ok(editedMessages[0].text.includes('BCV: 68,50'));
+  assert.ok(editedMessages[0].text.includes('P2P: 75,20'));
   assert.ok(editedMessages[0].reply_markup);
 });
 
@@ -1014,7 +1013,7 @@ test('createTelegramHandler processes callback_query for calc and updates bank s
   assert.equal(editedMessages.length, 1);
   assert.equal(editedMessages[0].chat_id, 12345);
   assert.equal(editedMessages[0].message_id, 105);
-  assert.ok(editedMessages[0].text.includes('BBVA Provincial · 1,5%'));
+  assert.ok(editedMessages[0].text.includes('*BBVA Provincial* · comisión 1,5%'));
   assert.ok(editedMessages[0].text.includes('Compra: 500,00 USD'));
 
   // Verify result keyboard keeps BBVA context for changing the amount.
@@ -1067,7 +1066,7 @@ test('createTelegramHandler rejects callback_query from unauthorized chat', asyn
   const response = await handler.fetch(request);
   assert.equal(response.status, 200);
   const data = await response.json();
-  assert.equal(data.status, 'ephemeral_redirect');
+  assert.equal(data.status, 'ignored_external_group_callback');
   assert.equal(answeredQueries.length, 1);
   assert.equal(answeredQueries[0].callback_query_id, 'cb_unauthorized');
   assert.equal(editCount, 0);

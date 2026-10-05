@@ -2,6 +2,7 @@ import { money } from '../js/utils.js';
 import {
   CANONICAL_APP_URL,
   formatBankFee,
+  formatRateProvenance,
   resolveBank
 } from './telegram-formatter.mjs';
 
@@ -39,11 +40,11 @@ export function parseRequestedAmount(input) {
 }
 
 export function formatHomeMessage() {
-  return '🤖 *CalcuFlow*\n\n¿Qué quieres hacer?';
+  return '*CalcuFlow*\n\nBanco → USDT. Usa /calc 500 bdv o elige banco y monto con los botones.';
 }
 
 export function formatBankSelectionMessage() {
-  return '🏦 *Elige un banco:*';
+  return '*Elige un banco*\nDespués selecciona el monto en USD.';
 }
 
 export function formatAmountSelectionMessage(bankInfo) {
@@ -53,13 +54,13 @@ export function formatAmountSelectionMessage(bankInfo) {
 
 export function formatCustomAmountPanel(bankInfo) {
   const bank = resolveBank(bankInfo?.id || bankInfo);
-  return `✏️ *Otro monto*\n\n🏦 ${bank.name} · ${formatBankFee(bank)}\n\nResponde al mensaje que te envié con el monto en USD.`;
+  return `*Otro monto — ${bank.name}*\nResponde a la solicitud del bot con el monto en USD.\nEjemplo: 375,50 o 375.50. Si no la ves, usa /calc@calcuflowbot.`;
 }
 
 export function formatCustomAmountPrompt(bankId, panelMessageId, ownerId = null) {
   const owner = normalizeTelegramUserId(ownerId);
   const ownerSuffix = owner ? `:${owner}` : '';
-  return `✏️ *Escribe el monto en USD*\n\nEjemplo: 375\n\nReferencia: ${CUSTOM_AMOUNT_PROMPT_PREFIX}:${bankId}:${panelMessageId}${ownerSuffix}`;
+  return `*Escribe el monto en USD*${owner ? `\n[Tu solicitud](tg://user?id=${owner})` : ''}\nResponde a este mensaje con 375,50 o 375.50.\nBanco: ${resolveBank(bankId).name}.\n\nReferencia: ${CUSTOM_AMOUNT_PROMPT_PREFIX}:${bankId}:${panelMessageId}${ownerSuffix}`;
 }
 
 export function isCustomAmountPrompt(message) {
@@ -114,12 +115,14 @@ export function parseCustomSupportReply(message) {
   return result;
 }
 
-export function formatAppCalculationResult(result, bankInfo, { updatedAt = null, bankMargin = 0.5 } = {}) {
+export function formatAppCalculationResult(result, bankInfo, {
+  updatedAt = null, bankMargin = 0.5, bcvRecord = null, p2pRecord = null
+} = {}) {
   const bank = typeof bankInfo === 'object' && bankInfo !== null ? bankInfo : resolveBank(bankInfo);
   const profitSign = result.profitUsdt >= 0 ? '+' : '';
   const roiSign = result.roi >= 0 ? '+' : '';
-  const updatedLine = updatedAt ? `\n\n_Actualizado: ${updatedAt}_` : '';
-  return `📊 *CalcuFlow*\n\n🏦 *${bank.name} · ${formatBankFee(bank)}*\nCompra: ${money(result.usdUsed, 2)} USD\n\n🇻🇪 *Bolívares necesarios*\n${money(result.vesNeeded, 2)} Bs\n\n💳 *Monto en BPay*\n${money(result.safeGateway?.bpayInputAmount ?? result.afterCard, 2)} USD\n\n🟢 *USDT finales*\n${money(result.usdtFinal, 2)} USDT\n\n💰 *Ganancia estimada*\n${profitSign}${money(result.profitUsdt, 2)} USD · ${roiSign}${money(result.roi, 2)}%\n\n📈 BCV: ${money(result.bcv, 2)} Bs\n🏦 Tasa banco (+${money(bankMargin, 1)}%): ${money(result.bank, 2)} Bs\n🔄 P2P: ${money(result.p2p, 2)} Bs${updatedLine}`;
+  const updatedLine = updatedAt ? `\n\nCalculado: ${updatedAt}` : '';
+  return `*CalcuFlow*\n*${bank.name}* · comisión ${formatBankFee(bank)}\nCompra: ${money(result.usdUsed, 2)} USD\n\nBolívares necesarios: *${money(result.vesNeeded, 2)} Bs*\nMonto en BPay: *${money(result.safeGateway?.bpayInputAmount ?? result.afterCard, 2)} USD*\nUSDT finales: *${money(result.usdtFinal, 2)} USDT*\n\nGanancia estimada: *${profitSign}${money(result.profitUsdt, 2)} USD*\nROI: *${roiSign}${money(result.roi, 2)}%*\n\nBCV: ${money(result.bcv, 2)} Bs/USD\n${formatRateProvenance(bcvRecord, 'bcv')}\nTasa banco (+${money(bankMargin, 1)}%): ${money(result.bank, 2)} Bs/USD\n\nP2P: ${money(result.p2p, 2)} Bs/USDT\n${formatRateProvenance(p2pRecord, 'p2p')}${updatedLine}`;
 }
 
 export function formatSupportMessage() {
@@ -139,10 +142,6 @@ export function formatPaymentSupportMessage({ contactConfigured = false } = {}) 
 
 export function formatPaymentThanksMessage() {
   return `⭐ *¡Gracias por apoyar CalcuFlow!*\n\nTu aporte ayuda a mantener la calculadora y el bot disponibles para la comunidad.`;
-}
-
-export function formatGroupRedirectMessage() {
-  return '🤖 Los bots se usan en el tema Bots para interactuar con CalcuFlow y mantener limpio el grupo.';
 }
 
 export function formatPrivateAccessMessage() {
@@ -178,26 +177,14 @@ export function addCallbackOwner(callbackData, ownerId) {
   return ownedData;
 }
 
-export function buildTopicUrl(chatId, threadId) {
-  const chat = String(chatId ?? '').trim();
-  const thread = String(threadId ?? '').trim();
-  if (!/^-100\d+$/.test(chat) || !/^\d+$/.test(thread)) return '';
-  return `https://t.me/c/${chat.slice(4)}/${thread}`;
-}
-
-export function buildHomeInlineKeyboard({ isPrivate = true, botUsername = '', ownerId = null } = {}) {
-  const supportUrl = isPrivate ? '' : buildPrivateBotUrl(botUsername, 'support');
-  const privateUrl = isPrivate ? '' : buildPrivateBotUrl(botUsername, 'calc');
-  const supportButton = supportUrl
-    ? { text: '⭐ Apoyar CalcuFlow', url: supportUrl, style: 'success' }
-    : { text: '⭐ Apoyar CalcuFlow', callback_data: addCallbackOwner('support', ownerId), style: 'success' };
+export function buildHomeInlineKeyboard({ isPrivate = true, botUsername = 'calcuflowbot', ownerId = null } = {}) {
   const rows = [
-    [{ text: '🧮 Calcular', callback_data: addCallbackOwner('banks', ownerId), style: 'primary' }],
-    [{ text: '📈 Ver tasas', callback_data: addCallbackOwner('rates', ownerId) }],
-    [supportButton],
+    [{ text: 'Calcular', callback_data: isPrivate ? addCallbackOwner('banks', ownerId) : 'new', style: 'primary' },
+      { text: 'Tasas', callback_data: isPrivate ? addCallbackOwner('rates', ownerId) : 'rates' }],
+    [{ text: 'Abrir CalcuFlow', url: CANONICAL_APP_URL }]
   ];
-  if (privateUrl) rows.push([{ text: '🤖 Usar en privado', url: privateUrl }]);
-  rows.push([{ text: '🌐 Abrir CalcuFlow', url: CANONICAL_APP_URL }]);
+  if (isPrivate) rows.push([{ text: '⭐ Apoyar', callback_data: addCallbackOwner('support', ownerId) }]);
+  else rows[1].push({ text: 'Bot en privado', url: buildPrivateBotUrl(botUsername || 'calcuflowbot', 'calc') });
   return { inline_keyboard: rows };
 }
 
@@ -226,21 +213,18 @@ export function buildAmountMenuInlineKeyboard(bankId, ownerId = null) {
 
 export function buildResultInlineKeyboard(bankId, ownerId = null) {
   const bank = resolveBank(bankId);
-  const changeAmountCallback = bank.id === 'custom' ? 'banks' : `bank:${bank.id}`;
   return { inline_keyboard: [
-    [{ text: '✏️ Cambiar monto', callback_data: addCallbackOwner(changeAmountCallback, ownerId), style: 'primary' }],
-    [{ text: '🏦 Otros bancos', callback_data: addCallbackOwner('banks', ownerId) }],
-    [{ text: '📈 Ver tasas', callback_data: addCallbackOwner('rates', ownerId) }],
-    [{ text: '🌐 Abrir CalcuFlow', url: CANONICAL_APP_URL }],
-    [{ text: '⌂ Inicio', callback_data: addCallbackOwner('home', ownerId) }]
+    [{ text: 'Cambiar monto', callback_data: addCallbackOwner(bank.id === 'custom' ? 'banks' : `bank:${bank.id}`, ownerId) },
+      { text: 'Nuevo cálculo', callback_data: 'new', style: 'primary' }],
+    [{ text: 'Abrir CalcuFlow', url: CANONICAL_APP_URL },
+      { text: 'Bot en privado', url: buildPrivateBotUrl('calcuflowbot', 'calc') }]
   ] };
 }
 
-export function buildRatesInlineKeyboard(ownerId = null) {
+export function buildRatesInlineKeyboard() {
   return { inline_keyboard: [
-    [{ text: '🧮 Calcular', callback_data: addCallbackOwner('banks', ownerId), style: 'primary' }],
-    [{ text: '🌐 Abrir CalcuFlow', url: CANONICAL_APP_URL }],
-    [{ text: '⌂ Inicio', callback_data: addCallbackOwner('home', ownerId) }]
+    [{ text: 'Nuevo cálculo', callback_data: 'new', style: 'primary' },
+      { text: 'Abrir CalcuFlow', url: CANONICAL_APP_URL }]
   ] };
 }
 
@@ -297,15 +281,6 @@ export function buildThanksInlineKeyboard(ownerId = null) {
   return { inline_keyboard: [[{ text: '🧮 Volver a calcular', callback_data: addCallbackOwner('banks', ownerId), style: 'primary' }]] };
 }
 
-export function buildGroupRedirectInlineKeyboard({ chatId, threadId, botUsername } = {}) {
-  const rows = [];
-  const topicUrl = buildTopicUrl(chatId, threadId);
-  const privateUrl = buildPrivateBotUrl(botUsername, 'calc');
-  if (topicUrl) rows.push([{ text: '🤖 Ir a Bots', url: topicUrl }]);
-  if (privateUrl) rows.push([{ text: '👤 Usar en privado', url: privateUrl, style: 'primary' }]);
-  return { inline_keyboard: rows };
-}
-
 export function buildPrivateAccessInlineKeyboard(botUsername) {
   const privateUrl = buildPrivateBotUrl(botUsername, 'calc');
   return { inline_keyboard: privateUrl
@@ -352,6 +327,7 @@ export function parseAppCallbackData(data) {
   const trimmed = ownerMatch ? ownerMatch[1] : raw;
   const withOwner = parsed => ownerMatch ? { ...parsed, ownerId: ownerMatch[2] } : parsed;
   const simple = {
+    new: 'new_calc',
     home: 'home',
     banks: 'show_banks',
     rates: 'rates',
