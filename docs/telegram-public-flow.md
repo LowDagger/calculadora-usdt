@@ -1,3 +1,5 @@
+> Historical previous release. Current single-chat implementation, configuration and pending live acceptance: [telegram-single-chat.md](telegram-single-chat.md). The current webhook requires Redis REST and a webhook secret; old deduplication/failure statements below describe the prior release.
+
 # Flujo público de Telegram: revisión de mensajes
 
 Ejemplos reproducibles de presentación, no tasas observadas en producción.

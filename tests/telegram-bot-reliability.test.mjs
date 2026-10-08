@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  createTelegramHandler,
+  createTelegramTransportHandler as createTelegramHandler,
   sendTelegramMessage,
   TelegramApiError
 } from '../api/telegram.mjs';
@@ -50,7 +50,7 @@ for (const legacyBankId of ['bdv-fisica', 'bdv-virtual']) {
   });
 }
 
-test('send failure stays HTTP 200, reports an explicit status, and logs sanitized metadata', async () => {
+test('send failure returns HTTP 503, reports an explicit status, and logs sanitized metadata', async () => {
   const logged = [];
   const token = '123456:SECRET_TOKEN_VALUE';
   const handler = createTelegramHandler({
@@ -72,7 +72,7 @@ test('send failure stays HTTP 200, reports an explicit status, and logs sanitize
     }
   });
 
-  assert.equal(response.status, 200);
+  assert.equal(response.status, 503);
   assert.equal((await response.json()).status, 'delivery_failed');
   assert.equal(logged[0].category, 'permission');
   assert.equal(logged[0].httpStatus, 401);

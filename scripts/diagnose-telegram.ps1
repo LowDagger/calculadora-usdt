@@ -138,6 +138,7 @@ try {
       $telegram.getWebhookInfo = @{
         ok = $true; registered_url = Get-SafeUrl $registered
         matches_endpoint_without_query = ((Get-SafeUrl $registered).Split('?')[0] -eq $EndpointUrl)
+        allowed_updates = Get-Field $info.result 'allowed_updates'
         pending_update_count = Get-Field $info.result 'pending_update_count'
         last_error_date = if ($errorDate) { [DateTimeOffset]::FromUnixTimeSeconds([long]$errorDate).ToUniversalTime().ToString('o') } else { $null }
         last_error_message = if ($lastError) { (Get-SafeErrorCategory $lastError) + ' [details redacted]' } else { $null }

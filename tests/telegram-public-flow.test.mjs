@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createTelegramHandler } from '../api/telegram.mjs';
+import { createTelegramTransportHandler as createTelegramHandler } from '../api/telegram.mjs';
 import { calculateValues, DEFAULT_BPAY_FEE } from '../js/calculator.js';
 import { money } from '../js/utils.js';
 import { resolveBank, formatHelpMessage } from '../api/telegram-formatter.mjs';
