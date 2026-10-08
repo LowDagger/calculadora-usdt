@@ -56,7 +56,7 @@ test('Telegram webhook helper calls authenticated POST methods in the required o
 });
 
 test('Telegram webhook helper subscribes to payment updates', () => {
-  assert.match(script, /allowed_updates = @\('message', 'edited_message', 'callback_query', 'pre_checkout_query'\)/);
+  assert.match(script, /allowed_updates = @\('message', 'callback_query', 'pre_checkout_query'\)/);
 });
 
 test('Telegram webhook helper supports the official isolated test API without changing production default', () => {

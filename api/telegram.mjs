@@ -1,3 +1,4 @@
+import { createDurableTelegramHandler } from './telegram-session-handler.mjs';
 import { createTelegramAppHandler } from './telegram-app-handler.mjs';
 
 const REQUEST_TIMEOUT_MS = 8000;
@@ -203,10 +204,10 @@ export function isChatAuthorized(chatId, allowedChatIdSetting) {
   return allowedIds.some(allowed => allowed === currentIdStr);
 }
 
-export function createTelegramHandler(options = {}) {
+export function createTelegramTransportHandler(options = {}) {
   return createTelegramAppHandler({
     ...options,
-    api: {
+    api: options.api || {
       sendTelegramMessage,
       answerTelegramCallbackQuery,
       editTelegramMessageText,
@@ -215,6 +216,12 @@ export function createTelegramHandler(options = {}) {
       answerTelegramPreCheckoutQuery
     }
   });
+}
+
+export function createTelegramHandler(options = {}) {
+  return createDurableTelegramHandler({ ...options, createTransport: createTelegramTransportHandler,
+    api: { sendTelegramMessage, answerTelegramCallbackQuery, editTelegramMessageText,
+      deleteTelegramMessage, sendTelegramInvoice, answerTelegramPreCheckoutQuery } });
 }
 
 export default createTelegramHandler();

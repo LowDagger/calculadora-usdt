@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createTelegramHandler } from '../api/telegram.mjs';
+import { createTelegramTransportHandler as createTelegramHandler } from '../api/telegram.mjs';
 import {
   BINANCE_P2P_URL,
   DOLARAPI_RATES_URL
@@ -262,7 +262,7 @@ test('isValidBankSlug validates known Venezuelan banks and percentage queries', 
 // FORCEREPLY SAFETY TESTS
 // ─────────────────────────────────────────────────────────────────────────────
 
-test('FORCEREPLY: response outside topic 555 is rejected', async () => {
+test('FORCEREPLY: obsolete topic metadata does not gate valid replies', async () => {
   const harness = createHarness();
   const handler = createHandler(harness);
 
@@ -285,11 +285,11 @@ test('FORCEREPLY: response outside topic 555 is rejected', async () => {
 
   assert.equal(res.status, 200);
   const data = await res.json();
-  assert.equal(data.status, 'ignored_custom_reply_invalid_context');
-  assert.equal(harness.calls.length, 0);
+  assert.equal(data.status, 'custom_calc_sent');
+  assert.ok(harness.calls.every(c => !c.payload?.message_thread_id));
 });
 
-test('FORCEREPLY: prompt from different thread is rejected even if reply is in 555', async () => {
+test('FORCEREPLY: different obsolete thread metadata does not gate replies', async () => {
   const harness = createHarness();
   const handler = createHandler(harness);
 
@@ -312,8 +312,8 @@ test('FORCEREPLY: prompt from different thread is rejected even if reply is in 5
 
   assert.equal(res.status, 200);
   const data = await res.json();
-  assert.equal(data.status, 'ignored_custom_reply_invalid_context');
-  assert.equal(harness.calls.filter(c => c.method === 'editMessageText').length, 0);
+  assert.equal(data.status, 'custom_calc_sent');
+  assert.equal(harness.calls.filter(c => c.method === 'editMessageText').length, 1);
 });
 
 test('FORCEREPLY: wrong owner reply is rejected', async () => {

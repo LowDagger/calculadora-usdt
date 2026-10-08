@@ -58,15 +58,8 @@ function json(body, { status = 200 } = {}) {
 }
 
 export const OFFICIAL_COMMUNITY_CHAT_ID = '-1003824051698';
-// Deleted topic IDs are never reused for outgoing messages.
-const DELETED_THREAD_ID = '555';
-
-function outgoingThreadId(message) {
-  const id = String(message?.message_thread_id ?? '');
-  return inferChatType(message?.chat) === 'private' || message?.chat?.is_forum === false || id === '1' ||
-    (String(message?.chat?.id) === OFFICIAL_COMMUNITY_CHAT_ID && id === DELETED_THREAD_ID)
-    ? null : message?.message_thread_id;
-}
+// Single conversation: never propagate a thread from old Telegram messages.
+function outgoingThreadId() { return null; }
 
 function isReplyToThisBot(message, env) {
   const author = message?.reply_to_message?.from;
@@ -467,7 +460,7 @@ export function createTelegramAppHandler({
         botToken,
         chatId,
         text: formatCustomAmountPrompt(bank.id, panel.messageId || messageId, ownerId),
-        replyToMessageId: String(callbackQuery.message?.message_thread_id) === DELETED_THREAD_ID ? null : callbackQuery.message?.reply_to_message?.message_id,
+        replyToMessageId: callbackQuery.message?.reply_to_message?.message_id,
         messageThreadId,
         replyMarkup: {
           force_reply: true,
@@ -566,7 +559,7 @@ export function createTelegramAppHandler({
         botToken,
         chatId,
         text: `${formatErrorMessage(customReply.error)}\n\n${formatCustomAmountPrompt(customReply.bankId, customReply.panelMessageId, ownerId)}`,
-        replyToMessageId: String(message.message_thread_id) === DELETED_THREAD_ID ? null : message.message_id,
+        replyToMessageId: message.message_id,
         messageThreadId,
         replyMarkup: {
           force_reply: true,
@@ -590,7 +583,7 @@ export function createTelegramAppHandler({
       return json({ ok: true, status: calculation.ok ? 'custom_calc_sent' : 'calc_failed' });
     } catch (error) {
       if (invocation.getStore()?.failures.length) throw error;
-      await safeSend({ botToken, chatId, text: formatErrorMessage('Error interno al procesar el cálculo.'), replyToMessageId: String(message.message_thread_id) === DELETED_THREAD_ID ? null : message.message_id, messageThreadId });
+      await safeSend({ botToken, chatId, text: formatErrorMessage('Error interno al procesar el cálculo.'), replyToMessageId: message.message_id, messageThreadId });
       return json({ ok: true, status: 'calc_error' });
     }
   }
@@ -603,7 +596,7 @@ export function createTelegramAppHandler({
       return json({ ok: true, status: 'ignored_custom_support_wrong_user' });
     }
 
-    const common = { botToken, chatId: message.chat.id, replyToMessageId: String(message.message_thread_id) === DELETED_THREAD_ID ? null : message.message_id };
+    const common = { botToken, chatId: message.chat.id, replyToMessageId: message.message_id };
     if (!customReply.ok) {
       await safeSend({
         ...common,
@@ -648,7 +641,7 @@ export function createTelegramAppHandler({
     if (!access.allowed) return json({ ok: true, status: 'ignored_external_group_message' });
     if (/^\/(?:threadid|topicid)(?:@\w+)?(?:\s+.*)?$/i.test(rawText)) {
       await safeSend({ botToken, chatId, text: formatThreadIdMessage(chatId, message.message_thread_id),
-        replyToMessageId: String(message.message_thread_id) === DELETED_THREAD_ID ? null : message.message_id, messageThreadId });
+        replyToMessageId: message.message_id, messageThreadId });
       return json({ ok: true, status: 'thread_id_sent' });
     }
 
@@ -684,14 +677,6 @@ export function createTelegramAppHandler({
         if (promptChatId && promptChatId !== String(chatId)) {
           return json({ ok: true, status: 'ignored_custom_reply_invalid_context' });
         }
-        const promptThreadId = message.reply_to_message?.message_thread_id !== undefined && message.reply_to_message?.message_thread_id !== null
-          ? String(message.reply_to_message.message_thread_id)
-          : '';
-        const replyThreadId = String(message.message_thread_id || '');
-        const normalizeGeneral = id => id === '1' ? '' : id;
-        if (promptThreadId && normalizeGeneral(promptThreadId) !== normalizeGeneral(replyThreadId)) {
-          return json({ ok: true, status: 'ignored_custom_reply_invalid_context' });
-        }
       }
 
       const replyUserId = String(message.from?.id ?? '').trim();
@@ -720,7 +705,7 @@ export function createTelegramAppHandler({
 
     if (parsed.type === 'unknown') return json({ ok: true, status: 'ignored_unknown_message' });
     const ownerId = message.from?.id || null;
-    const common = { botToken, chatId, replyToMessageId: String(message.message_thread_id) === DELETED_THREAD_ID ? null : message.message_id, messageThreadId };
+    const common = { botToken, chatId, replyToMessageId: message.message_id, messageThreadId };
 
     if (parsed.type === 'home') {
       await safeSend({ ...common, text: formatHomeMessage(), replyMarkup: buildHomeInlineKeyboard({ isPrivate: access.isPrivate, botUsername: env.TELEGRAM_BOT_USERNAME, ownerId }) });
@@ -745,13 +730,13 @@ export function createTelegramAppHandler({
         chat,
         messageThreadId,
         fromUserId: message.from?.id,
-        replyToMessageId: String(message.message_thread_id) === DELETED_THREAD_ID ? null : message.message_id
+        replyToMessageId: message.message_id
       });
       return json({ ok: true, status });
     }
     if (parsed.type === 'support') {
       if (!access.isPrivate) {
-        const status = await sendPrivateSupport({ botToken, env, chat, messageThreadId, fromUserId: message.from?.id, replyToMessageId: String(message.message_thread_id) === DELETED_THREAD_ID ? null : message.message_id });
+        const status = await sendPrivateSupport({ botToken, env, chat, messageThreadId, fromUserId: message.from?.id, replyToMessageId: message.message_id });
         return json({ ok: true, status });
       }
       await safeSend({ ...common, text: formatSupportMessage(), replyMarkup: buildSupportInlineKeyboard(ownerId) });
@@ -840,13 +825,13 @@ export function createTelegramAppHandler({
         if (!state.failures.length) return response;
         const categories = state.failures.map(error => error?.category || 'unknown');
         // A 429 explicitly rejects delivery. Only this case permits webhook redelivery,
-        // and only before any required operation completed. Ambiguous sends are acknowledged.
+        // and only before any required operation completed. Failed delivery returns non-2xx.
         const retry = !state.delivered && categories.every(category => category === 'rate_limited');
         const ambiguous = categories.some(category => ['network', 'timeout', 'server', 'invalid_response'].includes(category));
         const status = state.delivered ? 'partial_delivery' : ambiguous ? 'delivery_unknown' : 'delivery_failed';
         logWebhookEvent('error', { event: 'telegram_webhook_outcome', outcome: status,
           category: categories[0], retry, completedOperations: state.delivered });
-        return json({ ok: false, status, category: categories[0], retry }, { status: retry ? 503 : 200 });
+        return json({ ok: false, status, category: categories[0], retry }, { status: 503 });
       });
     }
   };

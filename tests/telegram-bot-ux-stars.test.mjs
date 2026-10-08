@@ -40,7 +40,7 @@ import {
   validateSuccessfulPayment
 } from '../api/telegram-app-handler.mjs';
 import {
-  createTelegramHandler,
+  createTelegramTransportHandler as createTelegramHandler,
   sendTelegramInvoice,
   sendTelegramMessage
 } from '../api/telegram.mjs';
@@ -343,7 +343,7 @@ test('required private and official-group command matrices remain supported', as
   }
   const groupSends = groupHarness.calls.filter(call => call.method === 'sendMessage');
   assert.equal(groupSends.length, groupCommands.length);
-  assert.ok(groupSends.every(call => call.payload.message_thread_id === BOT_THREAD_ID));
+  assert.ok(groupSends.every(call => call.payload.message_thread_id === undefined));
 });
 
 test('group /privado sends an ordinary message with the private calculator link', async () => {
@@ -475,7 +475,7 @@ test('live topics and General both support calculations', async () => {
     text: '/calc 500 bdv'
   } }));
   const sends = harness.calls.filter(call => call.method === 'sendMessage');
-  assert.equal(sends[0].payload.message_thread_id, BOT_THREAD_ID);
+  assert.equal(sends[0].payload.message_thread_id, undefined);
   assert.equal(sends[1].payload.message_thread_id, undefined);
   assert.equal(sends[1].payload.ephemeral_message_parameters, undefined);
   assert.match(sends[1].payload.text, /Ganancia estimada/);
@@ -951,7 +951,7 @@ test('/threadid diagnostic command responds in forum topics, general, and privat
   assert.equal((await topicResult.json()).status, 'thread_id_sent');
   const topicSend = harness.calls.find(call => call.payload.reply_to_message_id === 601);
   assert.equal(topicSend.payload.chat_id, OFFICIAL_CHAT_ID);
-  assert.equal(topicSend.payload.message_thread_id, 1234);
+  assert.equal(topicSend.payload.message_thread_id, undefined);
   assert.equal(topicSend.payload.text, `Chat ID:\n${OFFICIAL_CHAT_ID}\n\nTopic ID:\n1234`);
   assert.doesNotMatch(topicSend.payload.text, /testadmin|test_token/i);
 

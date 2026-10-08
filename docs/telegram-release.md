@@ -1,3 +1,5 @@
+> Historical previous release. Current single-chat implementation, configuration and pending live acceptance: [telegram-single-chat.md](telegram-single-chat.md). The current webhook requires Redis REST and a webhook secret; old deduplication/failure statements below describe the prior release.
+
 # CalcuFlow Telegram release review
 
 Prepared locally on `feature/telegram-group-reliability`, 2026-10-02.

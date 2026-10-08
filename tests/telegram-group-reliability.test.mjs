@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  createTelegramHandler, sendTelegramMessage, editTelegramMessageText,
+  createTelegramTransportHandler as createTelegramHandler, sendTelegramMessage, editTelegramMessageText,
   answerTelegramCallbackQuery, classifyTelegramError
 } from '../api/telegram.mjs';
 import { formatCustomAmountPrompt } from '../api/telegram-ui.mjs';
@@ -133,7 +133,7 @@ test('missing custom panel replacement supplies the new reference across fresh i
   assert.ok(sends.every(call => !call.payload.message_thread_id));
 });
 
-test('partial custom prompt failure is acknowledged without permitting a repeated panel send', async () => {
+test('partial custom prompt failure returns non-2xx for durable recovery', async () => {
   let sends = 0;
   const h = harness(method => {
     if (method === 'editMessageText') return rejected('Bad Request: message to edit not found');
@@ -141,7 +141,7 @@ test('partial custom prompt failure is acknowledged without permitting a repeate
     return response();
   });
   const res = await post(h.create(), callback('custom:bnc'));
-  assert.equal(res.status, 200);
+  assert.equal(res.status, 503);
   assert.deepEqual(await res.json(), { ok: false, status: 'partial_delivery', category: 'rate_limited', retry: false });
   assert.equal(sends, 2);
 });
@@ -174,10 +174,10 @@ for (const [category, fetchReply] of [
   ['network', () => { throw new TypeError('network error with PRIVATE_DATA'); }],
   ['timeout', () => new Promise(() => {})]
 ]) {
-  test(`ambiguous ${category} send is attempted once and acknowledged as unknown`, async () => {
+  test(`ambiguous ${category} send is attempted once and returns non-2xx as unknown`, async () => {
     const h = harness(fetchReply, { timeoutMs: 15 });
     const res = await post(h.create(), message('/start'));
-    assert.equal(res.status, 200);
+    assert.equal(res.status, 503);
     assert.deepEqual(await res.json(), { ok: false, status: 'delivery_unknown', category, retry: false });
     assert.equal(h.calls.length, 1);
   });

@@ -10,12 +10,15 @@ param(
   [System.Security.SecureString]$VercelBypassSecret,
 
   [Parameter(Mandatory = $false)]
+  [System.Security.SecureString]$WebhookSecret,
+
   [switch]$TelegramTestEnvironment
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
+$PlainWebhookSecret = $null
 $PlainToken = $null
 $PlainVercelBypassSecret = $null
 $EscapedVercelBypassSecret = $null
@@ -41,7 +44,7 @@ function Protect-SensitiveText {
   if ($null -eq $Text) { return $null }
 
   $safeText = $Text
-  foreach ($secret in @($script:PlainToken, $script:PlainVercelBypassSecret, $script:EscapedVercelBypassSecret)) {
+  foreach ($secret in @($script:PlainToken, $script:PlainVercelBypassSecret, $script:EscapedVercelBypassSecret, $script:PlainWebhookSecret)) {
     if (-not [string]::IsNullOrEmpty($secret)) {
       $safeText = $safeText.Replace($secret, '[REDACTED]')
     }
@@ -123,6 +126,10 @@ function Invoke-TelegramMethod {
 }
 
 try {
+  $PlainWebhookSecret = if ($WebhookSecret) { ConvertFrom-SecureValue -SecureValue $WebhookSecret } else { $env:TELEGRAM_WEBHOOK_SECRET }
+  if ($PlainWebhookSecret -notmatch '^[A-Za-z0-9_-]{32,256}$') {
+    throw 'TELEGRAM_WEBHOOK_SECRET debe contener 32-256 caracteres A-Z, a-z, 0-9, _ o -. No se intentó setWebhook.'
+  }
   if ($BotToken) {
     $PlainToken = ConvertFrom-SecureValue -SecureValue $BotToken
   } elseif (-not [string]::IsNullOrWhiteSpace($env:TELEGRAM_BOT_TOKEN)) {
@@ -186,6 +193,7 @@ try {
   }
 
   $botUsername = Get-OptionalProperty -InputObject $me.result -Name 'username'
+  if ($botUsername -ine 'calcuflowbot') { throw 'getMe no corresponde a @calcuflowbot. No se intentó setWebhook.' }
   $botLabel = if ($botUsername) { "@$botUsername" } else { 'bot sin username público' }
   Write-Host "getMe: OK ($botLabel)"
 
@@ -210,7 +218,8 @@ try {
 
   $setWebhook = Invoke-TelegramMethod -Method 'setWebhook' -Body @{
     url = $EffectiveWebhookUrl
-    allowed_updates = @('message', 'edited_message', 'callback_query', 'pre_checkout_query')
+    secret_token = $PlainWebhookSecret
+    allowed_updates = @('message', 'callback_query', 'pre_checkout_query')
     drop_pending_updates = $false
   }
   $setWebhookDescription = Get-OptionalProperty -InputObject $setWebhook -Name 'description'
@@ -242,6 +251,7 @@ try {
   [Console]::Error.WriteLine("ERROR: $safeMessage")
   exit 1
 } finally {
+  $PlainWebhookSecret = $null
   $PlainToken = $null
   $PlainVercelBypassSecret = $null
   $EscapedVercelBypassSecret = $null

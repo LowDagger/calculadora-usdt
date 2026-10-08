@@ -15,7 +15,7 @@ import {
   CANONICAL_APP_URL
 } from '../api/telegram-formatter.mjs';
 import {
-  createTelegramHandler,
+  createTelegramTransportHandler as createTelegramHandler,
   isChatAuthorized,
   sendTelegramMessage,
   answerTelegramCallbackQuery,

@@ -1,47 +1,53 @@
-# Fix official-group Telegram routing and public calculation reliability
+# Fix V1 Telegram calculations in one public group conversation
 
-The official group no longer has topic 555, but the previous router still required
-it through hardcoded and environment fallbacks. Required Telegram API failures
-could also return successful delivery statuses. This change authorizes the whole
-official group, preserves private access and rejects unapproved groups and
-commands addressed to other bots.
+The previous release still propagated some topic IDs and had no durable session expiry
+or update deduplication. This change keeps the existing calculation flow and engine,
+while omitting all outgoing topic IDs and validating each panel's chat, initiating user,
+revision, expiry and exact input prompt across serverless invocations.
 
-`/calc 500 bdv` now delivers an ordinary public result; `/calc` and `/calcular`
-guide users through bank and amount. Each initiating user owns their editable
-panel; shared entry buttons create separate panels. Ordinary group messages are
-ignored, and custom amounts require a validated reply to this bot's ForceReply.
-Results include unchanged financial values with units and truthful rate sources
-and dates. Private navigation and Stars remain available. No user messages are
-automatically deleted.
+- All ordinary members of the authorized group can start with `/calcular@calcuflowbot`.
+  Menus, prompts and results remain public in the same chat. Group conversation is ignored.
+- Only the initiator can use a panel's buttons or answer its active prompt. Cancelled,
+  consumed, expired and pre-release controls give a concise Spanish restart instruction.
+- Redis REST provides metadata, leases, 48-hour update deduplication and operation receipts
+  without npm dependencies. Native fetch reuses the existing transport. The infrastructure
+  integration was explicitly approved; Redis was not provisioned.
+- Telegram POSTs require a webhook secret. One callback answer occurs before locks/provider
+  work. Failed processing returns HTTP 503. Rate-limit receipts respect retry_after;
+  permanent creates are not retried blindly. Ambiguous creates require reconciliation and
+  are not sent twice. There is no background worker or exactly-once-delivery claim.
+- Private calculations, navigation and Stars remain supported. Financial formulas,
+  sequential commissions, bank fees, business rules, rate providers, website and CI are unchanged.
 
-Telegram transport classifies HTTP and body errors, treats unchanged edits as
-success, limits plain-text fallback to formatting errors, replaces missing panels,
-and bounds retries. Callback queries are acknowledged before provider work.
-Ambiguous sends and partially completed flows are acknowledged without reporting
-successful delivery or blindly replaying message creation. Sanitized logs and a
-read-only PowerShell diagnostic make failures reviewable.
+Validation: baseline **357/357**, final **373/373** on Node 24.19.0 / Windows, plus
+`git diff --check`. Sixteen new tests exercise the production entrypoint using fresh
+handlers and shared simulated storage, including two ordinary members, two panels for one
+member, prompt/owner/revision checks, cancellation, expiry, duplicates, restart recovery,
+callback acknowledgement, permanent errors, 429, ambiguity and private Stars. Existing
+financial/transport suites remain intact and explicitly test the underlying factory.
+Redis REST commands and Lua lease release were simulated; no real Redis service was tested.
+Read-only production GET health returned HTTP 200.
 
-Validation: baseline 343 tests passed; final suite **357/357 passed**, including
-**144 Telegram tests**, on Node v24.19.0/Windows. [Release QA](telegram-release.md)
-records the limits. Simulations cover concurrent users,
-ownership, repeated updates/callbacks, deleted/old messages, decimals, provider
-outages, formatting/403/429/5xx/timeouts and eight-bank financial parity. The
-PowerShell diagnostic runs against simulated APIs and redacts sensitive output.
-Local static website HTTP smoke and focused PWA tests pass; production GET
-health is directly accessible. Live Telegram, credentials-backed diagnostics,
-Node 20 CI, rendered desktop/mobile/themes, browser console and actual PWA
-installation/offline checks remain pending. Health and unit tests do not certify
-Telegram end-to-end delivery.
+**Draft: pending live validation and configuration.** No Telegram token was available and
+Vercel credentials were invalid. Live username, Topics/Privacy settings, registered webhook,
+production environment variables, logs and real two-member acceptance remain unverified.
+Confirmed code defects do not establish the root cause of the current production incident.
 
-No financial formulas, rate integrations, PWA interface, dependencies or CI
-changed. Distributed deduplication is not provided: repeated creating updates
-may duplicate results, and suppressed ambiguous retries may lose a response.
-Remove obsolete topic variables, retain only the official group allowlist, and
-verify the production function duration before release. Deployment, controlled
-two-user acceptance and code/configuration rollback are detailed in the release
-guide; pre-fix rollback code still depends on deleted topic 555.
+Before an authorized release, configure Redis REST and `TELEGRAM_WEBHOOK_SECRET`, remove
+`TELEGRAM_ALLOWED_THREAD_ID` / `TELEGRAM_ALLOWED_THREADS`, retain the intended chat allowlist,
+verify bot identity, and register the authenticated webhook. Do not merge/deploy without
+explicit authorization. No production configuration or webhook was changed.
+The complete owner settings, exact environment table, secure webhook verification commands,
+live acceptance checklist and Spanish member message are in
+[docs/telegram-single-chat.md](docs/telegram-single-chat.md).
 
-The user authorized committing and pushing these reviewed changes to main on
-2026-10-05 with the documented live checks pending. No manual deployment or
-production reconfiguration was performed; pending Telegram updates were not
-consumed or discarded.
+Changed files:
+`api/telegram.mjs`, `api/telegram-app-handler.mjs`, `api/telegram-session-handler.mjs`,
+`api/telegram-store.mjs`; `scripts/diagnose-telegram.ps1`, `scripts/setup-telegram-webhook.ps1`;
+`tests/telegram-single-chat.test.mjs`, `tests/setup-telegram-webhook.test.mjs`,
+`tests/telegram-bot.test.mjs`, `tests/telegram-bot-reliability.test.mjs`,
+`tests/telegram-bot-ux-stars.test.mjs`, `tests/telegram-group-reliability.test.mjs`,
+`tests/telegram-public-flow.test.mjs`, `tests/telegram-topic-routing-incident.test.mjs`;
+`docs/telegram-single-chat.md`, `docs/telegram-pr-description.md`,
+`docs/telegram-release.md`, `docs/telegram-public-flow.md`.
+The pre-existing nested untracked `calculadora-usdt/` checkout is excluded.
